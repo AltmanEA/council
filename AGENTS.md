@@ -4,7 +4,7 @@ Status: active
 Last Modified: 2026-11-04
 Language: en
 <!-- CHANGES v0.3.1: Replaced "the collaborative design framework" with "Council" as project name reference. -->
-<!-- CHANGES v0.1.0: Initial version — documentation process guide per AGENTS.md §7.2 metadata header convention. -->
+<!-- CHANGES v0.1.1: Added §2.4 Operational Fallback referencing fallback-mode.md for subagent-based Council sessions. -->
 
 This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `PROJECT-CONCEPT.md`, which describes Council.
 
@@ -38,6 +38,10 @@ A **manifest** file (`docs-manifest.yaml` or equivalent index) is the single sou
 - Documents reference others by canonical identifier (filename without extension).
 - Cross-references use stable anchors (headings), not line numbers.
 - Creating a new document requires updating the manifest and cross-references in relevant existing documents.
+
+### 2.4 Operational Fallback
+
+When the code-based Moderator is not yet implemented, the file `fallback-mode.md` defines the substitute procedure using named subagents launched through this agent harness. It covers role assignment, output structure, phase sequence, and conflict aggregation rules. Refer to it whenever executing a Council session without tooling support.
 
 ---
 

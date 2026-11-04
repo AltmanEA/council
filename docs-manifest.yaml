@@ -1,6 +1,6 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-04 (name: "Council" — v0.3.1 rollout)
+# Updated: 2026-11-04 (subagent fallback mode — v0.1.0 addition)
 
 documents:
   - id: agents
@@ -8,6 +8,24 @@ documents:
     title: Agent Instructions (Documentation Process Guide)
     version: 0.1.0
     status: active
+    language: en
+    abstraction: reference
+
+  - id: backlog
+    path: backlog.md
+    title: Backlog — Operational Notes & Ideas
+    version: 0.1.0
+    status: active
+    last_modified: 2026-11-04
+    language: en
+    abstraction: reference
+
+  - id: fallback-mode
+    path: fallback-mode.md
+    title: Subagent Fallback Mode
+    version: 0.1.0
+    status: draft
+    last_modified: 2026-11-04
     language: en
     abstraction: reference
 
@@ -82,5 +100,7 @@ documents:
 
 # Cross-references:
 # - protocol-core.md references project-concept.md (Role Model inherits from "Roles are assigned based on task context")
+# - fallback-mode.md references protocol-core.md (uses the same 5-phase interaction protocol structure)
+# - fallback-mode.md defines operational procedure for subagent-based execution before Moderator is implemented
 # - GLOSSARY.md defines terms used across all documents above
 # - All RU files mirror EN source files with Synced date
