@@ -1,4 +1,9 @@
 # Glossary
+Version: 0.3.0
+Status: draft
+Last Modified: 2026-11-04
+Language: en
+<!-- CHANGES v0.3.0: Added metadata header per AGENTS.md §7.2. Updated version to align with project documents after split. -->
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
 
@@ -112,4 +117,4 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 ---
 
-*Drafted alongside Project Concept Document v0.2.0*
+*Aligned with project documents v0.3.0 — split: project-concept.md, protocol-core.md, project-reference.draft.*

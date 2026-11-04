@@ -1,0 +1,86 @@
+# Documentation Manifest
+# Single source of truth for project documentation layout.
+# Updated: 2026-11-04
+
+documents:
+  - id: agents
+    path: AGENTS.md
+    title: Agent Instructions (Documentation Process Guide)
+    version: 0.1.0
+    status: active
+    language: en
+    abstraction: reference
+
+  - id: glossary
+    path: GLOSSARY.md
+    title: Glossary
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: en
+    abstraction: reference
+
+  - id: project-concept
+    path: project-concept.md
+    title: AI-Agent Collaborative Design Framework — Conceptual Overview
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: en
+    abstraction: conceptual
+
+  - id: project-concept-ru
+    path: project-concept-RU.md
+    title: Обзор концепции фреймворка
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: ru
+    abstraction: conceptual
+    source: project-concept
+    synced: 2026-11-04
+
+  - id: protocol-core
+    path: protocol-core.md
+    title: Protocol Core
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: en
+    abstraction: protocol
+
+  - id: protocol-core-ru
+    path: protocol-core-RU.md
+    title: Протокол взаимодействия
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: ru
+    abstraction: protocol
+    source: protocol-core
+    synced: 2026-11-04
+
+  - id: project-reference
+    path: project-reference.draft
+    title: Project Reference (Draft) — Technical Implementation, Artifacts, Roadmap
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: en
+    abstraction: reference
+
+  - id: project-reference-ru
+    path: project-reference.draft-RU.md
+    title: Справочник проекта (Черновик)
+    version: 0.3.0
+    status: draft
+    last_modified: 2026-11-04
+    language: ru
+    abstraction: reference
+    source: project-reference
+    synced: 2026-11-04
+
+# Cross-references:
+# - protocol-core.md references project-concept.md (Role Model inherits from "Roles are assigned based on task context")
+# - GLOSSARY.md defines terms used across all documents above
+# - All RU files mirror EN source files with Synced date
