@@ -2,10 +2,9 @@
 Version: 0.1.0
 Status: draft
 Last Modified: 2026-11-04
-Language: en
 Abstraction: reference
 Source: fallback/
-<!-- CHANGES v0.1.0: Initial version — structured instructions for the fallback moderator (human operator) to consolidate three role reviews into a single consensus document. -->
+<!-- Changelog: CHANGELOGS/session-consolidation-prompt.changes.md -->
 
 ---
 

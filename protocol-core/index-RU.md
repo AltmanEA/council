@@ -2,12 +2,9 @@
 Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
-Language: ru
-Source: protocol-core.md
-Synced: 2026-11-04
-Abstraction: protocol
-<!-- CHANGES v0.3.1: Updated per EN revision — replaced "фреймворка" with "Council". -->
-<!-- CHANGES v0.3.0: Extracted from PROJECT-CONCEPT.md. Covers role model, interaction protocol phases, and escalation logic. -->
+Source: protocol-core/index.md
+<!-- Changelog: CHANGELOGS/protocol-core.changes.md -->
+<!-- See also: protocol-core/index.md (en) -->
 
 ## Модель ролей
 

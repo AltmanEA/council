@@ -1,0 +1,3 @@
+<!-- CHANGES v0.3.0: Redesign §5.2 — replaced 7-step linear flow with 8-step three-phase process (Understand → Align → Execute). Agent MUST NOT modify any file before explicit Approve from user. Added Propose step as mandatory scope confirmation. Split Phase labels for clarity. -->
+<!-- CHANGES v0.2.0: Restructured documentation layout — hierarchical folders, moved CHANGES to CHANGELOGS/, removed language field from manifest and metadata. Updated paths, cross-references, and all related sections (§2, §3, §4, §7). -->
+<!-- CHANGES v0.1.1: Added §2.4 Operational Fallback referencing fallback-mode.md for subagent-based Council sessions. -->

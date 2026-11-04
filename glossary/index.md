@@ -2,9 +2,7 @@
 Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
-Language: en
-<!-- CHANGES v0.3.1: Added "Council" term in Project section — canonical project identifier and shorthand reference. -->
-<!-- CHANGES v0.3.0: Added metadata header per AGENTS.md §7.2. Updated version to align with project documents after split. -->
+<!-- Changelog: CHANGELOGS/glossary.changes.md -->
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
 
@@ -20,7 +18,7 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **Reliability & Security Specialist** (Специалист по надёжности и безопасности) The role responsible for examining failure modes, recovery strategies, vulnerabilities, attack vectors, compliance, and data confidentiality introduced or affected by a design decision.
 
-**Human-Centric Designer** (Человекоцентричный проектировщик) The role responsible for ensuring that a design accounts for the end-user's real capabilities, cognitive load, accessibility, trust calibration, and understandability of system decisions.
+**Human-Centric Designer** (Человекоцентричный проектировщик) The role responsible for ensuring that the design accounts for the end-user's real capabilities, cognitive load, accessibility, trust calibration, and understandability of system decisions.
 
 ---
 
@@ -124,4 +122,4 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 ---
 
-*Aligned with project documents v0.3.0 — split: project-concept.md, protocol-core.md, project-reference.draft.*
+*Aligned with project documents v0.4.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*

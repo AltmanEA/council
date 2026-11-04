@@ -2,12 +2,9 @@
 Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
-Language: ru
-Source: project-reference.draft
-Synced: 2026-11-04
-Abstraction: reference
-<!-- CHANGES v0.3.1: Updated per EN revision — title changed to "Council". -->
-<!-- CHANGES v0.3.0: Extracted from PROJECT-CONCEPT.md. Technical implementation, artifact definitions, roadmap. Awaiting approval before promoting to .md. -->
+Source: project-reference/index.md
+<!-- Changelog: CHANGELOGS/project-reference.changes.md -->
+<!-- See also: project-reference/index.md (en) -->
 
 ---
 

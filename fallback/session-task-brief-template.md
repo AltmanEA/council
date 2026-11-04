@@ -2,9 +2,8 @@
 Version: 0.1.0
 Status: draft
 Last Modified: 2026-11-04
-Language: en
 Abstraction: reference
-<!-- CHANGES v0.1.0: Initial version — structured template for preparing a subagent-based Council session before launch. -->
+<!-- Changelog: CHANGELOGS/session-task-brief-template.changes.md -->
 
 ---
 
