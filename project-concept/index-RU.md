@@ -2,9 +2,8 @@
 Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
-Source: project-concept/index.md
+Abstraction: conceptual
 changelog-path: CHANGELOGS/project-concept.changes.md
-<!-- See also: project-concept/index.md (en) -->
 
 ## Назначение
 

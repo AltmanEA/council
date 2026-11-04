@@ -1,5 +1,5 @@
 # Documentation Worker Subagent Instructions
-Version: 0.1.0
+Version: 0.4.0
 Status: active
 Last Modified: 2026-11-04
 changelog-path: CHANGELOGS/documentation-worker.changes.md
@@ -123,15 +123,42 @@ When `change_type: split`:
 - Instead, propose 2–3 candidate split locations based on natural section boundaries, topic coherence, and cross-reference clusters. Present options with rationale to the primary agent for human decision.
 - After human selects the split point: create new sub-documents with stable identifiers, move appropriate sections, update cross-references in all referencing documents, update the manifest (remove old entry, add new ones), and bump version accordingly.
 
-### Create Russian Translation
+### Create or Update Russian Translation
 
 When `change_type: create_ru`:
 
-- Produce `index-RU.md` in the same directory as the English source.
-- Preserve exact structure: heading hierarchy, section order, paragraph count, list-item alignment, code blocks in place.
-- Translate conceptually, not literally — preserve meaning while adapting terminology to established Russian equivalents from the glossary.
-- Do NOT introduce structural deviations. If the source undergoes future changes, subsequent updates should maintain this structural parity.
-- Log alignment action in the primary agent's report.
+#### Phase 1 — Parse English source
+
+Read the target document's `index.md`. Count metadata lines and structural elements (blank lines, `---` separators, headings at each level, code blocks, list items). Record the exact line count and section structure.
+
+#### Phase 2 — Check existing translation
+
+If `index-RU.md` exists in the same directory: read it, count its lines, compare structural elements against the EN source.
+- If structural parity is intact → proceed to Phase 3 with update mode.
+- If structural deviation detected (extra blank lines, missing separators, reordered sections) → discard current content, switch to create mode. Log why.
+If no RU file exists → proceed to create mode.
+
+#### Phase 3 — Generate / update translation
+
+Produce `index-RU.md` in the same directory as the English source.
+Metadata block must match exactly: same keys, same order, same number of blank lines after it. Translate only values (`# Глоссарий` instead of `# Glossary`, `changelog-path` stays as-is, etc.).
+Preserve exact structure: heading hierarchy, section order, paragraph count, list-item alignment, code blocks in place, separator lines (`---`) at identical positions.
+Line number parity: every content line in `index-RU.md` must occupy the same line number as its counterpart in `index.md`. Translate text per line; never collapse multi-line entries into one or split one into many.
+If translated text length differs from the original, adjust surrounding whitespace to restore line alignment rather than collapsing or expanding sections.
+Use established Russian equivalents from the glossary for all domain terms.
+Translate conceptually, not literally — preserve meaning while adapting terminology.
+
+#### Phase 4 — Self-verify and remediate
+
+After writing the file, perform a verification pass:
+
+1. **Line parity:** confirm that non-metadata, non-separator line N in RU aligns with line N in EN. Report any misalignment.
+2. **Completeness:** ensure every non-blank, non-separator content line from EN has a corresponding line in RU. Flag MISSING lines.
+3. **Language leakage:** scan for un-translated domain terms or stray English words/sentences within otherwise Russian text. **If trust_level is `safe`, fix trivial leakage items automatically** (e.g., untranslated single words like "configured" → "установленного"). If trust_level is `review`, present findings for approval before applying.
+4. **Glossary compliance:** cross-reference all glossary terms against `glossary/index.md`; flag terms absent from glossary.
+5. **No drift:** confirm no sections were added, removed, or re-ordered relative to the source.
+
+For each failed check: if the failure is mechanically correctable (line shift due to missing separator, stray English word, minor whitespace), fix it immediately. For structural deviations (reordered sections, missing content, wrong section count) or semantic concerns, do NOT auto-fix — present them in the report so the primary agent can decide corrective action. Log the final verification result alongside the translation action.
 
 ### Audit Compliance
 
@@ -181,6 +208,7 @@ Verify ALL items against AGENTS.md before completing any task:
 
 - [ ] Manifest reflects current on-disk state (no stale entries, correct paths)
 - [ ] Russian alignment performed per §3.3 (if RU version exists)
+  - [ ] Line number parity verified with English source
 - [ ] All domain terms exist in `glossary/index.md` (or escalated)
 - [ ] All cross-references resolve (stable anchors, no line-number dependencies)
 - [ ] Changelog entry appended to correct file with proper format

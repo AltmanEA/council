@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.5.0
+Version: 0.6.0
 Status: active
 Last Modified: 2026-11-04
 changelog-path: CHANGELOGS/agents.changes.md
@@ -123,7 +123,7 @@ Bump patch (X.Y.**Z**) for typos/formatting, minor (X.**Y**.Z) for content addit
 
 ## 8. Compliance Verification
 
-At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian alignment checked per §3.3, all terms exist in glossary, all cross-references resolve, changelog entries appended. The Documentation Worker subagent runs these checks automatically per its compliance checklist (§10); the primary agent reviews the result before reporting completion.
+At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian alignment checked per §3.3 (including line parity, completeness, language leakage, glossary compliance, no drift when RU file exists), all terms exist in glossary, all cross-references resolve, changelog entries appended. The Documentation Worker subagent runs these checks automatically per its compliance checklist (§10); the primary agent reviews the result before reporting completion.
 
 ---
 
@@ -148,4 +148,4 @@ When in doubt, use `review`. Conservative escalation is preferred over unauthori
 
 ## 10. Documentation Worker (detailed instructions → `subagents/documentation-worker.instructions`)
 
-The Documentation Worker subagent handles mechanical document operations under two trust levels (`safe` / `review`). Key capabilities: update a document, split a document (>200 lines escalation), create Russian translation, audit compliance. Full contract (Work Request / Response), safety protocol, and compliance checklist are in `subagents/documentation-worker.instructions`. Refer to it whenever configuring or troubleshooting the subagent.
+The Documentation Worker subagent handles mechanical document operations under two trust levels (`safe` / `review`). Key capabilities: update a document, split a document (>200 lines escalation), create or update Russian translations (with 4-phase workflow: parse EN source, check existing RU for structural deviation, generate/update with line number parity, self-verify across 5 criteria), and audit compliance. Full contract (Work Request / Response), safety protocol, and compliance checklist are in `subagents/documentation-worker.instructions`. Refer to it whenever configuring or troubleshooting the subagent.

@@ -31,6 +31,7 @@ documents:
     version: 0.4.0
     status: draft
     abstraction: reference
+    has_translation: index-RU.md
 
   - id: project-concept
     path: project-concept/index.md
