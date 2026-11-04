@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.4.0
+Version: 0.5.0
 Status: active
 Last Modified: 2026-11-04
 changelog-path: CHANGELOGS/agents.changes.md
@@ -87,97 +87,65 @@ The English-only portion of `glossary/index.md` is the primary (machine-readable
 
 ### 5.1 Responsibility Split
 
-Document structure, formatting, content drafting, RU translation alignment, cross-references, manifest updates, and version bumping → **Agent**. Strategic/content decisions, ambiguity resolution, scope approval, and change-plan confirmation → **Human**. The Agent MUST NOT modify any document file, manifest, or changelog until after step (5) Approve is confirmed by the human operator. This rule has no exceptions — even typo fixes require explicit go-ahead after the propose step.
+Document structure, formatting, content drafting, manifest updates, cross-references, and version bumping → **Documentation Worker subagent** (§9–§10). Russian translation alignment → Documentation Worker per its instruction document. Strategic decisions, ambiguity resolution, scope approval, and change-plan confirmation → **Primary agent**. All mechanical write operations go through the subagent; reading files (manifest, documents, glossary, changelogs) is done directly by the primary agent. The Agent MUST NOT modify any document file, manifest, or changelog until after step (5) Approve is confirmed by the human operator. This rule has no exceptions — even typo fixes require explicit go-ahead after the propose step.
 
 ### 5.2 Document Processing Flow
 
-Every task proceeds through eight steps, organized into three phases. The Agent MUST NOT modify any document file, manifest, or changelog entry until after step (5) is confirmed by the human operator. This rule has no exceptions — even typo fixes require explicit go-ahead after the propose step.
+Every task proceeds through three phases controlled by the primary agent. Detailed steps are handled by the Documentation Worker subagent per its Work Request Contract (§9–§10).
 
-**Phase 1 — Understand:** (1) **Understand** — read the manifest to locate the target document(s), identify related documents, read existing content of all affected files (`index.md` for English, `index-RU.md` if present). (2) **Analyze** — determine what needs to be created/modified/deleted; check `glossary/index.md` for undefined domain terms.
-
-**Phase 2 — Align:** (3) **Clarify** — enumerate all ambiguities found during Understand/Analyze and present them to the user as questions with options (see §6 Resolution Procedure). Wait for answers. If no ambiguities exist, skip to step (4) anyway — the proposal itself serves as confirmation of scope. (4) **Propose** — produce a concrete change plan listing: every file that will be modified, which sections/headings within each file will change, whether RU translation needs updating (§3.3), whether new changelog entries are needed, and whether manifest cross-references or the manifest itself must be updated. Present this plan to the user for review. (5) **Approve** — wait for explicit user confirmation ("go" / approve / proceed). DO NOT write any changes until this step yields positive confirmation.
-
-**Phase 3 — Execute:** (6) **Modify** — apply the approved plan sequentially: edit each `index.md`, update matching `index-RU.md` if applicable (§3.3), append changelog entries to `CHANGELOGS/<id>.changes.md`, bump version per §7.5, update manifest, update cross-references. (7) **Verify** — run final compliance check (§8): manifest up-to-date, Russian alignment checked, all terms exist in glossary, all cross-references resolve, changelog entries appended. Fix failures before proceeding. (8) **Report** — inform the user of completed changes, summarizing modified files, new versions, and changelog references.
+**Phase 1 — Understand:** The primary agent reads manifest, target documents, related docs, and glossary. The subagent executes UNDERSTAND/ANALYZE report.
+**Phase 2 — Align:** The primary agent clarifies ambiguities with the human (see §6), proposes changes based on subagent's PROPOSE output, waits for explicit approval at step (5).
+**Phase 3 — Execute:** The primary agent delegates execution to the subagent (trust level determined by change scope). Subagent runs EXECUTE/VERIFY, produces diff + compliance report. Primary agent reviews results, then REPORTs to human.
 
 ### 5.3 Concurrent Work
 
-Agents working on different documents must coordinate through the manifest. No two agents modify the same file concurrently unless explicitly agreed upon.
+Agents working on different documents must coordinate through the manifest. No two agents modify the same file concurrently unless explicitly agreed upon. The Documentation Worker subagent handles all concurrent-write protection (TOCTOU detection) per its safety protocol (§10).
 
 ---
 
 ## 6. Ambiguity Handling
 
-### 6.1 Trigger Conditions
-
-An ambiguity exists whenever more than one reasonable approach exists with no prior guidance — including conflicting term usage across documents, unstructured decisions (heading levels, ordering), domain questions requiring factual input beyond pattern-matching, or additions/deletions affecting other documents.
-
-### 6.2 Resolution Procedure
-
-Describe the ambiguity clearly, propose 2–3 concrete options with consequences and a recommendation, wait for human selection. The agent MUST NOT default to its own preference without explicit instruction.
-
-### 6.3 Escalation Within Documentation
-
-If the human fails to respond within the session context and pending work blocks progress, record the unresolved item as an open question in the nearest consensus document rather than guessing.
+An ambiguity exists whenever more than one reasonable approach exists with no prior guidance — including conflicting term usage across documents, unstructured decisions, domain questions requiring factual input beyond pattern-matching, or changes affecting other documents. Describe clearly, propose 2–3 options with consequences and a recommendation, wait for human selection. If the human does not respond and work blocks progress, record unresolved items as open questions rather than guessing.
 
 ---
 
 ## 7. File Conventions
 
-### 7.1 Naming
+Use kebab-case for folder names; primary document is `index.md`; Russian translation is `index-RU.md` in the same folder. Draft files carry `.draft` suffix temporarily. Metadata headers follow YAML-style format; English is implied by presence in the manifest, no `Language` field. Changelog files use format `CHANGELOGS/<id>.changes.md`.
 
-Use kebab-case for folder names (`protocol-core/`). The primary document inside is `index.md`. Russian translation: `index-RU.md` in the same folder. Draft files carry `.draft` suffix temporarily during review — remove it upon approval. Changelog files use format `CHANGELOGS/<id>.changes.md`.
+Each document must not exceed **200 lines** of content (excluding metadata and changelog entries). When exceeded, halt and present **Split** (divide into sub-documents with stable identifiers and cross-references) or **Condense** (remove detail from lower-priority sections) options to the human operator. The Documentation Worker subagent performs line-count checks and triggers this escalation when needed.
 
-### 7.2 Metadata Headers
+Mixing broad concepts with concrete formats/signatures within one document is prohibited. Abstraction levels: **Conceptual** (principles, goals, rationale), **Protocol** (procedures, phases, decision logic), **Format** (field definitions, schemas, signatures), **Reference** (glossaries, checklists, config examples). Multi-level drafts require splitting by level. Promote `Abstraction:` field to permanent once approved.
 
-Each document begins with a YAML-style comment block:
-
-```
-# Title
-Version: X.Y.Z
-Status: active | draft | deprecated
-Last Modified: <date>
-Source: <english-path>          # Russian files only — path to index.md
-changelog-path: CHANGELOGS/<id>.changes.md
-Abstraction: conceptual | protocol | format | reference   # during drafting
-```
-
-The `Language` field has been removed from metadata. English is implied by presence in the manifest; Russian files do not carry a language tag — they have a `Source:` field pointing to their English parent.
-
-### 7.3 Line Count Limit
-
-Each document must not exceed **200 lines** of content (excluding metadata headers and changelog entries). When a draft exceeds this threshold, the agent MUST halt and present options to the human operator: (1) **Split** — divide into logical sub-documents with stable identifiers and cross-references; (2) **Condense** — remove detail from lower-priority sections while preserving core substance. The agent MUST NOT silently truncate, omit, or skip content. The manifest must reflect the resulting file layout once resolved.
-
-### 7.4 Consistent Abstraction Level
-
-Mixing broad concepts with concrete formats/signatures within one document is prohibited. Abstraction levels: **Conceptual** (principles, goals, rationale), **Protocol** (procedures, phases, decision logic), **Format** (field definitions, schemas, signatures), **Reference** (glossaries, checklists, config examples). Multi-level drafts require splitting by level (§7.3). Promote `Abstraction:` field to permanent once approved.
-
-### 7.5 Versioning
-
-Bump patch (X.Y.**Z**) for typos/formatting, minor (X.**Y**.Z) for content additions or structural changes, major (**X**.Y.Z) for foundational rewrites. Document version history in the changelog file (`CHANGELOGS/<id>.changes.md`) when substantive changes occur — entries are appended as `<!-- CHANGES v0.3.0: ... -->` lines.
-
-### 7.6 Changelog Storage
-
-Changelog entries live in `CHANGELOGS/<id>.changes.md`, not inside document bodies. When making an edit, the agent appends a new entry at the top of the relevant changelog file using the format: `<!-- CHANGES vX.Y.Z: description of change. -->`. The document body only contains a single reference line: `changelog-path: CHANGELOGS/<id>.changes.md`. During document reads, agents may optionally load the changelog by resolving this reference path.
+Bump patch (X.Y.**Z**) for typos/formatting, minor (X.**Y**.Z) for content additions or structural changes, major (**X**.Y.Z) for foundational rewrites. Document version history in the changelog file using format `<!-- CHANGES vX.Y.Z: description of change. -->`. Changelog entries live separately from document bodies — each document references its changelog via `changelog-path:` in metadata.
 
 ---
 
 ## 8. Compliance Verification
 
-At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian checks performed per §3.3, all terms exist in the glossary, all cross-references resolve, changelog entries appended. Fix failures before considering the session complete.
+At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian alignment checked per §3.3, all terms exist in glossary, all cross-references resolve, changelog entries appended. The Documentation Worker subagent runs these checks automatically per its compliance checklist (§10); the primary agent reviews the result before reporting completion.
 
 ---
 
-## 9. Subagent Tools
+## 9. Subagent Delegation
 
-### 9.1 Purpose
+### 9.1 Mandatory Delegation
 
-The primary agent may delegate certain documentation tasks to specialized subagent tools. These subagents are NOT part of the Council framework — they are operational instruments designed to reduce the mechanical workload described in §5.2. Each subagent has its own instruction document defining its capabilities, trust levels, and escalation rules.
+The primary agent MUST delegate all mechanical document editing operations to the Documentation Worker subagent (§10). Editing includes file writes — creating, modifying, and deleting document bodies, metadata, changelog entries, manifest updates, cross-references, and Russian translation files. Reading files (manifest, glossary, source documents, changelogs) is NOT delegated — the primary agent reads them directly as part of analysis and proposal.
 
-When delegating to a subagent:
+No exceptions — even typo fixes must go through the subagent after explicit user approval at step (5). The primary agent MUST NOT edit documentation files directly.
 
-- The primary agent remains responsible for presenting proposals to the human operator and obtaining approval at step (5).
-- The subagent produces work products (proposed changes, audit reports, diffs) but the primary agent performs the final approval gate before committing.
-- Trust-level `safe` operations by a subagent are treated as approved by the primary agent (the delegation itself serves as consent).
-- Trust-level `review` operations require explicit human approval — the subagent's output becomes the basis of the proposal presented at step (4).
+### 9.2 Trust Levels Summary
 
-Referenced subagent instruction documents are stored in `subagents/<name>.instructions` alongside this file. They are not added to `docs-manifest.yaml` because they operate on the tooling layer rather than being subject-matter documentation artifacts.
+| Level | What's included | Approval needed? |
+|---|---|---|
+| `safe` | Patch bumps, typos, formatting, changelog appends, clear anchor fixups | No — delegation = consent |
+| `review` | Content edits, manifest changes, RU translations, minor/major bumps, glossary, new cross-refs | Yes — human confirms at step (5) |
+
+When in doubt, use `review`. Conservative escalation is preferred over unauthorized substantive edits.
+
+---
+
+## 10. Documentation Worker (detailed instructions → `subagents/documentation-worker.instructions`)
+
+The Documentation Worker subagent handles mechanical document operations under two trust levels (`safe` / `review`). Key capabilities: update a document, split a document (>200 lines escalation), create Russian translation, audit compliance. Full contract (Work Request / Response), safety protocol, and compliance checklist are in `subagents/documentation-worker.instructions`. Refer to it whenever configuring or troubleshooting the subagent.
