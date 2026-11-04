@@ -1,5 +1,5 @@
 # Glossary
-Version: 0.3.1
+Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-04
 <!-- Changelog: CHANGELOGS/glossary.changes.md -->
@@ -19,6 +19,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Reliability & Security Specialist** (Специалист по надёжности и безопасности) The role responsible for examining failure modes, recovery strategies, vulnerabilities, attack vectors, compliance, and data confidentiality introduced or affected by a design decision.
 
 **Human-Centric Designer** (Человекоцентричный проектировщик) The role responsible for ensuring that the design accounts for the end-user's real capabilities, cognitive load, accessibility, trust calibration, and understandability of system decisions.
+
+**Operations Engineer** (Инженер по эксплуатации) The role responsible for evaluating production-readiness and operational sustainability — deployment strategies, observability instrumentation, runtime scaling policies, cost estimation, incident detection, and graceful degradation patterns. Focuses on how designs behave once deployed, not on structural design decisions.
 
 ---
 

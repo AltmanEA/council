@@ -1,5 +1,5 @@
 # Protocol Core
-Version: 0.3.1
+Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-04
 Source: project-concept/index.md
@@ -9,6 +9,19 @@ Abstraction: protocol
 ## Role Model
 
 Roles are assigned based on task context. The initial set includes three key roles; new ones are added as Council evolves. Each role is defined by its perspective, areas of responsibility, and prompt template.
+
+### Extending the Role Set
+
+A new role is introduced by documenting:
+- Role name (nominative form)
+- A brief description of the perspective (one sentence)
+- A list of areas of responsibility
+- A prompt template for initializing an agent in this role
+- A scope boundary statement describing interactions with existing roles (which role takes precedence on shared subjects)
+
+Adding a new role is a separate process that requires agreement within the project. Before approval, every candidate must undergo a **responsibility matrix audit**: a scan against all existing roles demonstrating no full overlap. Any area fully covered by another role without a complementary dimension is grounds for rejection.
+
+---
 
 ### 1. Architect
 
@@ -49,15 +62,46 @@ Roles are assigned based on task context. The initial set includes three key rol
 
 **Typical questions:** "Will the person understand why the AI made this decision?" "Is the system overloaded with too many steps?"
 
-### Adding a New Role
+---
 
-A new role is introduced by documenting:
-- Role name (nominative form)
-- A brief description of the perspective (one sentence)
-- A list of areas of responsibility
-- A prompt template for initializing an agent in this role
+### 4. Operations Engineer
 
-Adding a new role is a separate process that requires agreement within the project.
+**Perspective:** production-readiness and operational sustainability. The operations engineer reasons in terms of deployment mechanics, runtime behavior, observability, cost trajectory, and the continuity of user workflows under operational stress (ensuring users can still accomplish their goals even when systems degrade). Their focus is on how designs behave once deployed — not on structural design decisions themselves, which remain with the Architect.
+
+**Areas of responsibility:**
+- Production deployment strategies (blue-green, canary, rolling)
+- Observability and alerting instrumentation (metrics, logs, traces, dashboards)
+- Runtime scaling policies and auto-scaling configuration
+- Cost estimation and resource optimization
+- Incident detection, runbook development, and graceful degradation patterns ensuring users experience reduced but functional service rather than abrupt failure during outages, provided that safety-critical integrity checks (authentication, authorization, data consistency) are preserved under all circumstances
+
+**Typical questions:** "Can this deployment pattern recover from a single zone failure?" "How will we monitor the health of this integration in production?" "During a region outage, can a user still submit their order, even if recommendations are disabled?"
+
+**Scope boundary:** The operations engineer works alongside all existing roles:
+
+- **Architect** — The Architect defines structural capacity ceilings and component interaction boundaries; the operations engineer plans runtime scaling policies that operate within those structures. The Architect determines *what* should exist and *why*; the operations engineer determines *how* it operates and *at what ongoing cost*. When a subject involves both structural limits and runtime feasibility, the Architect identifies hard constraints and the operations engineer proposes workarounds within architectural bounds; unresolved conflicts are escalated to the operator.
+- **Reliability & Security Specialist** — The operations engineer evaluates behavioral properties of the system in operation (deployment mechanics, scaling behavior, monitoring efficacy, cost trajectory, and operational recovery procedures). The reliability & security specialist evaluates property-violation risks (failure modes, vulnerability surfaces, data-integrity threats, compliance gaps, confidentiality breaches). Precedence follows the nature of the finding: if it classifies a data-integrity, confidentiality, compliance, or security risk, the reliability & security specialist controls; if it classifies a deployment procedure, cost, scaling threshold, or monitoring concern, the operations engineer controls. A single decision carrying material implications in both categories stands with both stances independently. If the two stances cannot be simultaneously satisfied, the matter escalates to the operator under the "irresolvable conflict" reason. Recovery playbooks are authored by the operations engineer but must incorporate the reliability & security specialist's input on failure-mode identification, data-integrity verification, and evidence preservation. If the reliability & security specialist identifies a gap in failure-mode coverage, the operations engineer must include a documented reservation rather than overriding the concern.
+
+---
+
+### Role Activation Rules
+
+Not all assigned roles participate in every session. As the role set grows, universal inclusion becomes unsustainable — each additional review adds linear latency while marginal insight diminishes due to overlapping concerns.
+
+**Activation tiers:**
+
+| Tier | Roles active | When to use |
+|------|-------------|-------------|
+| Core | Architect + Reliability & Security + Human-Centric Designer | Default for every session unless a specific justification exists for exclusion |
+| Extended | Core + one or more additional roles | Activate only when the task explicitly involves the relevant domain (e.g., operations-heavy systems → include Operations Engineer) |
+
+**Rules:**
+- The Core tier is always active unless explicitly overridden by the operator.
+- Additional roles activate only when justified by the task's scope. Justification must be stated in Phase 1 (Task Submission).
+- Maximum role count under the current sequential protocol is **five**. Beyond that, the parallel review mode (Roadmap Phase 2) must be implemented before adding more participants.
+- A task that activates fewer than all Core-tier roles must include an operator-stated reason.
+
+**Scenario-driven assignment** (see backlog/index.md) will eventually replace manual justification with declarative scenario templates. Until then, activation is operator-managed with documented rationale.
 
 ---
 
