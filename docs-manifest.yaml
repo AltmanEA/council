@@ -23,7 +23,7 @@ documents:
   - id: fallback-mode
     path: fallback-mode.md
     title: Subagent Fallback Mode
-    version: 0.1.0
+    version: 0.2.0
     status: draft
     last_modified: 2026-11-04
     language: en

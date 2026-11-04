@@ -1,0 +1,407 @@
+# Human-Factor Analysis — Council Framework
+
+Version: 0.1.0
+Status: draft
+Last Modified: 2026-11-04
+Language: en
+Abstraction: reference
+
+<!-- CHANGES v0.1.0: Initial version — human-factor audit covering 8 areas with pain points, impact levels, improvement suggestions, and effort estimates. -->
+
+---
+
+## Introduction
+
+This document presents a systematic usability analysis of the Council framework from the perspective of the human operator(s) who use it. It examines every layer of the human-agent interaction loop — task formulation, session execution, output consumption, escalation handling, and post-session feedback. All findings are scoped to the current fallback-mode operation described in `fallback-mode.md`; future code-based Moderator may mitigate several issues automatically but should not be assumed to do so without explicit design intent.
+
+The analysis follows a consistent template per area: **Problem → Affected Stakeholder → Impact → Suggestion → Effort.**
+
+---
+
+## 1. Operator Cognitive Load in Fallback Mode
+
+### Problem
+
+In fallback mode, the human operator simultaneously plays the role of the code-based Moderator (per `protocol-core.md` §4 and `fallback-mode.md` Phase 4): they launch subagents, collect results, compare stances across roles, check consensus conditions against rules, decide when discussion rounds should end, track timeout counters, and apply conflict aggregation logic. Three agents run in parallel, each producing a multi-section document. The operator must mentally merge these outputs, perform structural stance comparisons on subject identifiers, and execute the exact same deterministic logic that a Moderator tool would handle automatically.
+
+For a single task, the operator manages: one task submission + three parallel reviews + (up to two) discussion round batches + one consensus evaluation + optional escalation triage + one resolution assembly. That is at least four separate "launch and collect" cycles before anything usable exists. Each cycle carries memory overhead: remembering prior positions while reading new ones, cross-referencing subject IDs, tracking which roles said what, and applying escalation reason rules correctly.
+
+**Where the pain is sharpest:** Phase 4 (Consensus Check). The rules involve compound conditions (all-agree, partial-concerns, blocked, disagreement-by-stance) applied across multiple documents in parallel view. A missed detail causes misclassification, leading either to a premature resolution or an unnecessary escalation.
+
+### Affected Stakeholders
+Operator (primary), end user (secondary — indirect effect via quality and timing of output).
+
+### Impact Level: High
+
+### Suggestion
+
+Create a **Consensus Checklist Template** — a reusable Markdown table that the operator fills during Phase 4, turning cognitive work into mechanical checkbox completion:
+
+| Subject ID | Architect Stance | Security Stance | Designer Stance | Outcome |
+|------------|------------------|-----------------|-----------------|---------|
+| SUBJ-001   | support          | null            | support         | Agreed  |
+
+Below the table, a decision tree:
+
+```
+☐ All roles = agree? → Resolved, proceed to Phase 5
+☐ No blocks, at least one = concerns? → Conditional, proceed to Phase 5
+☐ Any = blocked-escalation? → Escalation protocol
+☐ Opposing stances on same subject? → Disagreement → escalate if data insufficient
+```
+
+This transforms the operator's job from *reasoning about* consensus rules to *following* them visually. The checklist can live in a session directory alongside reviews, making the trace auditable.
+
+### Effort Estimate: Quick Win
+
+A shared template file or copy-paste block added to `fallback-mode.md`. No code changes, no process redesign.
+
+---
+
+## 2. Task Formulation Burden
+
+### Problem
+
+Phase 1 requires the operator to provide five structured inputs (scope, context, constraints, explicit risks, open questions) AND create a canonical subject list with stable identifiers before any agent work begins. For complex architectural decisions, this is reasonable. For simple tasks — e.g., "pick between library X and library Y for CSV parsing" or "define the error message format for API endpoint Z" — the requirement feels disproportionate. The operator must engineer a mini-scope document just to activate a lightweight deliberation among three agents whose combined knowledge likely exceeds what's needed for such narrow decisions.
+
+Additionally, the subject-list discipline (stable identifiers referenced by all findings) adds upfront cognitive framing. While beneficial for traceability at scale, forcing a subject list on trivial tasks introduces bureaucratic friction without proportional value.
+
+### Affected Stakeholders
+Both operator (formulates task) and end user (receives output; frustrated if input burden makes them avoid using Council even for legitimate small tasks).
+
+### Impact Level: Medium
+
+### Suggestion
+
+Introduce **task complexity tiers**, each with a different input bar:
+
+| Tier | Example Use Case | Required Inputs | Expected Rounds |
+|------|-----------------|-----------------|-----------------|
+| **Simple** | Library choice, format spec, naming | Scope + one paragraph context | 0–1 review only |
+| **Standard** | Module boundary, integration point | Full Phase 1 (scope, context, constraints, risks) + subject list | 2-phase protocol |
+| **Complex** | Cross-cutting architecture change | Phase 1 + pre-read materials, threat model outline | Up to 2 discussion rounds, targeted resolution possible |
+
+Subject lists remain mandatory at Standard+ tier but are optional at Simple tier — findings may reference contextual descriptions directly. A short scoping questionnaire (3–5 guided prompts) replaces free-form documentation for Simple tasks.
+
+This aligns with the existing backlog idea of scenario-driven role assignment (`backlog.md`): a "Simple Review" scenario uses fewer subjects, fewer rounds, and lighter input expectations.
+
+### Effort Estimate: Moderate
+
+Requires updates to `fallback-mode.md` Phase 1 description, `protocol-core.md` Phase 1 addition, glossary entries for `Task Tier`, and potentially a revised output structure for Simple-tier Consensus Documents. No breaking changes to existing flow.
+
+---
+
+## 3. Output Readability — Consensus Document Structure
+
+### Problem
+
+Per `fallback-mode.md` Phase 5, a Consensus Document must contain: decision, rationale, subjects with outcomes, role reservations tied to subjects, open questions, action items, escalation references (if any), and a transparency list of downgraded critical findings. Every field is required in some form, but their relative priority and visual hierarchy is undefined.
+
+When rendered as a flat Markdown document, all eight elements compete for attention equally. A reader arriving for the first time faces a wall of sections, many of which may be empty ("no escalations", "no downgrades", "no outstanding questions"). Conversely, a reader looking for one piece of information — "what was actually decided?" — must scan past noise to find it.
+
+The intended audience appears dual-purpose: the operator needs completeness (audit trail); the end user needs digestibility (answer the question, move on). One format serving both creates tension.
+
+### Affected Stakeholders
+End user (primary — receives and acts on the document). Operator secondary, since they also produce it.
+
+### Impact Level: Medium-High
+
+### Suggestion
+
+Adopt a **two-layer output convention**:
+
+**Layer 1 — Executive Summary (always present, max 8 lines):**
+```markdown
+## Decision
+[One sentence stating the chosen approach.]
+
+## Rationale
+[Bullet summary of the key argument. Max 5 bullets.]
+
+## Open Items
+- [Optional] Item requiring follow-up by date/owner.
+```
+
+**Layer 2 — Detailed Record (conditional, expandable under `---`):**
+- Subjects with outcomes (table)
+- Role reservations (grouped by role)
+- Action items (with owner/due fields)
+- Escalation references (only section header present if empty)
+- Downgraded findings log (same — present if populated)
+
+Empty sections collapse or appear collapsed by default. This respects completeness requirements (nothing is lost) while ensuring the first impression matches the end user's need. A production Moderator tool could automate Layer 1 extraction; in fallback mode, a template snippet guides the operator.
+
+Add a new term `Executive Summary` to the glossary and update `AGENTS.md` §7.2 metadata headers with a recommended structure field.
+
+### Effort Estimate: Moderate
+
+Template update to `fallback-mode.md` Phase 5, glossary addition, glossary cross-reference to fallback-mode. No protocol logic changes — purely presentational.
+
+---
+
+## 4. Escalation Experience
+
+### Problem
+
+Escalation records are structurally defined (type, role, severity, blocker description, positions, request, fallback strategy, timeout) but lack readability engineering. When a human operator receives an escalation, they must parse technical jargon embedded in role-specific terminology. Consider this realistic example derived from the protocol:
+
+> "Risk threshold breach raised by Reliability & Security Specialist regarding SUBJ-003 (JWT validation middleware). Critical finding states 'token replay attack vector on token refresh endpoint'. Positions: Architect opposes (claims 'refresh endpoint implements nbf/cliat claims'), Security maintains (claims 'clock skew not bounded')."
+
+A non-security-specialist operator must now evaluate whether the risk is real enough to trust. The format provides position summaries but no independent credibility signal. There is no mechanism for the operator to ask "explain this in plain language" before deciding.
+
+Additionally, the fallback-strategy-and-timeout concept assumes the operator anticipated the possibility. If no timeout is specified (as would happen in ad-hoc fallback sessions), the record says "fallback course of action" without specifying what it actually is, leaving the operator responsible for inventing one retroactively.
+
+### Affected Stakeholders
+Operator (primary — must comprehend and decide quickly). End user (secondary — blocked deliverables create downstream delays).
+
+### Impact Level: High
+
+### Suggestion
+
+Enhance escalation records with three new structural elements:
+
+**1. Plain-language translation layer.** Require every technical blocker description to include a one-sentence "in plain terms" annotation. Example:
+```markdown
+## Blocker Description (Technical)
+Token replay attack vector on token refresh endpoint; clock skew not bounded.
+
+## Blocker Description (Plain Terms)
+An attacker could capture a valid refresh token and reuse it indefinitely because the system doesn't enforce expiration limits, potentially allowing unauthorized access to sensitive data.
+```
+
+**2. Default timeout policy.** Define a project-level default timeout (e.g., "24 hours") stored in a configuration artifact, so fallback sessions never operate without one. The escalation record then simply references the default rather than being ambiguous.
+
+**3. Escalation severity guidance.** Provide brief descriptors next to severity labels so operators understand urgency without domain expertise:
+- `critical`: "Immediate halt — potential data loss, security breach, or system crash."
+- `high`: "Significant issue — delay recommended, work around may be possible."
+- `medium`: "Notable concern — continue with documented reservation."
+
+These additions make escalation comprehension self-service, reducing back-and-forth and decision latency.
+
+### Effort Estimate: Moderate
+
+Updates to `fallback-mode.md` Escalation section, `protocol-core.md` Escalation Protocol, glossary additions (`Blocker Description (Plain Terms)`, `Default Timeout Policy`). Adds required fields to the escalation record template.
+
+---
+
+## 5. Role Understanding and Onboarding
+
+### Problem
+
+Role definitions exist at two abstraction layers. `protocol-core.md` provides detailed descriptions, perspectives, responsibility lists, and typical questions. `fallback-mode.md` condenses each role to a three-column table (Name | Perspective | Responsibility). Neither location functions as an **onboarding entry point** for someone encountering Council for the first time.
+
+Consider a domain expert (e.g., a product manager or DevOps lead) asked to serve as the human operator for a session. They will see terms like "Reliability & Security Specialist" and must infer what that role actually argues for vs. against. Is this person a security auditor? A reliability engineer? A compliance officer? The distinction matters because it affects how they interpret role positions during escalation.
+
+Conversely, consider a second operator encountering a previous session's output and trying to understand why the "Human-Centric Designer" opposed a feature. Without context on what that specific designer was optimizing for (accessibility? cognitive load? trust calibration?), the opposition seems arbitrary.
+
+### Affected Stakeholders
+Both stakeholders — operator may misinterpret role positions; end user may receive inconsistent evaluations if different operators weight role perspectives differently.
+
+### Impact Level: Medium
+
+### Suggestion
+
+Create a **Role Quick-Reference Card** — a standalone Markdown artifact designed specifically for first-time participants. Each card contains:
+
+```markdown
+## <Role Name> — Quick Reference
+
+**What they care about:** [One-line plain-language summary]
+**What they typically oppose:** [Two examples]
+**What they typically support:** [Two examples]
+**When you should trust them over others:** [Specific scenario]
+**Common blind spots:** [Known perspective limitation]
+```
+
+Example for Reliability & Security Specialist:
+```
+**What they care about:** Keeping the system working reliably under failure conditions and protecting data.
+**Typically opposes:** Direct connections between components without auth/narrowing; storing data longer than necessary.
+**Typically supports:** Retry patterns with exponential backoff; defense-in-depth architectures.
+**When to defer to them:** When choosing between convenience and safety — they hold veto power on risk threshold breaches.
+**Blind spot:** May over-engineer protections for low-risk scenarios.
+```
+
+Place this as a separate file (`role-cards.draft`) referenced by both `fallback-mode.md` and the glossary. This serves as a cognitive shortcut during active sessions without cluttering the formal role definitions in `protocol-core.md`.
+
+### Effort Estimate: Quick Win
+
+New file creation with templated role cards. No protocol changes. Can be produced incrementally — start with the three existing roles, add new ones as roles are introduced.
+
+---
+
+## 6. Progress Visibility
+
+### Problem
+
+During a live Council session in fallback mode, there is no aggregated view telling the operator "where we are." The protocol defines five sequential phases, but between phase transitions the operator must manually track:
+
+- How many phases completed? (tracked only in head)
+- Are there N more review cycles or M discussion rounds left? (calculated per-task)
+- Did any role declare `blocked-in-scope`? Should an extra targeted round fire?
+- What files represent completed state vs. pending work?
+
+The session directory structure (`sessions/<id>/`) stores artifacts per phase, but listing files and inferring progress requires interpretation. An operator running concurrent sessions has no dashboard-level visibility. In extreme cases, an operator might restart a phase thinking it hadn't started, wasting tokens and time.
+
+### Affected Stakeholders
+Operator (primary — operational inefficiency and confusion). End user (secondary — unpredictable wait times).
+
+### Impact Level: Medium
+
+### Suggestion
+
+Implement a **Session State Tracker** — a lightweight Markdown file placed in each session directory upon session initialization, updated at phase boundaries:
+
+```markdown
+# Session State: <session-id>
+
+| Phase | Status     | Completed | Notes              |
+|-------|-----------|-----------|--------------------|
+| 1     | ✅ Done    | 2026-11-04T09:00Z | 3 subjects defined |
+| 2     | ⏳ Running | —         | 2/3 reviews received |
+| 3     | ⬚ Pending | —         | —                  |
+| 4     | ⬚ Pending | —         | —                  |
+| 5     | ⬚ Pending | —         | —                  |
+
+Escalation triggered: No
+Targeted round active: No
+Current time: 2026-11-04T09:12Z
+Estimated remaining: ~10 minutes
+```
+
+In fallback mode, the operator fills this manually at each transition (takes 10 seconds). A future Moderator implementation would maintain this programmatically. A standardized filename (`SESSION-STATE.md`) ensures consistency across sessions.
+
+Pair this with a project-level status board file (`status-board.md` or similar) where the operator can paste one-line status snapshots for active sessions, enabling at-a-glance multi-session management.
+
+### Effort Estimate: Quick Win
+
+New file templates added to the documentation package. Manual maintenance in fallback mode; automation-ready structure for future Moderator. Minimal process overhead.
+
+---
+
+## 7. Language Barrier and Translation Quality Control
+
+### Problem
+
+Technical English is the authoritative source; Russian translations exist for convenience (`project-concept-RU.md`, `protocol-core-RU.md`, `project-reference.draft-RU.md`). The sync mechanism (§3.3 AGENTS.md) prescribes a "fast version check" comparing section counts, heading structures, and paragraph positions. If structural mismatches are detected, only changed portions are retranslated. Otherwise, consistency is assumed.
+
+This approach works at the current scale (3 EN files × 3 RU files) but introduces several risk vectors:
+
+**Staleness propagation:** Section-count matching catches obvious drift but misses subtle content divergence — e.g., a paragraph was rewritten (same count, same headings) but the Russian side was never updated because the heuristic concluded alignment. With no semantic diff capability, a mechanical checker cannot detect this.
+
+**Glossary drift:** English terms evolve through usage; new terms enter via role additions, escalation refinements, or consensus-document conventions. If the glossary is updated in English but the Russian equivalent section is not translated correspondingly, the bilingual reader encounters unexplained terms on one side but not the other.
+
+**Quality inconsistency:** Different operators or translators may render the same term differently across sessions. "Critical Finding Justification" might become "Обоснование критического вывода" in one file and something else in another, depending on who performed the last sync. Over time, terminological inconsistency erodes the utility of Russian variants as reliable mirrors.
+
+### Affected Stakeholders
+Both — operators relying on Russian docs for comprehension may miss nuance; end users reading Russian versions face inconsistent experience.
+
+### Impact Level: Medium-High
+
+### Suggestion
+
+**Short-term (within current scope):**
+Add a **Translation Divergence Warning** to the sync workflow. Whenever a Russian file is touched after an English change, append a visible marker at the top of the Russian document's changelog block:
+
+```
+<!-- ⚠️ TRANSLATION SYNCED: 2026-11-04 — English changed in §3.2, §7.4. Verify completeness. -->
+```
+
+This creates a human-readable alert surface without requiring automated verification.
+
+**Medium-term (recommended backlog item):**
+Require explicit **sync scope declarations**. Instead of assuming structural equivalence, the updater must annotate which sections were modified:
+
+```
+<!-- SYNC SCOPE: §2.1 minor wording → updated. §4.3 verified consistent. -->
+```
+
+This turns implicit assumptions into explicit records. The manifest could carry a `last_sync_details` field to track granularity over time.
+
+**Long-term (Moderator-era improvement):**
+When the code-based Moderator ships, add a periodic consistency scanner that flags EN/RU pairs where semantic similarity falls below a configurable threshold, triggering manual review.
+
+Update glossary definition for `Synced` field semantics; add a new term `Translation Divergence` to the glossary.
+
+### Effort Estimate: Moderate
+
+Procedural change to §3.3 workflow. Updates to changelog conventions in affected documents and manifest metadata. New glossary term.
+
+---
+
+## 8. Feedback Loop
+
+### Problem
+
+The protocol is fully forward-facing: task in → deliberation → consensus out. Nothing flows backward. After receiving a Consensus Document, the end user has no recorded mechanism to indicate whether the output was useful, incomplete, misleading, or perfectly adequate. This absence means:
+
+1. **No learning signal.** The framework cannot detect systematic failures — e.g., "Architect consistently overlooks cost implications" or "Consensus Documents are too long for practical use" — because nobody reported those patterns back.
+
+2. **No accountability.** If a Consensus Document leads to a bad outcome, there is no way to reconstruct whether the problem was the reasoning or the task specification. No retrospective channel exists.
+
+3. **No satisfaction metric.** The backlog evolves through ideas (`backlog.md`), but there is no telemetry on what users actually value in the output. The "Scenario-driven role assignment" idea (the only backlog item to date) suggests experimentation is welcome, but there is no baseline measurement.
+
+4. **No exit path.** An operator who finds the process frustrating has no structured way to say "this didn't work for me." The implicit alternative is abandoning Council entirely, with no diagnostic captured.
+
+### Affected Stakeholders
+Both — end user cannot influence evolution; operator cannot signal friction.
+
+### Impact Level: Medium (currently latent — grows with adoption)
+
+### Suggestion
+
+Add a **Post-Session Feedback Artifact** — a minimal structured attachment appended to every Consensus Document, containing three fields:
+
+```markdown
+## Feedback (optional, for internal improvement)
+
+- Was the decision actionable? [Yes / Partially / No]
+- Main gap: [None / Too verbose / Missing context / Wrong focus / Other]
+- Would you use Council again for this type of task? [Yes / Maybe / No]
+- Comments: [Free text]
+```
+
+Implementation approaches, ordered by increasing sophistication:
+
+1. **Paper-clip variant (fallback-mode compatible).** A Markdown snippet copied at the bottom of each Consensus Document. The end user fills it manually and files it alongside the document. Zero process overhead.
+
+2. **Feedback folder variant.** All filled-out feedback forms accumulate in `feedback/` within each session directory. A periodic aggregator reads them into a summary file (`FEEDBACK-SUMMARY.md`) for pattern detection.
+
+3. **Integrated feedback channel (Moderator-era).** A dedicated prompt or API hook captures structured feedback automatically at task close, appending it to the session state. Enables quantitative metrics over time.
+
+Regardless of approach, establish a quarterly **Feedback Review** event where accumulated feedback shapes backlog prioritization (`backlog.md`). Close the loop visibly: "Based on operator feedback, we added task tiers (see issue #X)."
+
+Add terms `Feedback Artifact`, `Post-Session Feedback`, and `Feedback Review` to the glossary.
+
+### Effort Estimate: Quick Win
+
+A Markdown snippet added to the Consensus Document template. The paper-clip variant requires no infrastructure, no tools, no protocol changes — just a convention.
+
+---
+
+## Summary Matrix
+
+| # | Area                          | Impact    | Effort       | Priority |
+|---|-------------------------------|-----------|--------------|----------|
+| 1 | Operator cognitive load       | High      | Quick win    | P1       |
+| 2 | Task formulation burden       | Medium    | Moderate     | P2       |
+| 3 | Output readability            | Med-High  | Moderate     | P2       |
+| 4 | Escalation experience         | High      | Moderate     | P1       |
+| 5 | Role understanding/onboarding | Medium    | Quick win    | P2       |
+| 6 | Progress visibility           | Medium    | Quick win    | P3       |
+| 7 | Language barrier/translations | Med-High  | Moderate     | P2       |
+| 8 | Feedback loop                 | Medium    | Quick win    | P3       |
+
+---
+
+## Recommended Implementation Order
+
+**Iteration 1 (quick wins, low risk):** Items 1, 5, 6, 8 — templates and conventions only, no protocol changes. Can be implemented concurrently.
+
+**Iteration 2 (moderate, requires doc coordination):** Items 2, 3, 4 — introduces new structural elements across `protocol-core.md` and `fallback-mode.md`. Should be sequenced because they touch related sections (phase definitions, artifact formats).
+
+**Iteration 3 (ongoing maintenance):** Item 7 — translation quality controls become part of the operating rhythm, not a one-time change. Best introduced after Iteration 1 establishes a feedback habit.
+
+---
+
+*End of document.*
