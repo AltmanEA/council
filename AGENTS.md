@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.3.0
+Version: 0.4.0
 Status: active
 Last Modified: 2026-11-04
 changelog-path: CHANGELOGS/agents.changes.md
@@ -164,3 +164,20 @@ Changelog entries live in `CHANGELOGS/<id>.changes.md`, not inside document bodi
 ## 8. Compliance Verification
 
 At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian checks performed per §3.3, all terms exist in the glossary, all cross-references resolve, changelog entries appended. Fix failures before considering the session complete.
+
+---
+
+## 9. Subagent Tools
+
+### 9.1 Purpose
+
+The primary agent may delegate certain documentation tasks to specialized subagent tools. These subagents are NOT part of the Council framework — they are operational instruments designed to reduce the mechanical workload described in §5.2. Each subagent has its own instruction document defining its capabilities, trust levels, and escalation rules.
+
+When delegating to a subagent:
+
+- The primary agent remains responsible for presenting proposals to the human operator and obtaining approval at step (5).
+- The subagent produces work products (proposed changes, audit reports, diffs) but the primary agent performs the final approval gate before committing.
+- Trust-level `safe` operations by a subagent are treated as approved by the primary agent (the delegation itself serves as consent).
+- Trust-level `review` operations require explicit human approval — the subagent's output becomes the basis of the proposal presented at step (4).
+
+Referenced subagent instruction documents are stored in `subagents/<name>.instructions` alongside this file. They are not added to `docs-manifest.yaml` because they operate on the tooling layer rather than being subject-matter documentation artifacts.

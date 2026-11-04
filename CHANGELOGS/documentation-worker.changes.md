@@ -1,0 +1,1 @@
+<!-- CHANGES v0.1.0: Initial creation of Documentation Worker subagent instructions. Defined two-level trust model (safe/review), work request/response contracts, escalation criteria, safety protocol with git-based rollback, compliance checklist mapping to AGENTS.md sections 2–8. -->
