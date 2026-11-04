@@ -1,3 +1,4 @@
+<!-- CHANGES v0.4.1: Updated §2.4 reference path from fallback/fallback-mode.md to fallback/index.md following file rename convention (§7.1). -->
 <!-- CHANGES v0.4.0: Added §9 Subagent Tools — defined how the primary agent may delegate documentation tasks to auxiliary subagents like Documentation Worker, with trust-level segmentation (safe/review). Updated §5.1 scope note. -->
 <!-- CHANGES v0.3.0: Redesign §5.2 — replaced 7-step linear flow with 8-step three-phase process (Understand → Align → Execute). Agent MUST NOT modify any file before explicit Approve from user. Added Propose step as mandatory scope confirmation. Split Phase labels for clarity. -->
 <!-- CHANGES v0.2.0: Restructured documentation layout — hierarchical folders, moved CHANGES to CHANGELOGS/, removed language field from manifest and metadata. Updated paths, cross-references, and all related sections (§2, §3, §4, §7). -->

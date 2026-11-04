@@ -1,10 +1,4 @@
 # Session Consolidation Prompt
-Version: 0.1.0
-Status: draft
-Last Modified: 2026-11-04
-Abstraction: reference
-Source: fallback/
-changelog-path: CHANGELOGS/session-consolidation-prompt.changes.md
 
 ---
 
@@ -128,4 +122,4 @@ Before writing the final version, verify:
 
 ---
 
-*Aligned with fallback-mode.md Phase 4–5 workflow.*
+*Aligned with fallback/index.md Phase 4–5 workflow.*

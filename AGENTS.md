@@ -39,7 +39,7 @@ A **manifest** file (`docs-manifest.yaml` or equivalent index) is the single sou
 
 ### 2.4 Operational Fallback
 
-When the code-based Moderator is not yet implemented, the file `fallback/fallback-mode.md` defines the substitute procedure using named subagents launched through this agent harness. It covers role assignment, output structure, phase sequence, and conflict aggregation rules. Refer to it whenever executing a Council session without tooling support.
+When the code-based Moderator is not yet implemented, the file `fallback/index.md` defines the substitute procedure using named subagents launched through this agent harness. It covers role assignment, output structure, phase sequence, and conflict aggregation rules. Refer to it whenever executing a Council session without tooling support.
 
 ---
 

@@ -1,9 +1,4 @@
 # Session Task Brief Template
-Version: 0.1.0
-Status: draft
-Last Modified: 2026-11-04
-Abstraction: reference
-changelog-path: CHANGELOGS/session-task-brief-template.changes.md
 
 ---
 

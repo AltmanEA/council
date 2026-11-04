@@ -2,7 +2,6 @@
 Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-04
-Source: project-concept/index.md
 Abstraction: protocol
 changelog-path: CHANGELOGS/protocol-core.changes.md
 

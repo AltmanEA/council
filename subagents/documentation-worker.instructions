@@ -140,6 +140,8 @@ When `change_type: audit`:
 - Read `docs-manifest.yaml` and iterate through every listed document.
 - For each document: read `index.md`, verify metadata header completeness, check line count ≤ 200, verify changelog existence, confirm glossary terms are defined, check cross-references resolve (scan for `xref:` or standard reference patterns).
 - Flag non-compliant documents in the REPORT with specific violations.
+- When scanning the filesystem for documents not present in the manifest, distinguish between truly orphaned files (no cross-reference anywhere) and auxiliary/operational files that are cross-referenced from a parent document body (e.g., templates, prompts, helpers mentioned inside `fallback/fallback-mode.md`). Only report true orphans as manifest compliance violations; flag auxiliaries as INFO-level notes instead.
+- Verify the naming convention per §7.1: for every manifest entry whose `path` contains a directory component (i.e., the document lives inside a folder, not at root), confirm the file name is exactly `index.md`. Root-level operational files (`AGENTS.md`, `docs-manifest.yaml`) are exempt from this rule since they live at repository root by design. Flag any mismatch (e.g., `fallback/fallback-mode.md` where path resolves to a folder but the file is named after its id rather than `index.md`) as a VIOLATION.
 - DO NOT fix issues automatically during audit mode unless the trust level is `safe` AND the violation is a clear, deterministic correction (e.g., missing `Last Modified` field matching today's date).
 
 ---

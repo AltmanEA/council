@@ -2,7 +2,6 @@
 Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
-Source: project-concept/index.md
 Abstraction: reference
 changelog-path: CHANGELOGS/project-reference.changes.md
 
