@@ -1,6 +1,6 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-04
+# Updated: 2026-11-04 (name: "Council" — v0.3.1 rollout)
 
 documents:
   - id: agents
@@ -22,8 +22,8 @@ documents:
 
   - id: project-concept
     path: project-concept.md
-    title: AI-Agent Collaborative Design Framework — Conceptual Overview
-    version: 0.3.0
+    title: Council — Conceptual Overview
+    version: 0.3.1
     status: draft
     last_modified: 2026-11-04
     language: en
@@ -31,8 +31,8 @@ documents:
 
   - id: project-concept-ru
     path: project-concept-RU.md
-    title: Обзор концепции фреймворка
-    version: 0.3.0
+    title: Концепция Council — Обзор
+    version: 0.3.1
     status: draft
     last_modified: 2026-11-04
     language: ru
@@ -43,7 +43,7 @@ documents:
   - id: protocol-core
     path: protocol-core.md
     title: Protocol Core
-    version: 0.3.0
+    version: 0.3.1
     status: draft
     last_modified: 2026-11-04
     language: en
@@ -52,7 +52,7 @@ documents:
   - id: protocol-core-ru
     path: protocol-core-RU.md
     title: Протокол взаимодействия
-    version: 0.3.0
+    version: 0.3.1
     status: draft
     last_modified: 2026-11-04
     language: ru
@@ -62,8 +62,8 @@ documents:
 
   - id: project-reference
     path: project-reference.draft
-    title: Project Reference (Draft) — Technical Implementation, Artifacts, Roadmap
-    version: 0.3.0
+    title: Council Reference (Draft) — Technical Implementation, Artifacts, Roadmap
+    version: 0.3.1
     status: draft
     last_modified: 2026-11-04
     language: en
@@ -71,8 +71,8 @@ documents:
 
   - id: project-reference-ru
     path: project-reference.draft-RU.md
-    title: Справочник проекта (Черновик)
-    version: 0.3.0
+    title: Справочник Council (Черновик)
+    version: 0.3.1
     status: draft
     last_modified: 2026-11-04
     language: ru

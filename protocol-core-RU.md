@@ -1,16 +1,17 @@
 # Протокол взаимодействия
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
 Language: ru
-Source: project-concept.md
+Source: protocol-core.md
 Synced: 2026-11-04
 Abstraction: protocol
+<!-- CHANGES v0.3.1: Updated per EN revision — replaced "фреймворка" with "Council". -->
 <!-- CHANGES v0.3.0: Extracted from PROJECT-CONCEPT.md. Covers role model, interaction protocol phases, and escalation logic. -->
 
 ## Модель ролей
 
-Роли назначаются в зависимости от контекста задачи. Начальный набор включает три ключевые роли; новые добавляются по мере развития фреймворка. Каждая роль определяется своей перспективой, зоной ответственности и промпт-шаблоном.
+Роли назначаются в зависимости от контекста задачи. Начальный набор включает три ключевые роли; новые добавляются по мере развития Council. Каждая роль определяется своей перспективой, зоной ответственности и промпт-шаблоном.
 
 ### 1. Architect
 

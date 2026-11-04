@@ -1,6 +1,12 @@
 # Documentation Agent Instructions (AGENTS.md)
+Version: 0.1.1
+Status: active
+Last Modified: 2026-11-04
+Language: en
+<!-- CHANGES v0.3.1: Replaced "the collaborative design framework" with "Council" as project name reference. -->
+<!-- CHANGES v0.1.0: Initial version — documentation process guide per AGENTS.md §7.2 metadata header convention. -->
 
-This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `PROJECT-CONCEPT.md`, which describes the collaborative design framework.
+This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `PROJECT-CONCEPT.md`, which describes Council.
 
 ---
 

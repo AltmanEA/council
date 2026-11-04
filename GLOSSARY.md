@@ -1,8 +1,9 @@
 # Glossary
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
 Language: en
+<!-- CHANGES v0.3.1: Added "Council" term in Project section — canonical project identifier and shorthand reference. -->
 <!-- CHANGES v0.3.0: Added metadata header per AGENTS.md §7.2. Updated version to align with project documents after split. -->
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
@@ -104,6 +105,12 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 ## Resolution
 
 **Resolution** (Резолюция) The final decision or outcome of a task processing cycle — either a fully resolved Consensus Document, a conditionally resolved document with reservations, or an escalated item forwarded to the human operator for a binding decision. In protocol terms, resolution is the conclusion of a session's collaborative planning activity.
+
+---
+
+## Project
+
+**Council** The name of the AI-Agent Collaborative Design Framework project. Used as a canonical identifier and shorthand reference across all documentation (e.g., "the Council framework," "Council protocol"). Provides a stable named entity for cross-referencing without repeated use of the full title.
 
 ---
 

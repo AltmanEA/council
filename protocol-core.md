@@ -1,15 +1,16 @@
 # Protocol Core
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
 Language: en
 Source: project-concept.md
 Abstraction: protocol
+<!-- CHANGES v0.3.1: Replaced "framework" with "Council" as canonical project name where referring to the project itself. -->
 <!-- CHANGES v0.3.0: Extracted from project-concept.md (was lines 73–162). Covers role model, interaction protocol phases, and escalation logic. -->
 
 ## Role Model
 
-Roles are assigned based on task context. The initial set includes three key roles; new ones are added as the framework evolves. Each role is defined by its perspective, areas of responsibility, and prompt template.
+Roles are assigned based on task context. The initial set includes three key roles; new ones are added as Council evolves. Each role is defined by its perspective, areas of responsibility, and prompt template.
 
 ### 1. Architect
 

@@ -1,11 +1,12 @@
-# Справочник проекта (Черновик)
-Version: 0.3.0
+# Справочник Council (Черновик)
+Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
 Language: ru
-Source: project-concept.md
+Source: project-reference.draft
 Synced: 2026-11-04
 Abstraction: reference
+<!-- CHANGES v0.3.1: Updated per EN revision — title changed to "Council". -->
 <!-- CHANGES v0.3.0: Extracted from PROJECT-CONCEPT.md. Technical implementation, artifact definitions, roadmap. Awaiting approval before promoting to .md. -->
 
 ---
@@ -66,4 +67,4 @@ Abstraction: reference
 - Общий чат или разговорный искусственный интеллект
 - Управление проектами шире рамки одной задачи
 
-Эти возможности могут быть реализованы поверх фреймворка, но не являются частью его базового дизайна.
+Эти возможности могут быть реализованы поверх Council, но не являются частью его базового дизайна.
