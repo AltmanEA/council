@@ -3,7 +3,7 @@ Version: 0.1.0
 Status: active
 Last Modified: 2026-11-04
 Abstraction: conceptual
-<!-- Changelog: CHANGELOGS/backlog.changes.md -->
+changelog-path: CHANGELOGS/backlog.changes.md
 
 ---
 

@@ -3,7 +3,7 @@ Version: 0.1.0
 Status: draft
 Last Modified: 2026-11-04
 Abstraction: reference
-<!-- Changelog: CHANGELOGS/session-task-brief-template.changes.md -->
+changelog-path: CHANGELOGS/session-task-brief-template.changes.md
 
 ---
 

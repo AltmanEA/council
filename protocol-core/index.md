@@ -4,7 +4,7 @@ Status: draft
 Last Modified: 2026-11-04
 Source: project-concept/index.md
 Abstraction: protocol
-<!-- Changelog: CHANGELOGS/protocol-core.changes.md -->
+changelog-path: CHANGELOGS/protocol-core.changes.md
 
 ## Role Model
 

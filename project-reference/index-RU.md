@@ -3,7 +3,7 @@ Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
 Source: project-reference/index.md
-<!-- Changelog: CHANGELOGS/project-reference.changes.md -->
+changelog-path: CHANGELOGS/project-reference.changes.md
 <!-- See also: project-reference/index.md (en) -->
 
 ---

@@ -3,7 +3,7 @@ Version: 0.2.0
 Status: draft
 Last Modified: 2026-11-04
 Abstraction: reference
-<!-- Changelog: CHANGELOGS/fallback-mode.changes.md -->
+changelog-path: CHANGELOGS/fallback-mode.changes.md
 
 ---
 

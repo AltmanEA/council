@@ -3,7 +3,7 @@ Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-04
 Source: protocol-core/index.md
-<!-- Changelog: CHANGELOGS/protocol-core.changes.md -->
+changelog-path: CHANGELOGS/protocol-core.changes.md
 <!-- See also: protocol-core/index.md (en) -->
 
 ## Модель ролей

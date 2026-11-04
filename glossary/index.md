@@ -2,7 +2,7 @@
 Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-04
-<!-- Changelog: CHANGELOGS/glossary.changes.md -->
+changelog-path: CHANGELOGS/glossary.changes.md
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
 

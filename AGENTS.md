@@ -2,7 +2,7 @@
 Version: 0.3.0
 Status: active
 Last Modified: 2026-11-04
-<!-- Changelog: CHANGELOGS/agents.changes.md -->
+changelog-path: CHANGELOGS/agents.changes.md
 
 This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `project-concept/index.md`, which describes Council.
 
@@ -45,7 +45,7 @@ When the code-based Moderator is not yet implemented, the file `fallback/fallbac
 
 ## 2.5 Changelog Storage
 
-Version history is stored separately from document content in `CHANGELOGS/<id>.changes.md`. Each document's header contains a single comment pointing to its changelog file (`<!-- Changelog: CHANGELOGS/<id>.changes.md -->`). Agents read the changelog on-demand when editing a document; they append new entries to the appropriate changelog file rather than embedding CHANGES blocks in document bodies.
+Version history is stored separately from document content in `CHANGELOGS/<id>.changes.md`. Each document's header contains a single reference line pointing to its changelog file (`changelog-path: CHANGELOGS/<id>.changes.md`). Agents read the changelog on-demand when editing a document; they append new entries to the appropriate changelog file rather than embedding CHANGES blocks in document bodies.
 
 ---
 
@@ -137,7 +137,7 @@ Version: X.Y.Z
 Status: active | draft | deprecated
 Last Modified: <date>
 Source: <english-path>          # Russian files only — path to index.md
-<!-- Changelog: CHANGELOGS/<id>.changes.md -->
+changelog-path: CHANGELOGS/<id>.changes.md
 Abstraction: conceptual | protocol | format | reference   # during drafting
 ```
 
@@ -157,7 +157,7 @@ Bump patch (X.Y.**Z**) for typos/formatting, minor (X.**Y**.Z) for content addit
 
 ### 7.6 Changelog Storage
 
-Changelog entries live in `CHANGELOGS/<id>.changes.md`, not inside document bodies. When making an edit, the agent appends a new entry at the top of the relevant changelog file using the format: `<!-- CHANGES vX.Y.Z: description of change. -->`. The document body only contains a single reference comment: `<!-- Changelog: CHANGELOGS/<id>.changes.md -->`. During document reads, agents may optionally load the changelog by resolving this reference path.
+Changelog entries live in `CHANGELOGS/<id>.changes.md`, not inside document bodies. When making an edit, the agent appends a new entry at the top of the relevant changelog file using the format: `<!-- CHANGES vX.Y.Z: description of change. -->`. The document body only contains a single reference line: `changelog-path: CHANGELOGS/<id>.changes.md`. During document reads, agents may optionally load the changelog by resolving this reference path.
 
 ---
 

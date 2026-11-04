@@ -3,7 +3,7 @@ Version: 0.3.1
 Status: draft
 Last Modified: 2026-11-04
 Abstraction: conceptual
-<!-- Changelog: CHANGELOGS/project-concept.changes.md -->
+changelog-path: CHANGELOGS/project-concept.changes.md
 
 ## Purpose
 

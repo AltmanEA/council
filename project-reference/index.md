@@ -4,7 +4,7 @@ Status: draft
 Last Modified: 2026-11-04
 Source: project-concept/index.md
 Abstraction: reference
-<!-- Changelog: CHANGELOGS/project-reference.changes.md -->
+changelog-path: CHANGELOGS/project-reference.changes.md
 
 ---
 

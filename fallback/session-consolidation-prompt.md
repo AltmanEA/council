@@ -4,7 +4,7 @@ Status: draft
 Last Modified: 2026-11-04
 Abstraction: reference
 Source: fallback/
-<!-- Changelog: CHANGELOGS/session-consolidation-prompt.changes.md -->
+changelog-path: CHANGELOGS/session-consolidation-prompt.changes.md
 
 ---
 
