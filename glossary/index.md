@@ -114,7 +114,7 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **Council** The name of the AI-Agent Collaborative Design Framework project. Used as a canonical identifier and shorthand reference across all documentation (e.g., "the Council framework," "Council protocol"). Provides a stable named entity for cross-referencing without repeated use of the full title.
 
-**Documentation Worker** A specialized auxiliary subagent tool responsible for mechanical and structural operations on project documentation artifacts per `AGENTS.md` rules. NOT part of the Council framework itself — it is an operational instrument delegated by the primary agent to handle updates, splits, translations, and compliance audits under defined trust levels.
+**Documentation Worker** A reusable skill providing mechanical and structural operations on project documentation artifacts. NOT part of the Council framework itself — it is an operational instrument provided as a skill and invoked via the skill tool by the primary agent to handle updates, splits, translations, and compliance audits under defined trust levels. Full contract and capabilities are at `/.agents/skills/documentation/SKILL.md`.
 (Рабочий документацией) Вспомогательный субагент-инструмент, отвечающий за механические и структурные операции над артефактами документации проекта согласно правилам `AGENTS.md`. НЕ является частью самой структуры Консилиум — инструмент, делегируемый основным агентом для выполнения обновлений, разбивки документов, переводов и аудитов соответствия на основе определённых уровней доверия.
 
 ---
