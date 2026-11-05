@@ -28,7 +28,7 @@ documents:
   - id: glossary
     path: glossary/index.md
     title: Glossary
-    version: 0.4.0
+    version: 0.5.0
     status: draft
     abstraction: reference
     has_translation: index-RU.md
@@ -41,10 +41,17 @@ documents:
     abstraction: conceptual
     has_translation: index-RU.md
 
+  - id: scenario
+    path: scenario/index.md
+    title: Scenarios — Declarative Role & Protocol Configuration
+    version: 0.1.0
+    status: draft
+    abstraction: protocol
+
   - id: protocol-core
     path: protocol-core/index.md
     title: Protocol Core
-    version: 0.4.0
+    version: 0.5.0
     status: draft
     abstraction: protocol
     has_translation: index-RU.md
@@ -65,4 +72,5 @@ documents:
 # - fallback/index.md references protocol-core/index.md (uses the same 5-phase interaction protocol structure)
 # - fallback/index.md defines operational procedure for subagent-based execution before Moderator is implemented
 # - glossary/index.md defines terms used across all documents above
+# - scenario/index.md references glossary/index.md (Scenario term definition), protocol-core/index.md (base five-phase protocol structure, Role Activation Rules)
 # - RU files (index-RU.md) mirror EN source files; synced date tracked manually via git diff

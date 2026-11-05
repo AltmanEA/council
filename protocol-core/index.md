@@ -1,5 +1,5 @@
 # Protocol Core
-Version: 0.4.0
+Version: 0.5.0
 Status: draft
 Last Modified: 2026-11-04
 Abstraction: protocol
@@ -100,7 +100,7 @@ Not all assigned roles participate in every session. As the role set grows, univ
 - Maximum role count under the current sequential protocol is **five**. Beyond that, the parallel review mode (Roadmap Phase 2) must be implemented before adding more participants.
 - A task that activates fewer than all Core-tier roles must include an operator-stated reason.
 
-**Scenario-driven assignment** (see backlog/index.md) will eventually replace manual justification with declarative scenario templates. Until then, activation is operator-managed with documented rationale.
+**Scenario-driven assignment.** A Scenario (`scenario/index.md`) declares which Roles activate, parameters the base five-phase protocol, and optionally defines pre-phases. When no Scenario is specified, activation falls back to the tier-based defaults (§Role Activation Tiers). Until a full scenario catalog exists, the tier model serves as the default overlay mechanism.
 
 ---
 

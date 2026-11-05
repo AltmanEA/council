@@ -1,5 +1,5 @@
 # Glossary
-Version: 0.4.0
+Version: 0.5.0
 Status: draft
 Last Modified: 2026-11-04
 changelog-path: CHANGELOGS/glossary.changes.md
@@ -31,6 +31,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Task** (Задача) A user-submitted item describing what needs to be designed or planned — typically a module, function, or system capability. A task includes scope, context, constraints, and explicit risks or open questions.
 
 **Subject** (Объект обсуждения) A component, interface, or decision point identified during Phase 1 that a task concerns. Each subject is assigned a stable identifier used for cross-referencing in reviews, findings, and consensus documents.
+
+**Scenario** (Сценарий) A declarative configuration that specifies which Roles activate, how the base five-phase protocol is parameterized (round counts, subject criteria, pre-phase definitions), and any safety constraints for solving problems of a particular kind. A Scenario produces Sessions when executed with a Task. Scenarios configure but never redefine the protocol structure.
 
 ---
 
@@ -127,4 +129,4 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 ---
 
-*Aligned with project documents v0.4.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*
+*Aligned with project documents v0.5.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*
