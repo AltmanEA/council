@@ -1,6 +1,7 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-04 — bump agents version 0.5.0 — delegation model refactored
+# Updated: 2026-11-07 — bump agents version 0.5.0 — delegation model refactored
+# Added platform-architecture document (ADR) recording five binding architectural resolutions from consilium.
 # Language field removed per §7.2 update. RU translations are inline (index-RU.md) and indicated by has_translation.
 
 documents:
@@ -10,6 +11,13 @@ documents:
     version: 0.5.0
     status: active
     abstraction: reference
+
+  - id: architect-analysis
+    path: architect-analysis/index.md
+    title: Architect Analysis — Platform Direction for Council
+    version: 0.1.0
+    status: draft
+    abstraction: conceptual
 
   - id: backlog
     path: backlog/index.md
@@ -32,6 +40,35 @@ documents:
     status: draft
     abstraction: reference
     has_translation: index-RU.md
+
+  - id: planned-architecture
+    path: planned-architecture/index.md
+    title: Planned Architecture (Complete)
+    version: 0.1.0
+    status: draft
+    abstraction: conceptual
+
+  - id: platform-architecture-spec
+    path: platform-architecture-spec/index.md
+    title: Platform Architecture Specification (Complete)
+    version: 0.1.0
+    status: draft
+    abstraction: conceptual
+
+  - id: platform-architecture
+    path: platform-architecture/index.md
+    title: Platform Architecture Decisions (ADR)
+    version: 0.1.0
+    status: draft
+    abstraction: reference
+    has_translation: index-RU.md
+
+  - id: platform-direction
+    path: protocol-core/platform-direction-analysis.md
+    title: Platform Direction Analysis — Reliability & Security
+    version: 0.1.0
+    status: draft
+    abstraction: reference
 
   - id: project-concept
     path: project-concept/index.md
@@ -74,3 +111,7 @@ documents:
 # - glossary/index.md defines terms used across all documents above
 # - scenario/index.md references glossary/index.md (Scenario term definition), protocol-core/index.md (base five-phase protocol structure, Role Activation Rules)
 # - RU files (index-RU.md) mirror EN source files; synced date tracked manually via git diff
+# - platform-direction (protocol-core/platform-direction-analysis.md) analyzes all three platform approaches through reliability & security dimensions; referenced by protocol-core, fallback-mode, project-reference
+# - architect-analysis (architect-analysis/index.md) evaluates structural/escalation path implications of each platform approach
+# - human-centric-analysis (human-centric-analysis/index.md) evaluates interaction modalities, cognitive load, trust calibration for operator-facing architecture decisions
+# - planned-architecture/ (index + layer-0, layer-1, layer-2, decisions/) consolidated view of accepted multi-layered architecture with six B-derived integrations; cross-references: decisions/index.md references platform-architecture/index.md (ADR rationale), layer-0.md / layer-1.md / layer-2.md reference index.md
