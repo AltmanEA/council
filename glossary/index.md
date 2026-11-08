@@ -1,7 +1,7 @@
 # Glossary
-Version: 0.5.0
+Version: 0.7.0
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 changelog-path: CHANGELOGS/glossary.changes.md
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
@@ -127,6 +127,18 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **LLM Abstraction Layer** (Абстракция над LLM) A single entry point (`get_model()`) that abstracts away provider-specific details, enabling transparent model swapping without touching protocol or role logic. MVP uses one provider; replacement is trivial during scaling.
 
+**Intent Record** (Журнал намерения) A crash-recovery journal file written to `documenter/intent/` before the first rename in a multi-file commit. Records the full set of intended file transitions (`before_hash`, `after_hash`, `tmp_path`) to enable roll-forward reconciliation at cold-start. Managed exclusively by Documenter; hidden from the operator.
+
+**Roll-forward** (Прямая докатка) Reconciliation procedure that re-applies staged renames from leftover `.tmp` files when no external modification occurred since the crash. Opposite of rollback; used by Documenter when an intent record is found at cold-start and all target files still match their `before_hash`.
+
+**Commit Order** (Порядок коммита) The fixed sequence of renames in a multi-file commit: document content → `index-RU.md` → changelog → `docs-manifest.yaml` → `documenter/hashes.json`. Chosen so that a crash before the manifest step leaves orphaned but readable files rather than dangling cross-references.
+
+**Trust Floor** (Базовый уровень доверия) The minimum trust level permitted for an operation. Two forms: *static floor*, computed at policy load from `change_type` and used to validate `allowed_operations`; and *derived floor* (dynamic), computed at invocation from the actual diff and used to validate the caller's request. A request below the derived floor is rejected with `trust_mismatch`.
+
+**Mechanical Edit** (Механическое изменение) A deterministic, reversible change that does not alter semantic content: patch-level version bump, changelog append, metadata or typo/anchor correction, formatting normalization. The normative enumeration is in Documenter §Trust Classification; this term is the glossary-level summary.
+
+**Effective Trust Level** (Фактический уровень доверия) The trust level actually applied to a `delegate()` invocation. Equal to the caller's requested level when that request is at or above the derived floor; never a silently upgraded value.
+
 ---
 
-*Aligned with project documents v0.5.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*
+*Aligned with project documents v0.7.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*

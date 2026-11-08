@@ -35,6 +35,8 @@ constraints: [optional]
 
 Validate all required fields are present. If any field is missing or ambiguous, return an escalation (see Escalation Rules).
 
+**Authority note:** For Documenter-mediated invocations, the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority.
+
 ---
 
 ## Trust Levels

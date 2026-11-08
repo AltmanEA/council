@@ -1,8 +1,8 @@
 # Layer 2 — Integration & Orchestration
 
-Version: 0.1.0
+Version: 0.2.0
 Status: draft
-Last Modified: 2026-11-07
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
@@ -72,6 +72,10 @@ Deterministic lookup table mapping error codes to localized messages. No LLM gen
 Operator-configurable verbosity level: minimal (highly summarized), balanced (default), full (actionable technical details included).
 
 Codified gate enforcement: every new error code requires PR adding both code entry and localization entry simultaneously. CI check fails if new code exists without corresponding localization.
+
+## Documenter Service
+
+On-demand documentation-quality utility. Independent of the role-agent execution path: it does not orchestrate Council sessions and holds no relationship with Layer 1's ScenarioLoader. Exposes two operator-invoked interfaces — `audit()` (read-only compliance diagnostics) and `delegate()` (writes executed through the Documentation Worker skill under a four-tier trust model). Runs only on explicit RPC-style operator invocation; no background processes or file watchers. Full specification: `../documenter-service/index.md`.
 
 ## Typer CLI (deferred to Phase 2)
 

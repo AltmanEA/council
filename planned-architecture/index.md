@@ -1,8 +1,8 @@
 # Planned Architecture
 
-Version: 0.1.0
+Version: 0.2.0
 Status: draft
-Last Modified: 2026-11-07
+Last Modified: 2026-11-09
 Abstraction: conceptual
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
