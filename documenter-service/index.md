@@ -1,8 +1,8 @@
 # Documenter Service
 
-Version: 0.14.0-draft
+Version: 0.15.0-draft
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-08
 Abstraction: protocol
 changelog-path: CHANGELOGS/documenter-service.changes.md
 
@@ -10,15 +10,17 @@ changelog-path: CHANGELOGS/documenter-service.changes.md
 
 ## Purpose
 
-Documenter is a Layer 2 service maintaining documentation quality per `AGENTS.md` rules. It operates as an **on-demand utility** — all functions begin upon explicit operator invocation; no background processes or file watchers run autonomously. It provides two interfaces: `audit()` for read-only reporting and `delegate()` for write operations via the Documentation Worker skill. A four-tier trust model governs delegate() write capabilities. Interface parameter schemas are authoritative in §Interfaces; configuration fields are defined in the Policy Reference (`documenter-service/policy-reference.md`) and runtime data structures in the Configuration Guide (`documenter-service/configuration-guide.md`).
+Documenter is a **Supporting service** outside the three-layer chain, maintaining documentation quality per `AGENTS.md` rules. It operates as an **on-demand utility** — all functions begin upon explicit operator invocation; no background processes or file watchers run autonomously. It provides two interfaces: `audit()` for read-only reporting and `delegate()` for write operations via the Documentation Worker skill. A four-tier trust model governs delegate() write capabilities. Interface parameter schemas are authoritative in §Interfaces; configuration fields are defined in the Policy Reference (`documenter-service/policy-reference.md`) and runtime data structures in the Configuration Guide (`documenter-service/configuration-guide.md`).
 
 ---
 
 ## Architecture Position
 
-Documenter lives in **Layer 2 (Integration & Orchestration)** as an independent on-demand utility, alongside the other Layer 2 interface components (transport adapters, structured input validation, quick-review path, error localization — see `planned-architecture/layer-2.md`). It is not part of the Layer 1 role-agent execution path: ScenarioLoader and RoleAgentFactory belong to Layer 1 (`planned-architecture/layer-1.md`), so no peer/subordinate relationship with ScenarioLoader exists. It does NOT orchestrate Council sessions — it scans, reports, and delegates on demand. No causal dependency between Council orchestration flow and Documenter operations. Invocations are explicit RPC-style calls from the operator; no event-driven subscription or filesystem polling.
+Documenter is a **Supporting service** outside the three-layer chain. It is invoked by the Layer 2 operator surface (an explicit MCP tool call) and, for LLM-backed writes, uses a **Layer 1 execution port** to reach the Documentation Worker. It never calls Layer 2 or Layer 0 directly, and Layer 2 never invokes an LLM on Documenter's behalf. Events and verdicts are returned synchronously to the invoking surface; Documenter keeps no event loop, no subscription, and no filesystem watcher.
 
-Sync mode (the `pre_check` parameter of `audit()`, see §Interfaces) is available for mid-session integrity gates. The operator is the originating actor for all invocations; the gate request is delivered through the **Layer 2 session surface** — an explicit operator command or an RPC-style request (e.g., HTTP POST received by a Layer 2 transport adapter) — and invokes Documenter downward, consistent with the downward-only dependency rule (`planned-architecture/index.md`). Documenter never accepts invocations from Layer 0 or Layer 1; sync mode preserves idle-until-invoked semantics. All modes operate identically under the hood: each invocation performs an independent full scan of the target documents.
+It is not part of the Layer 1 role-agent path: ScenarioLoader and RoleAgentFactory belong to Layer 1 (`planned-architecture/layer-1.md`), so no peer or subordinate relationship with ScenarioLoader exists. Documenter does not orchestrate Council sessions and holds no causal dependency on the orchestration flow. Every invocation is explicit and operator-originated.
+
+Sync mode (`pre_check`, see §Interfaces) is a mid-session integrity gate. The gate request arrives through the Layer 2 operator surface, invokes Documenter, and returns a synchronous verdict to that surface. Documenter never accepts invocations from Layer 0 or Layer 1; sync mode preserves idle-until-invoked semantics. All modes perform an independent full scan of the target documents.
 
 ---
 
@@ -32,7 +34,7 @@ Returns a structured report without touching any write path. Scans documents aga
 |-----------|------|-------------|
 | target_id | string | Document identifier from manifest, or `"*"` for all |
 | severity_min | enum | Minimum severity to include: `low`, `medium`, `high`, `critical`. Default: `low` |
-| pre_check | bool | Mid-session integrity gate flag, set by the Layer 2 session surface at phase boundaries. Identical scan semantics; the report is additionally returned as a synchronous gate verdict to the caller. No write path involved. Default: `false` |
+| pre_check | bool | Mid-session integrity gate flag, set by the Layer 2 operator surface at phase boundaries (see `operator-surface/index.md`, §pre_check Gate). Identical scan semantics; the report is additionally returned as a synchronous gate verdict to the caller. No write path involved. Default: `false` |
 
 | Returns | Type | Description |
 |---------|------|-------------|
@@ -98,7 +100,7 @@ Four deployment tiers governing progressively greater write capability. Each tie
 | 2 | Confirm-per-change | No | Yes, per-item | Apply changes only after individual approve |
 | 3 | Batch approve | Pattern-based | Yes, per-batch with group summaries | Approved patterns auto-apply; critical items require per-item expanded review |
 
-Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field). Both conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
+Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Surface & Escalation specification defines an authenticated, out-of-band approval channel. A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field). Both conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
 
 ### Tier Selection Guidance
 
@@ -126,23 +128,23 @@ Rollback is symmetric: lowering `active_tier` takes effect at the next invocatio
 
 ## Quick Start
 
-One-line getting started path for new operators:
+The MVP invocation path is MCP stdio. Every tool requires an explicit operator call; Tier 2+ writes are disabled (see §Trust Tiers).
 
 ```
-# Step 1 — Read-only audit (Tier 0, no risk)
-documenter audit "*" --severity-min low
+# Step 1 — Read-only audit (Tier 0)
+documenter.audit { "target_id": "*", "severity_min": "low" }
 
-# Step 2 — Review findings, understand trust tiers
-documenter explain-tier --target <doc-id>
-
-# Step 3 — Authorize write (Tier 1, diff preview only)
-# Edit documenter_policy.yml: active_tier: 1
-
-# Step 4 — Execute first delegate change
-documenter delegate --target <doc-id> --diff-view
+# Step 2 — Preview a change (Tier 1, no writes)
+documenter.delegate {
+  "target_id": "<doc-id>",
+  "change_type": "update",
+  "trust_level": "review",
+  "diff": "<machine-readable diff>",
+  "audit_id": "<audit_id returned by Step 1>"
+}
 ```
 
-See §Authorization Workflow for tier advancement beyond Tier 1 and `AGENTS.md` for documentation rules this service enforces.
+At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays interlocked until the Operator Surface & Escalation specification defines an out-of-band approval channel. See §Authorization Workflow and `AGENTS.md` for documentation rules this service enforces.
 
 ---
 
@@ -170,7 +172,8 @@ See §Authorization Workflow for tier advancement beyond Tier 1 and `AGENTS.md` 
 - **`documenter-service/policy-reference.md`** — Policy file schema and field reference, operational tuning parameters, authorization workflow checklist
 - **`documenter-service/configuration-guide.md`** — Hash store structure, intent record schema, event schema, glossary compliance settings, RU alignment procedure
 - `protocol-core/index.md` — Protocol enforcement interface (layer boundary)
-- `planned-architecture/layer-2.md` — Layer 2 component inventory (confirms Documenter's architectural position)
+- `planned-architecture/index.md` — layer model and Supporting service placement
+- `planned-architecture/layer-1.md` — execution ports and Auxiliary Agents
 - `fallback/index.md` — Fallback mode operator workflow (used during pre-Moderator phase)
 - `docs-manifest.yaml` — Single source of truth for document layout
 - `glossary/index.md` — Canonical term definitions for compliance verification
@@ -179,4 +182,4 @@ See §Authorization Workflow for tier advancement beyond Tier 1 and `AGENTS.md` 
 
 ---
 
-*Aligned with planned architecture v0.1.0, sess-documenter-consiliums, and v0.4.0 spec split.*
+*Aligned with planned architecture v0.3.0, sess-documenter-consiliums, sess-services-readiness (D3), and v0.4.0 spec split.*

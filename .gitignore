@@ -1,0 +1,3 @@
+# Runtime state — local only, not versioned (sess-services-readiness retention decision)
+sessions/
+documenter/

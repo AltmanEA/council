@@ -5,3 +5,4 @@
 <!-- CHANGES v0.4.0: Added Operations Engineer term. -->
 <!-- CHANGES v0.3.1: Added "Council" term in Project section — canonical project identifier and shorthand reference. -->
 <!-- CHANGES v0.3.0: Added metadata header per AGENTS.md §7.2. Updated version to align with project documents after split. -->
+<!-- CHANGES v0.8.0: Added four architecture terms — Auxiliary Agent (Roles & Agents), Execution Runtime, Execution Port, Supporting Service (Technical Concepts) — to support planned-architecture v0.3.0 (variant C + D3). RU aligned; removed a duplicate Russian-only line under Documentation Worker to restore EN/RU line parity. -->

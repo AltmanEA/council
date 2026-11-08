@@ -1,23 +1,15 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-09 — documenter-service 0.14.0 / documenter-configuration-guide 0.9.0 / documenter-policy-reference 0.4.0 / glossary 0.7.0 — H7 (Trust Classification static/dynamic floor), H8 (multi-file commit), H9-H12 (policy validator, batch job, audit registry, Tier 3 gate).
-# Added platform-architecture document (ADR) recording five binding architectural resolutions from consilium.
+# Updated: 2026-11-08 — added service-contract 0.1.0, execution-runtime 0.1.0, operator-surface 0.1.0 (pre-implementation spec set from sess-services-readiness); planned-architecture 0.3.0 (variant C + D3), documenter-service 0.15.0, configuration-guide 0.9.1, glossary 0.8.0; stale entries removed.
 # Language field removed per §7.2 update. RU translations are inline (index-RU.md) and indicated by has_translation.
 
 documents:
   - id: agents
     path: AGENTS.md
     title: Agent Instructions (Documentation Process Guide)
-    version: 0.5.0
+    version: 0.6.0
     status: active
     abstraction: reference
-
-  - id: architect-analysis
-    path: architect-analysis/index.md
-    title: Architect Analysis — Platform Direction for Council
-    version: 0.1.0
-    status: draft
-    abstraction: conceptual
 
   - id: backlog
     path: backlog/index.md
@@ -29,7 +21,7 @@ documents:
   - id: documenter-service
     path: documenter-service/index.md
     title: Documenter Service (Main Specification)
-    version: 0.14.0
+    version: 0.15.0
     status: draft
     abstraction: protocol
     references:
@@ -39,7 +31,7 @@ documents:
   - id: documenter-configuration-guide
     path: documenter-service/configuration-guide.md
     title: Documenter Configuration Guide (Hash Store, Intent Record, Event Schema)
-    version: 0.9.0
+    version: 0.9.1
     status: draft
     abstraction: reference
     references:
@@ -62,7 +54,7 @@ documents:
   - id: glossary
     path: glossary/index.md
     title: Glossary
-    version: 0.7.0
+    version: 0.8.0
     status: draft
     abstraction: reference
     has_translation: index-RU.md
@@ -70,31 +62,69 @@ documents:
   - id: planned-architecture
     path: planned-architecture/index.md
     title: Planned Architecture (Complete)
+    version: 0.3.0
+    status: draft
+    abstraction: conceptual
+    references:
+      - planned-architecture-layer-0
+      - planned-architecture-layer-1
+      - planned-architecture-layer-2
+      - planned-architecture-decisions
+
+  - id: planned-architecture-layer-0
+    path: planned-architecture/layer-0.md
+    title: Layer 0 — Protocol Enforcement
     version: 0.2.0
     status: draft
-    abstraction: conceptual
+    abstraction: protocol
 
-  - id: platform-architecture-spec
-    path: platform-architecture-spec/index.md
-    title: Platform Architecture Specification (Complete)
-    version: 0.1.0
+  - id: planned-architecture-layer-1
+    path: planned-architecture/layer-1.md
+    title: Layer 1 — Execution Runtime
+    version: 0.2.0
     status: draft
-    abstraction: conceptual
+    abstraction: protocol
 
-  - id: platform-architecture
-    path: platform-architecture/index.md
-    title: Platform Architecture Decisions (ADR)
-    version: 0.1.0
+  - id: planned-architecture-layer-2
+    path: planned-architecture/layer-2.md
+    title: Layer 2 — External Interfaces / Adapters
+    version: 0.3.0
+    status: draft
+    abstraction: protocol
+
+  - id: planned-architecture-decisions
+    path: planned-architecture/decisions/index.md
+    title: Decisions Index (ADR-001–005)
+    version: 0.2.0
     status: draft
     abstraction: reference
-    has_translation: index-RU.md
 
-  - id: platform-direction
-    path: protocol-core/platform-direction-analysis.md
-    title: Platform Direction Analysis — Reliability & Security
+  - id: execution-runtime
+    path: execution-runtime/index.md
+    title: Execution Runtime & Session Lifecycle
     version: 0.1.0
     status: draft
-    abstraction: reference
+    abstraction: protocol
+    references:
+      - service-contract
+      - operator-surface
+
+  - id: operator-surface
+    path: operator-surface/index.md
+    title: Operator Surface & Escalation
+    version: 0.1.0
+    status: draft
+    abstraction: protocol
+    references:
+      - service-contract
+      - execution-runtime
+
+  - id: service-contract
+    path: service-contract/index.md
+    title: Cross-Service Artifact & Event Contract
+    version: 0.1.0
+    status: draft
+    abstraction: format
 
   - id: project-concept
     path: project-concept/index.md
@@ -137,8 +167,6 @@ documents:
 # - glossary/index.md defines terms used across all documents above
 # - scenario/index.md references glossary/index.md (Scenario term definition), protocol-core/index.md (base five-phase protocol structure, Role Activation Rules)
 # - RU files (index-RU.md) mirror EN source files; synced date tracked manually via git diff
-# - platform-direction (protocol-core/platform-direction-analysis.md) analyzes all three platform approaches through reliability & security dimensions; referenced by protocol-core, fallback-mode, project-reference
-# - architect-analysis (architect-analysis/index.md) evaluates structural/escalation path implications of each platform approach
-# - human-centric-analysis (human-centric-analysis/index.md) evaluates interaction modalities, cognitive load, trust calibration for operator-facing architecture decisions
-# - planned-architecture/ (index + layer-0, layer-1, layer-2, decisions/) consolidated view of accepted multi-layered architecture with six B-derived integrations; cross-references: decisions/index.md references platform-architecture/index.md (ADR rationale), layer-0.md / layer-1.md / layer-2.md reference index.md
+# - planned-architecture/ (index + layer-0, layer-1, layer-2, decisions/) consolidated view of accepted multi-layered architecture; layer files reference index.md; decisions/index.md is the stable cross-reference point for ADR-001–005
 # - documenter-service/ three-document set: index.md (protocol: interfaces, trust tiers, safety protocol) → policy-reference.md (reference: policy file schema, operational tuning, authorization workflow) → configuration-guide.md (reference: hash store, intent record, event schema, compliance modes). Policy fields are defined once in policy-reference and consumed by the other two by name.
+# - Pre-implementation spec set (sess-services-readiness): service-contract/index.md defines artifact/event/error schemas consumed by execution-runtime/index.md (Layer 1 runtime, persistence, lifecycle) and operator-surface/index.md (MCP stdio transport, identity, escalation, Documenter invocation). Ordering: service-contract → execution-runtime → operator-surface.

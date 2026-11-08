@@ -1,8 +1,8 @@
 # Documenter Configuration Guide
 
-Version: 0.9.0-draft
+Version: 0.9.1-draft
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-08
 Abstraction: reference
 changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
@@ -111,7 +111,7 @@ The gate is configurable via the `audit_freshness` policy field (default 30 min;
 
 ## Event Schema
 
-Structured events emitted during both audit and delegate phases for consumption by the Layer 2 session surface at phase boundaries (persisted via the append-only audit log below). See §Interfaces (main spec) for severity taxonomy mapping. `audit_id` is present on events emitted during `delegate()` calls that passed the pre-audit gate; absent on `audit()` events and on gate-rejection events.
+Structured events emitted during both audit and delegate phases, returned synchronously to the invoking operator surface (Layer 2) and persisted via the append-only audit log below. See §Interfaces (main spec) for severity taxonomy mapping. `audit_id` is present on events emitted during `delegate()` calls that passed the pre-audit gate; absent on `audit()` events and on gate-rejection events.
 
 ```yaml
 event_type: documenter.issue     # finding/failure events; use documenter.approval for decisions (see below)

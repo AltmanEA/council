@@ -1,0 +1,3 @@
+# Changelog — Execution Runtime & Session Lifecycle
+
+<!-- CHANGES v0.1.0: Initial creation. Variant C: Layer 1 as Execution Runtime with deterministic Moderator + Role/Auxiliary Agents; internal module and import rules; phase state machine and guards; RoleStatus/InvalidFormat and missing-Core-role handling; artifact assembly order; stop-and-resume escalation routing; session directory contract; persistence mechanics (atomic rename, single-writer lock, hash chain); MVP phase-boundary crash semantics; fallback/moderator namespace rule; D3 Supporting service rule; operator status projection; migration path to an Orchestration Core. -->

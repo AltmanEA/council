@@ -1,8 +1,8 @@
 # Layer 0 — Protocol Enforcement
 
-Version: 0.1.0
+Version: 0.2.0
 Status: draft
-Last Modified: 2026-11-07
+Last Modified: 2026-11-08
 Abstraction: protocol
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
@@ -34,7 +34,7 @@ All enforced via explicit `assert` statements and Hypothesis property tests. No 
 
 | Invariant | Description |
 |-----------|-------------|
-| Core role presence | All Core-tier roles must be present (Architect, R&S Specialist, HCD Designer) before any simplification applies |
+| Core role presence | All Core-tier roles must be present (Architect, R&S Specialist, HCD Designer) on every execution path, not only before simplification applies |
 | Escalation integrity | Escalation paths cannot be removed or weakened by any parameter |
 | Consensus immutability | Consensus computation logic cannot be overridden by scenario configuration |
 | Justification enforcement | Critical finding justification validation always runs regardless of task complexity |

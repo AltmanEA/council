@@ -1,7 +1,7 @@
 # Glossary
-Version: 0.7.0
+Version: 0.8.0
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-08
 changelog-path: CHANGELOGS/glossary.changes.md
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
@@ -13,6 +13,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Role** (Роль) A perspective-driven capacity assigned to an agent within the framework, defined by its viewpoint, areas of responsibility, and a prompt template. Roles are independent evaluators; they do not represent job titles or organizational positions.
 
 **Role Agent** (Ролевой агент) An LLM-backed agent instance initialized with a specific role's prompt and context. One instance is created per active role for each session.
+
+**Auxiliary Agent** (Вспомогательный агент) A non-role LLM-backed worker invoked by the Execution Runtime for supporting tasks — for example, the Documentation Worker behind Documenter. Auxiliary Agents never participate in consensus, never vote, and never advance a phase.
 
 **Architect** (Архитектор) The role responsible for evaluating how a design decision fits into the overall system structure — component boundaries, integration points, data flows, coupling, and structural scalability.
 
@@ -115,7 +117,6 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Council** The name of the AI-Agent Collaborative Design Framework project. Used as a canonical identifier and shorthand reference across all documentation (e.g., "the Council framework," "Council protocol"). Provides a stable named entity for cross-referencing without repeated use of the full title.
 
 **Documentation Worker** A reusable skill providing mechanical and structural operations on project documentation artifacts. NOT part of the Council framework itself — it is an operational instrument provided as a skill and invoked via the skill tool by the primary agent to handle updates, splits, translations, and compliance audits under defined trust levels. Full contract and capabilities are at `/.agents/skills/documentation/SKILL.md`.
-(Рабочий документацией) Вспомогательный субагент-инструмент, отвечающий за механические и структурные операции над артефактами документации проекта согласно правилам `AGENTS.md`. НЕ является частью самой структуры Консилиум — инструмент, делегируемый основным агентом для выполнения обновлений, разбивки документов, переводов и аудитов соответствия на основе определённых уровней доверия.
 
 ---
 
@@ -126,6 +127,12 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **State Persistence** (Сохранение состояния) The practice of serializing each protocol phase's state as a separate JSON file in the session directory (`sessions/<id>/`). No shared state flows between sessions; tasks are short-lived.
 
 **LLM Abstraction Layer** (Абстракция над LLM) A single entry point (`get_model()`) that abstracts away provider-specific details, enabling transparent model swapping without touching protocol or role logic. MVP uses one provider; replacement is trivial during scaling.
+
+**Execution Runtime** (Среда исполнения) Layer 1 of the architecture: a deterministic control plane (the Moderator) plus non-deterministic execution units (Role Agents and Auxiliary Agents). It is the only layer that calls Layer 0.
+
+**Execution Port** (Порт исполнения) The Layer 1 interface through which a Supporting service requests an LLM-backed operation. Documenter uses it to reach the Documentation Worker; the port enforces the Layer 2 → Supporting service → Layer 1 direction.
+
+**Supporting Service** (Вспомогательный сервис) A service outside the three-layer chain that is invoked by the Layer 2 operator surface and may call Layer 1, but never calls Layer 2 or Layer 0 directly. Documenter, fallback mode, and JSON persistence are Supporting services.
 
 **Intent Record** (Журнал намерения) A crash-recovery journal file written to `documenter/intent/` before the first rename in a multi-file commit. Records the full set of intended file transitions (`before_hash`, `after_hash`, `tmp_path`) to enable roll-forward reconciliation at cold-start. Managed exclusively by Documenter; hidden from the operator.
 
@@ -141,4 +148,4 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 ---
 
-*Aligned with project documents v0.7.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*
+*Aligned with project documents v0.8.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*

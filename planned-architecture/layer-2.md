@@ -1,8 +1,8 @@
-# Layer 2 — Integration & Orchestration
+# Layer 2 — External Interfaces / Adapters
 
-Version: 0.2.0
+Version: 0.3.0
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-08
 Abstraction: protocol
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
@@ -12,7 +12,11 @@ Source: ../index.md (planned-architecture)
 
 ## Purpose
 
-All external-facing interfaces between human operators and the internal layers. Transport agnostic — MCP stdio, CLI, future OpenCode skill, REST API if demanded externally by third-party consumers.
+All external-facing interfaces between human operators and the internal layers. Layer 2 translates external requests into Layer 1 calls; it contains no protocol logic and no LLM invocation. MVP ships one transport — MCP stdio. CLI and REST remain deferred adapters over the same library functions.
+
+## Transport (MVP: MCP stdio)
+
+The operator surface exposes a small set of MCP tools: submit a task, inspect session status, resolve an escalation, retrieve artifacts, and invoke Documenter (`audit`, `delegate`). Each tool validates its input, authenticates the caller, and calls Layer 1. No tool calls Layer 0 directly.
 
 ## Structured Input Validation
 
@@ -23,37 +27,10 @@ Pydantic models at ingress gate validating before any data reaches Layer 0. Comp
 External mapper file `schema_versions.json` handles backward compatibility with single-level migration chain. Each migration step transforms old → next version only (no multi-hop direct mappings). Sequential application. Adding/removing migrations requires PR through codified gate. Python model versions are self-contained; mapper only orchestrates transitions.
 
 Validation rules enforced:
+
 - `ConfigDict(extra="forbid")` — unknown fields rejected, not silently absorbed
 - Deep-nesting protection (~32 levels max) to prevent pathological input crashes
 - Graceful degradation — any validation error produces structured operator-friendly response, never stack trace leaked
-
-## Quick-Review Path
-
-Automatic SIMPLE/COMPLEX classification by task metadata. Simplification reduces operational parameters only, never protocol rules.
-
-### Allowed simplifications
-
-| Parameter | Full path | Simple path |
-|-----------|-----------|-------------|
-| max_discussion_rounds | up to 2 | 0 |
-| Extended-tier roles | per justification | disabled unless task explicitly justifies |
-| Discussion round count | configurable | auto-determined by complexity classifier |
-
-### Invariant checklist (ADR-001)
-
-Before any simplification applies, auto-verified that all critical invariants remain intact:
-- All Core-tier roles active
-- Consensus rules unchanged
-- Escalation paths intact
-- Justification format validation enforced
-- Subject admission criteria unchanged
-- Severity threshold rules unchanged
-
-If any assertion fails, simplification is blocked and full-path defaults apply.
-
-### Upgradable classification
-
-After Phase 2 (Individual Review), if any finding warrants upgraded treatment (e.g., critical finding from a "simple" classified task), session automatically upgrades to full-path discussion rounds without operator intervention. Reason recorded in session log.
 
 ## Error Localization (ADR-003)
 
@@ -73,9 +50,9 @@ Operator-configurable verbosity level: minimal (highly summarized), balanced (de
 
 Codified gate enforcement: every new error code requires PR adding both code entry and localization entry simultaneously. CI check fails if new code exists without corresponding localization.
 
-## Documenter Service
+## Operator Surface
 
-On-demand documentation-quality utility. Independent of the role-agent execution path: it does not orchestrate Council sessions and holds no relationship with Layer 1's ScenarioLoader. Exposes two operator-invoked interfaces — `audit()` (read-only compliance diagnostics) and `delegate()` (writes executed through the Documentation Worker skill under a four-tier trust model). Runs only on explicit RPC-style operator invocation; no background processes or file watchers. Full specification: `../documenter-service/index.md`.
+The operator surface is an adapter, not an orchestrator. It authenticates the caller, validates the request, and calls Layer 1. Operator verbs, identity classes, escalation delivery, and the `pre_check` gate are specified in the Operator Surface & Escalation specification. Escalation is stop-and-resume: the session is durable, and the operator resolves it in a later invocation.
 
 ## Typer CLI (deferred to Phase 2)
 
@@ -87,11 +64,21 @@ Local-first scriptable interface. One of multiple transport adapters sharing sam
 - stdout/stderr separation: structured result on stdout, progress/warnings/errors on stderr
 - Argument sanitization pass-through after Pydantic validation
 
-## Checkpoint / Resume (deferred to Phase 2+, ADR-004)
+## Moved to Layer 1
 
-Hybrid checkpoint strategy:
-- Intra-phase recovery via LangGraph native checkpoint (mid-phase crash restart without re-invoking providers)
-- Inter-phase checkpoints as custom JSON snapshots at phase boundaries containing only protocol state fields (phase number, active roles, cumulative findings, status declarations). No raw model outputs. Atomic rename, sorted keys, version check on restore.
-- Ordering guarantee: inter-phase checkpoint written ONLY AFTER all graph nodes confirm successful completion of current phase.
+The following are control-plane concerns and belong to Layer 1, not Layer 2:
 
-Evaluate LangGraph-native checkpoint capability first at Phase 2 before building custom layer.
+- Scenario matching and loading (`ScenarioLoader`).
+- Quick-review SIMPLE/COMPLEX classification (deferred; the upgrade hook is reserved in the phase state machine).
+- Checkpoint/resume and session persistence.
+
+## Supporting Services
+
+Documenter is not a Layer 2 component. It is a Supporting service invoked through this layer's operator surface; LLM-backed writes use a Layer 1 execution port. Layer 2 never invokes an LLM on Documenter's behalf. Full specification: `../documenter-service/index.md`; placement: `../index.md`.
+
+## Cross-References
+
+- `../index.md` — layer model and dependency rules
+- `layer-0.md` — protocol enforcement interface
+- `layer-1.md` — execution runtime and Layer 1 execution ports
+- `../documenter-service/index.md` — Documenter specification
