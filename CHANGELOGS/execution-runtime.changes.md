@@ -1,6 +1,7 @@
 # Changelog — Execution Runtime & Session Lifecycle
 
 <!-- CHANGES v0.4.0: Resolved readiness finding A-02 — exempted fallback sessions from SessionManifest requirements; added detailed §Namespace Rule clarifying separate artifact layouts for moderator (canonical JSON) vs fallback (Markdown); versioned to 0.4.0. -->
+<!-- CHANGES v0.3.3: Moved from root-level `execution-runtime/` to `docs/execution-runtime/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. -->
 
 <!-- CHANGES v0.1.0: Initial creation. Variant C: Layer 1 as Execution Runtime with deterministic Moderator + Role/Auxiliary Agents; internal module and import rules; phase state machine and guards; RoleStatus/InvalidFormat and missing-Core-role handling; artifact assembly order; stop-and-resume escalation routing; session directory contract; persistence mechanics (atomic rename, single-writer lock, hash chain); MVP phase-boundary crash semantics; fallback/moderator namespace rule; D3 Supporting service rule; operator status projection; migration path to an Orchestration Core. -->
 <!-- CHANGES v0.2.0: Resolved readiness finding A-05 — changed `timeout_at` in Escalation Routing (§69) from informational-only to auto-enforced: when a resumed invocation finds the current time past `timeout_at`, the runtime automatically applies the `fallback_strategy` from the `EscalationRecord`. Matches protocol-core definition of deferred fallback behavior. -->

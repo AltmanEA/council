@@ -1,5 +1,5 @@
 # Subagent Fallback Mode
-Version: 0.4.0
+Version: 0.5.0
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference
@@ -9,7 +9,7 @@ changelog-path: CHANGELOGS/fallback-mode.changes.md
 
 ## Overview
 
-This document defines how to run the Council interaction protocol using named subagents when the Moderator (code-based orchestrator) is not yet implemented. It is a manual approximation of the same protocol defined in `../protocol-core/index.md`; all artifacts and role status semantics remain identical. Use this mode until a dedicated tool layer replaces it.
+This document defines how to run the Council interaction protocol using named subagents when the Moderator (code-based orchestrator) is not yet implemented. It is a manual approximation of the same protocol defined in `../docs/protocol-core/index.md`; all artifacts and role status semantics remain identical. Use this mode until a dedicated tool layer replaces it.
 
 ### Base Roles
 
@@ -135,13 +135,13 @@ The following auxiliary documents live in the same directory and are referenced 
 
 Fill out before launching subagents. Defines session goal, focus areas, questionnaires, output limits, and constraints. Pass as context to all three subagents in Phase 2.
 
-See also: `../protocol-core/index.md` §1.x (task submission requirements).
+See also: `../docs/protocol-core/index.md` §1.x (task submission requirements).
 
 ### Consolidation Prompt (`session-consolidation-prompt.md`)
 
 Step-by-step instructions for the operator acting as Moderator during the Phase 4 → Phase 5 transition. Covers matrix normalization, deduplication, conflict identification, consensus determination, and Consensus Document drafting under 300 lines.
 
-See also: `../protocol-core/index.md` §4–5 (consensus check and resolution formation).
+See also: `../docs/protocol-core/index.md` §4–5 (consensus check and resolution formation).
 
 ### Session workspace convention
 
@@ -158,12 +158,12 @@ All per-session artifacts created by or for the operator go into `sessions/<sess
 - `consensus-doc.md` — the produced Consensus Document
 - Optional: `discussion-round-N.md` — transcript of round N
 
-The workspace directory is isolated from the root project directory. When a session produces approved changes to core documents (`../protocol-core/index.md`, etc.), those changes are applied manually after operator review, never automatically.
+The workspace directory is isolated from the root project directory. When a session produces approved changes to core documents (`../docs/protocol-core/index.md`, etc.), those changes are applied manually after operator review, never automatically.
 
 ---
 
 ## Compliance Notes
 
-This fallback mode implements the same five-phase interaction protocol as `../protocol-core/index.md` with operator-in-the-loop substitution for the code-based Moderator. All terminology inherits from `../glossary/index.md`. Role prompts are derived from the role definitions in `../protocol-core/index.md` (§1).
+This fallback mode implements the same five-phase interaction protocol as `../docs/protocol-core/index.md` with operator-in-the-loop substitution for the code-based Moderator. All terminology inherits from `../docs/glossary/index.md`. Role prompts are derived from the role definitions in `../docs/protocol-core/index.md` (§1).
 
 *Aligned with planned architecture v0.4.0 and project reference 0.3.1.*

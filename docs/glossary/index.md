@@ -1,5 +1,5 @@
 # Glossary
-Version: 0.10.0
+Version: 0.10.1
 Status: draft
 Last Modified: 2026-11-09
 changelog-path: CHANGELOGS/glossary.changes.md

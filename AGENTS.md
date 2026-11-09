@@ -1,10 +1,10 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.8.1
+Version: 0.9.0
 Status: active
 Last Modified: 2026-11-09
 changelog-path: CHANGELOGS/agents.changes.md
 
-This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `project-concept/index.md`, which describes Council.
+This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `docs/project-concept/index.md`, which describes Council.
 
 ---
 
@@ -18,6 +18,16 @@ This file defines how AI agents interact with, maintain, and evolve the project'
 - Provide procedures for handling ambiguity, versioning, and glossary management.
 
 All agents reading this file must comply with every rule defined here. Non-compliance should be reported as an open question in the consensus document.
+
+### 1.6 Documentation Separation
+
+Documentation artifacts are divided into two categories based on their role in the project lifecycle:
+
+**Project documents** — specifications and protocols that describe the developing project (Council framework). Stored under `docs/`, managed by Documenter via the manifest. Examples: `docs/protocol-core/`, `docs/project-concept/`, `docs/glossary/`.
+
+**Implementation files** — files for the current temporary operation of the Council system. Stored at repository root, excluded from Documenter control. Examples: `AGENTS.md`, `fallback/`, `documenter-service/`, `.agents/skills/documentation/`, `CHANGELOGS/`, `.opencode/`, `defaults/`, `archive/`, `tests/`, `consensus-non-controlled-files.md`, `notes.md`.
+
+This separation is documented in the consensus document from session `sess-documentation-separation` (2026-11-09). The manifest (`docs-manifest.yaml`) tracks only project documents under `docs/`. Implementation files are explicitly excluded from Documenter scope.
 
 ### 1.5 Project Stage
 
@@ -48,9 +58,9 @@ Relationship between the two: the Documentation Worker skill is the executor; Do
 
 ### 2.1 On-Disk Layout
 
-Documents are stored in individual folders named after their manifest identifier. The primary document is `index.md` inside that folder; a Russian translation, if present, is `index-RU.md` in the same folder. A changelog file `CHANGELOGS/<id>.changes.md` stores version history separately from content. Examples: `protocol-core/index.md`, `project-concept/index-RU.md`, `glossary/index.md`. Documents at the repository root — such as `AGENTS.md` and `docs-manifest.yaml` — serve as operational rules and the manifest index itself. New documents are created by making a new folder and an `index.md`; the manifest must be updated simultaneously.
+Documents are stored in individual folders under the `docs/` directory, named after their manifest identifier. The primary document is `index.md` inside that folder; a Russian translation, if present, is `index-RU.md` in the same folder. A changelog file `CHANGELOGS/<id>.changes.md` stores version history separately from content (changelogs remain at repository root as operational artifacts). Examples: `docs/protocol-core/index.md`, `docs/project-concept/index-RU.md`, `docs/glossary/index.md`. Documents at the repository root — such as `AGENTS.md` and `docs-manifest.yaml` — serve as operational rules and the manifest index itself. New documents are created by making a new folder under `docs/` and an `index.md`; the manifest must be updated simultaneously.
 
-Multi-document exceptions: The following pre-existing folders contain additional documents beyond `index.md`. Their non-primary file paths are recorded in the manifest explicitly and do not set a precedent for new documents: `documenter-service/*` (configuration-guide, policy-reference), `planned-architecture/*` (layer-0, layer-1, layer-2, decisions/index).
+Multi-document exceptions: The following pre-existing folders contain additional documents beyond `index.md`. Their non-primary file paths are recorded in the manifest explicitly and do not set a precedent for new documents: `documenter-service/*` (configuration-guide, policy-reference, remains at root as operational file), `docs/planned-architecture/*` (layer-0, layer-1, layer-2, decisions/index).
 
 ### 2.2 AI View (Manifest)
 
@@ -64,7 +74,7 @@ A **manifest** file (`docs-manifest.yaml` or equivalent index) is the single sou
 
 ### 2.4 Operational Fallback
 
-When the code-based Moderator is not yet implemented, the file `fallback/index.md` defines the substitute procedure using named subagents launched through this agent harness. It covers role assignment, output structure, phase sequence, and conflict aggregation rules. Refer to it whenever executing a Council session without tooling support.
+When the code-based Moderator is not yet implemented, the file `fallback/index.md` (operational file at repository root, frozen per §1.5) defines the substitute procedure using named subagents launched through this agent harness. It covers role assignment, output structure, phase sequence, and conflict aggregation rules. Refer to it whenever executing a Council session without tooling support.
 
 Session workspace files produced during fallback-mode sessions (`task-brief`, reviews, consensus docs, discussion transcripts) reside in `sessions/<id>/` and are outside the scope of Documenter; cleanup and archival are the operator's responsibility (see `fallback/index.md`, §Session workspace convention).
 
@@ -100,7 +110,7 @@ Translation does not apply to code, configuration, or non-document artifacts.
 
 ### 4.1 Structure
 
-The glossary lives in `glossary/index.md`. Each term entry includes: term name (canonical form), definition (English), Russian equivalent (if applicable), and optional category tag (e.g., `[roles]`, `[protocol]`).
+The glossary lives in `docs/glossary/index.md`. Each term entry includes: term name (canonical form), definition (English), Russian equivalent (if applicable), and optional category tag (e.g., `[roles]`, `[protocol]`).
 
 ### 4.2 Agent Responsibilities
 
@@ -108,7 +118,7 @@ Read before use (verbatim), create when a multi-used term is absent, update when
 
 ### 4.3 Machine-Readable Variant
 
-The English-only portion of `glossary/index.md` is the primary (machine-readable) version. Russian equivalents are annotations. Agents operate on English definitions exclusively.
+The English-only portion of `docs/glossary/index.md` is the primary (machine-readable) version. Russian equivalents are annotations. Agents operate on English definitions exclusively.
 
 ---
 

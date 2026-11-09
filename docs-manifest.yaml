@@ -1,71 +1,49 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-09 — scope boundary consensus (sess-documenter-scope-boundary): documenter-service 0.17.0-draft, configuration-guide 0.12.0-draft, fallback-mode 0.4.0, glossary 0.10.0, AGENTS.md 0.8.1. Added session workspace lifecycle and non-manifest file scope boundary.
+# Updated: 2026-11-09 — documentation separation (sess-documentation-separation): moved all project documents to docs/ directory.
+# Removed operational entries (AGENTS.md, fallback-mode, documenter-service/*) from manifest per consensus.
 # Language field removed per §7.2 update. RU translations are inline (index-RU.md) and indicated by has_translation.
 
 documents:
-  - id: agents
-    path: AGENTS.md
-    title: Documentation Agent Instructions (AGENTS.md)
-    version: 0.8.1
-    status: active
-    abstraction: reference
-
   - id: backlog
-    path: backlog/index.md
+    path: docs/backlog/index.md
     title: Backlog
-    version: 0.1.0
+    version: 0.1.1
     status: active
     abstraction: reference
 
-  - id: documenter-service
-    path: documenter-service/index.md
-    title: Documenter Service
-    version: 0.17.0-draft
+  - id: execution-runtime
+    path: docs/execution-runtime/index.md
+    title: Execution Runtime & Session Lifecycle
+    version: 0.3.3
     status: draft
     abstraction: protocol
-    allow_non_index_paths: true
     references:
-      - documenter-policy-reference
-      - documenter-configuration-guide
-
-  - id: documenter-configuration-guide
-    path: documenter-service/configuration-guide.md
-    title: Documenter Configuration Guide
-    version: 0.12.0-draft
-    status: draft
-    abstraction: reference
-    allow_non_index_paths: true
-    references:
-      - documenter-policy-reference
-
-  - id: documenter-policy-reference
-    path: documenter-service/policy-reference.md
-    title: Documenter Policy Reference
-    version: 0.5.0-draft
-    status: draft
-    abstraction: reference
-    allow_non_index_paths: true
-
-  - id: fallback-mode
-    path: fallback/index.md
-    title: Subagent Fallback Mode
-    version: 0.4.0
-    status: draft
-    abstraction: reference
+      - service-contract
+      - operator-surface
 
   - id: glossary
-    path: glossary/index.md
+    path: docs/glossary/index.md
     title: Glossary
-    version: 0.10.0
+    version: 0.10.1
     status: draft
     abstraction: reference
     has_translation: index-RU.md
 
+  - id: operator-surface
+    path: docs/operator-surface/index.md
+    title: Operator Surface & Escalation
+    version: 0.1.3
+    status: draft
+    abstraction: protocol
+    references:
+      - service-contract
+      - execution-runtime
+
   - id: planned-architecture
-    path: planned-architecture/index.md
+    path: docs/planned-architecture/index.md
     title: Planned Architecture
-    version: 0.4.0
+    version: 0.4.1
     status: draft
     abstraction: conceptual
     allow_non_index_paths: true
@@ -76,111 +54,104 @@ documents:
       - planned-architecture-decisions
 
   - id: planned-architecture-layer-0
-    path: planned-architecture/layer-0.md
+    path: docs/planned-architecture/layer-0.md
     title: Layer 0 — Protocol Enforcement
-    version: 0.2.0
+    version: 0.2.1
     status: draft
     abstraction: protocol
     allow_non_index_paths: true
 
   - id: planned-architecture-layer-1
-    path: planned-architecture/layer-1.md
+    path: docs/planned-architecture/layer-1.md
     title: Layer 1 — Execution Runtime
-    version: 0.2.0
+    version: 0.2.1
     status: draft
     abstraction: protocol
     allow_non_index_paths: true
 
   - id: planned-architecture-layer-2
-    path: planned-architecture/layer-2.md
+    path: docs/planned-architecture/layer-2.md
     title: Layer 2 — External Interfaces / Adapters
-    version: 0.4.0
+    version: 0.4.1
     status: draft
     abstraction: protocol
     allow_non_index_paths: true
+    references:
+      - documenter-service
 
   - id: planned-architecture-decisions
-    path: planned-architecture/decisions/index.md
+    path: docs/planned-architecture/decisions/index.md
     title: Decisions Index
-    version: 0.3.0
+    version: 0.3.1
     status: draft
     abstraction: reference
     allow_non_index_paths: true
 
-  - id: execution-runtime
-    path: execution-runtime/index.md
-    title: Execution Runtime & Session Lifecycle
-    version: 0.3.2
-    status: draft
-    abstraction: protocol
-    references:
-      - service-contract
-      - operator-surface
-
-  - id: operator-surface
-    path: operator-surface/index.md
-    title: Operator Surface & Escalation
-    version: 0.1.2
-    status: draft
-    abstraction: protocol
-    references:
-      - service-contract
-      - execution-runtime
-
-  - id: service-contract
-    path: service-contract/index.md
-    title: Cross-Service Artifact & Event Contract
-    version: 0.1.6
-    status: draft
-    abstraction: format
-
   - id: project-concept
-    path: project-concept/index.md
+    path: docs/project-concept/index.md
     title: Council
-    version: 0.3.1
+    version: 0.3.2
     status: draft
     abstraction: conceptual
     has_translation: index-RU.md
 
-  - id: scenario
-    path: scenario/index.md
-    title: Scenarios
-    version: 0.1.0
-    status: draft
-    abstraction: protocol
-    has_translation: index-RU.md
-
-  - id: protocol-core
-    path: protocol-core/index.md
-    title: Protocol Core
-    version: 0.5.3
-    status: draft
-    abstraction: protocol
-    has_translation: index-RU.md
-
   - id: project-reference
-    path: project-reference/index.md
+    path: docs/project-reference/index.md
     title: Council Reference (Draft)
-    version: 0.3.1
+    version: 0.3.2
     status: draft
     abstraction: reference
     has_translation: index-RU.md
 
+  - id: protocol-core
+    path: docs/protocol-core/index.md
+    title: Protocol Core
+    version: 0.5.4
+    status: draft
+    abstraction: protocol
+    has_translation: index-RU.md
+
+  - id: scenario
+    path: docs/scenario/index.md
+    title: Scenarios
+    version: 0.1.1
+    status: draft
+    abstraction: protocol
+    has_translation: index-RU.md
+
+  - id: service-contract
+    path: docs/service-contract/index.md
+    title: Cross-Service Artifact & Event Contract
+    version: 0.1.7
+    status: draft
+    abstraction: format
+
 # Changelog storage: CHANGELOGS/<id>.changes.md — one file per document with its change history.
-#   Agents read changelogs on-demand when editing corresponding documents (§X Changelog Storage).
+#   Changelogs remain at repository root (operational artifact shared by all documents).
+#   Agents read changelogs on-demand when editing corresponding documents (§2.5 Changelog Storage in AGENTS.md).
 
 # Compliance notes:
 # - documenter-service/configuration-guide.md: 211 lines (limit 200 per AGENTS.md §7.3).
-#   This is a non-index file in a multi-document folder (allow_non_index_paths: true).
-#   Not actionable in this session; consider splitting as a future improvement.
+#   This file is no longer in the manifest (operational, not a project document).
+#
+# - protocol-core/index.md: 205 lines (limit 200 per AGENTS.md §7.3).
+#   Moved to docs/ as-is. Split deferred to a future session as a separate task (operator decision).
+#
+# - service-contract/index.md: 280 lines (limit 200 per AGENTS.md §7.3).
+#   Moved to docs/ as-is. Split deferred to a future session as a separate task (operator decision).
+#
+# - operator-surface/index.md: 206 lines (limit 200 per AGENTS.md §7.3).
+#   Moved to docs/ as-is. Split deferred to a future session as a separate task (operator decision).
 
 # Cross-references:
-# - protocol-core/index.md references project-concept/index.md (Role Model inherits from "Roles are assigned based on task context")
-# - fallback/index.md references protocol-core/index.md (uses the same 5-phase interaction protocol structure)
-# - fallback/index.md defines operational procedure for subagent-based execution before Moderator is implemented
-# - glossary/index.md defines terms used across all documents above
-# - scenario/index.md references glossary/index.md (Scenario term definition), protocol-core/index.md (base five-phase protocol structure, Role Activation Rules)
+# - docs/protocol-core/index.md references docs/project-concept/index.md (Role Model inherits from "Roles are assigned based on task context")
+# - docs/fallback/index.md references docs/protocol-core/index.md (uses the same 5-phase interaction protocol structure)
+# - docs/fallback/index.md defines operational procedure for subagent-based execution before Moderator is implemented
+# - docs/glossary/index.md defines terms used across all documents above
+# - docs/scenario/index.md references docs/glossary/index.md (Scenario term definition), docs/protocol-core/index.md (base five-phase protocol structure, Role Activation Rules)
 # - RU files (index-RU.md) mirror EN source files; synced date tracked manually via git diff
-# - planned-architecture/ (index + layer-0, layer-1, layer-2, decisions/) consolidated view of accepted multi-layered architecture; layer files reference index.md; decisions/index.md is the stable cross-reference point for ADR-001–005
-# - documenter-service/ three-document set: index.md (protocol: interfaces, trust tiers, safety protocol) → policy-reference.md (reference: policy file schema, operational tuning, authorization workflow) → configuration-guide.md (reference: hash store, intent record, event schema, compliance modes). Policy fields are defined once in policy-reference and consumed by the other two by name.
-# - Pre-implementation spec set (sess-services-readiness): service-contract/index.md defines artifact/event/error schemas consumed by execution-runtime/index.md (Layer 1 runtime, persistence, lifecycle) and operator-surface/index.md (MCP stdio transport, identity, escalation, Documenter invocation). Ordering: service-contract → execution-runtime → operator-surface.
+# - docs/planned-architecture/ (index + layer-0, layer-1, layer-2, decisions/) consolidated view of accepted multi-layered architecture; layer files reference index.md; decisions/index.md is the stable cross-reference point for ADR-001–005
+# - documenter-service/ three-document set (operational, not in manifest): index.md (protocol: interfaces, trust tiers, safety protocol) → policy-reference.md (reference: policy file schema, operational tuning, authorization workflow) → configuration-guide.md (reference: hash store, intent record, event schema, compliance modes). Policy fields are defined once in policy-reference and consumed by the other two by name.
+# - Pre-implementation spec set (sess-services-readiness): docs/service-contract/index.md defines artifact/event/error schemas consumed by docs/execution-runtime/index.md (Layer 1 runtime, persistence, lifecycle) and docs/operator-surface/index.md (MCP stdio transport, identity, escalation, Documenter invocation). Ordering: service-contract → execution-runtime → operator-surface.
+# - Documenter operational state: documenter/ directory (hashes.json, intent/, audits.json) — not in manifest, explicitly excluded from Documenter audit scope per consensus-non-controlled-files.md.
+# - Operational files (not in manifest): AGENTS.md, fallback/, documenter-service/, .agents/, .opencode/, CHANGELOGS/, defaults/, archive/, tests/, consensus-non-controlled-files.md, notes.md, session files (sessions/<id>/).

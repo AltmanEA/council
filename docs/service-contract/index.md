@@ -1,6 +1,6 @@
 # Cross-Service Artifact & Event Contract
 
-Version: 0.1.6
+Version: 0.1.7
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: format

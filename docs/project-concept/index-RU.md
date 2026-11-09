@@ -1,7 +1,7 @@
 # Концепция Council — Обзор
-Version: 0.3.1
+Version: 0.3.2
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 Abstraction: conceptual
 changelog-path: CHANGELOGS/project-concept.changes.md
 

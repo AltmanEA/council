@@ -122,7 +122,7 @@ When `delegate()` receives an `audit_id`, it reads the registry and validates:
 
 ## Event Schema
 
-Documenter events are emitted inside the canonical [EventEnvelope](../service-contract/index.md#event-envelope) defined in the Cross-Service Artifact & Event Contract. The envelope carries routing metadata (`schema_version`, `event_id`, `event_type`, `emitted_at`, `session_id`, `phase_id`, `actor`, `severity`, `causation_id`/`correlation_id`); the Documenter-specific data lives in the `payload` object below.
+Documenter events are emitted inside the canonical [EventEnvelope](../docs/service-contract/index.md#event-envelope) defined in the Cross-Service Artifact & Event Contract. The envelope carries routing metadata (`schema_version`, `event_id`, `event_type`, `emitted_at`, `session_id`, `phase_id`, `actor`, `severity`, `causation_id`/`correlation_id`); the Documenter-specific data lives in the `payload` object below.
 
 ### Issue Payload Schema
 

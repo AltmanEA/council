@@ -1,8 +1,8 @@
 ---
 name: documentation
-description: When editing, creating, or deleting project documentation files (.md under the docs layout).
+description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Documentation Worker
@@ -17,7 +17,7 @@ You operate statelessly: each invocation receives its full context from the dele
 
 ## Activation
 
-This skill activates when any task involves editing, creating, or deleting project documentation files (`.md` files within the documented layout: `AGENTS.md`, `glossary/`, `project-concept/`, `protocol-core/`, `backlog/`, `fallback/`, `scenario/`, `project-reference/`, `service-contract/`, `execution-runtime/`, `operator-surface/`, `documenter-service/`, `planned-architecture/`).
+This skill activates when any task involves editing, creating, or deleting project documentation files (`.md` files within the documented layout: `docs/` directory and its subfolders). Operational files at repository root (`AGENTS.md`, `fallback/`, `documenter-service/`, `.opencode/`, `CHANGELOGS/`, `defaults/`, `archive/`, `tests/`, `consensus-non-controlled-files.md`, `notes.md`) are excluded from the Documentation Worker's scope per `AGENTS.md` §1.6 (Documentation Separation). The skill's authority is scoped exclusively to project documentation files managed through the manifest (`docs-manifest.yaml`) — which now contains only entries under `docs/`.
 
 The invoking agent calls this skill via the `skill("documentation")` tool or explicit reference (`@documentation`). The skill provides all instructions below as context.
 
@@ -229,8 +229,8 @@ Fix failures mechanically; escalate if unfixable.
 
 ## References
 
-- `AGENTS.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.1–§7.6)
-- `glossary/index.md` (canonical term definitions)
+- `AGENTS.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.1–§7.6, §1.6)
+- `docs/glossary/index.md` (canonical term definitions)
 - `fallback/index.md` (Council protocol; this skill is separate)
 
 ---

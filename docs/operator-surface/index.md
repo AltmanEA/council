@@ -1,6 +1,6 @@
 # Operator Surface & Escalation
 
-Version: 0.1.2
+Version: 0.1.3
 Status: draft
 Last Modified: 2026-11-08
 Abstraction: protocol

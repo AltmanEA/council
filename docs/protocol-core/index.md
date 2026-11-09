@@ -1,5 +1,5 @@
 # Protocol Core
-Version: 0.5.3
+Version: 0.5.4
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: protocol

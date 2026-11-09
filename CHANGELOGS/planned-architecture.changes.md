@@ -1,4 +1,5 @@
 <!-- CHANGES v0.1.1: Resolved readiness finding A-02 — updated Fallback mode table row in §Supporting Services to clarify exemption from SessionManifest requirements (execution-runtime §Namespace Rule). -->
+<!-- CHANGES v0.4.1: Moved from root-level `planned-architecture/` to `docs/planned-architecture/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. Includes all sub-documents (layer-0, layer-1, layer-2, decisions/). -->
 # Changelog — Planned Architecture Documentation
 
 <!-- CHANGES 0.1.0: initial creation of planned-architecture directory documenting complete accepted platform architecture (multi-layered A with six B-derived integrations). Four files: index (conceptual overview), layer-0/1/2 (protocol specifications), decisions/index (cross-reference to ADR rationale). -->

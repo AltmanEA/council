@@ -1,8 +1,8 @@
 # Сценарии
 
-Version: 0.1.0
+Version: 0.1.1
 Status: draft
-Last Modified: 2026-11-05
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/scenario.changes.md
 

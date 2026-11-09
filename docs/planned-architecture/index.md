@@ -1,6 +1,6 @@
 # Planned Architecture
 
-Version: 0.4.0
+Version: 0.4.1
 Status: draft
 Last Modified: 2026-11-08
 Abstraction: conceptual

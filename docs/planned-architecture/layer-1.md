@@ -1,8 +1,8 @@
 # Layer 1 — Execution Runtime
 
-Version: 0.2.0
+Version: 0.2.1
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 

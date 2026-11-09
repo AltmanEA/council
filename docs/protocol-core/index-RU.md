@@ -1,7 +1,7 @@
 # Ядро протокола
-Version: 0.4.0
+Version: 0.5.4
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/protocol-core.changes.md
 

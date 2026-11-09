@@ -1,7 +1,7 @@
 # Справочник Council (Черновик)
-Version: 0.3.1
+Version: 0.3.2
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 Abstraction: reference
 changelog-path: CHANGELOGS/project-reference.changes.md
 

@@ -1,8 +1,8 @@
 # Layer 2 — External Interfaces / Adapters
 
-Version: 0.4.0
+Version: 0.4.1
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 

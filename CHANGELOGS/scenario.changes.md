@@ -1,6 +1,7 @@
 # Changelog: Scenarios
 
 All notable changes to the Scenarios document are recorded here.
+<!-- CHANGES v0.1.1: Moved from root-level `scenario/` to `docs/scenario/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. -->
 
 ## 0.1.0
 

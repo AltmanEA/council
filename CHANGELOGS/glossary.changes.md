@@ -3,6 +3,7 @@
 <!-- CHANGES v0.6.0: Added three Documenter-specific terms in Technical Concepts section — Intent Record (crash-recovery journal for multi-file commits), Roll-forward (re-applies staged renames on cold-start reconciliation), Commit Order (fixed rename sequence bounding blast radius of a mid-sequence crash). Supports documenter-service v0.9.0-draft Multi-file Commit Protocol. RU aligned. -->
 <!-- CHANGES v0.7.0: Added three terms per H7/H12 — Trust Floor (static/dynamic forms), Mechanical Edit (deterministic non-semantic edits), Effective Trust Level (actually applied trust level). RU aligned. -->
 <!-- CHANGES v0.4.1: aligned RU file — removed Source: metadata, added intro paragraph translation, fixed language leakage in Operations Engineer and Discussion Round definitions. -->
+<!-- CHANGES v0.10.1: Moved from root-level `glossary/` to `docs/glossary/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. -->
 <!-- CHANGES v0.4.0: Added Operations Engineer term. -->
 <!-- CHANGES v0.3.1: Added "Council" term in Project section — canonical project identifier and shorthand reference. -->
 <!-- CHANGES v0.3.0: Added metadata header per AGENTS.md §7.2. Updated version to align with project documents after split. -->

@@ -1,8 +1,8 @@
 # Decisions Index
 
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 Abstraction: reference
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
