@@ -1,5 +1,5 @@
 # Subagent Fallback Mode
-Version: 0.3.0
+Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference
@@ -146,6 +146,10 @@ See also: `../protocol-core/index.md` §4–5 (consensus check and resolution fo
 ### Session workspace convention
 
 - **Exemption from runtime contract.** Fallback sessions use a plain-text Markdown layout (`task-brief.md`, `review-*.md`, `consensus-doc.md`) instead of the structured JSON schema defined in `execution-runtime/index.md` (§Session Directory Contract) and `service-contract/index.md` (§SessionManifest). Fallback sessions do NOT produce a `SessionManifest`, `phase-*.json`, or `events.jsonl`. They exist outside the moderator's namespace contract until a future adapter translates them. This exemption was formalized to resolve readiness finding A-02.
+
+**Session workspace lifecycle.** Per-session workspace files (`task-brief.md`, `review-<role>.md`, `consensus-doc.md`, `discussion-round-N.md`) are created and maintained by the operator/orchestration layer and are outside the scope of Documenter. Cleanup responsibility belongs to the operator: after a session concludes, the operator determines which files to retain (e.g., archived consensus docs) and which to delete. No automatic cleanup is specified at MVP.
+
+Retained session directories should be moved to `archive/sessions/<session-id>/` when no longer actively referenced. If a session directory contains files but no `consensus-doc.md` (indicating an incomplete or abandoned session), the operator may remove the directory at any time.
 
 All per-session artifacts created by or for the operator go into `sessions/<session-id>/`:
 

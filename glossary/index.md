@@ -1,5 +1,5 @@
 # Glossary
-Version: 0.9.0
+Version: 0.10.0
 Status: draft
 Last Modified: 2026-11-09
 changelog-path: CHANGELOGS/glossary.changes.md
@@ -107,6 +107,10 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Consensus Document** (Документ консенсуса) The primary output artifact produced when a task resolves (either fully or conditionally). Contains the decision, rationale, subjects with outcomes, reservations, open questions, action items, escalation references, and a transparency list of downgraded critical findings.
 
 **Escalation record** (Запись эскалации) An artifact produced each time the system hands a problem to the operator. Contains escalation type, raising role, severity, blocker description, positions, operator request, fallback strategy with timeout, resolution outcome, and resume phase.
+
+**Session working file** (Рабочий файл сессии) — A transient file created during a council session for intermediate use (e.g., discussion drafts, temporary notes). Not committed to git, not managed by Documenter. Lifecycle is tied to the session; cleanup is the operator's responsibility.
+
+**Session artifact** (Артефакт сессии) — A persistent output from a council session (e.g., review files, consensus documents, discussion transcripts). Committed to git for audit trail. Not managed by Documenter (outside manifest scope). Visible to the operator for review but not actionable through the Documenter audit/approval flow.
 
 ---
 

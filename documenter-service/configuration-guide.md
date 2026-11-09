@@ -1,6 +1,6 @@
 # Documenter Configuration Guide
 
-Version: 0.11.0-draft
+Version: 0.12.0-draft
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference
@@ -52,7 +52,7 @@ Read → compare expected hash with current content hash → apply if match → 
 
 **Git diff as supplementary signal:** `git log` over `hashes.json` may provide historical recovery but does NOT replace CRC/checksum (corruption between commits is undetectable from log alone) nor WAL/backup (crash mid-write loses uncommitted state). Git HEAD diff should remain an **advisory only** signal — it cannot serve as primary conflict detection because refs move independently of content changes. Use direct file checksums with optimistic-lock semantics for authoritative conflict resolution.
 
-`documenter/hashes.json` is tracked by the manifest as an operational artifact (`operational: true`).
+`documenter/hashes.json` is tracked by the manifest as an operational artifact (`operational: true`). `documenter/intent/` (intent records) and `documenter/audits.json` (audit registry) are similarly operational — managed exclusively by Documenter, hidden from operator, and excluded from the manifest scope of `audit()` and `delegate()`.
 
 ---
 

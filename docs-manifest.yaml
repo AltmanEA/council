@@ -1,13 +1,13 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-09 — pre-implementation spec set from sess-services-readiness session; planned-architecture v0.4.0 (variant C + D3); documenter-service 0.16.0-draft; all versions synchronized to match document headers; added has_translation to scenario.
+# Updated: 2026-11-09 — scope boundary consensus (sess-documenter-scope-boundary): documenter-service 0.17.0-draft, configuration-guide 0.12.0-draft, fallback-mode 0.4.0, glossary 0.10.0, AGENTS.md 0.8.1. Added session workspace lifecycle and non-manifest file scope boundary.
 # Language field removed per §7.2 update. RU translations are inline (index-RU.md) and indicated by has_translation.
 
 documents:
   - id: agents
     path: AGENTS.md
     title: Documentation Agent Instructions (AGENTS.md)
-    version: 0.8.0
+    version: 0.8.1
     status: active
     abstraction: reference
 
@@ -21,7 +21,7 @@ documents:
   - id: documenter-service
     path: documenter-service/index.md
     title: Documenter Service
-    version: 0.16.0-draft
+    version: 0.17.0-draft
     status: draft
     abstraction: protocol
     allow_non_index_paths: true
@@ -32,7 +32,7 @@ documents:
   - id: documenter-configuration-guide
     path: documenter-service/configuration-guide.md
     title: Documenter Configuration Guide
-    version: 0.11.0-draft
+    version: 0.12.0-draft
     status: draft
     abstraction: reference
     allow_non_index_paths: true
@@ -50,14 +50,14 @@ documents:
   - id: fallback-mode
     path: fallback/index.md
     title: Subagent Fallback Mode
-    version: 0.3.0
+    version: 0.4.0
     status: draft
     abstraction: reference
 
   - id: glossary
     path: glossary/index.md
     title: Glossary
-    version: 0.9.0
+    version: 0.10.0
     status: draft
     abstraction: reference
     has_translation: index-RU.md
@@ -168,6 +168,11 @@ documents:
 
 # Changelog storage: CHANGELOGS/<id>.changes.md — one file per document with its change history.
 #   Agents read changelogs on-demand when editing corresponding documents (§X Changelog Storage).
+
+# Compliance notes:
+# - documenter-service/configuration-guide.md: 211 lines (limit 200 per AGENTS.md §7.3).
+#   This is a non-index file in a multi-document folder (allow_non_index_paths: true).
+#   Not actionable in this session; consider splitting as a future improvement.
 
 # Cross-references:
 # - protocol-core/index.md references project-concept/index.md (Role Model inherits from "Roles are assigned based on task context")

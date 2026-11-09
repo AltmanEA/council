@@ -1,8 +1,8 @@
 # Documenter Service
 
-Version: 0.16.0-draft
+Version: 0.17.0-draft
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/documenter-service.changes.md
 
@@ -11,6 +11,8 @@ changelog-path: CHANGELOGS/documenter-service.changes.md
 ## Purpose
 
 Documenter is a **Supporting service** outside the three-layer chain, maintaining documentation quality per `AGENTS.md` rules. It operates as an **on-demand utility** — all functions begin upon explicit operator invocation; no background processes or file watchers run autonomously. It provides two interfaces: `audit()` for read-only reporting and `delegate()` for write operations via the Documentation Worker skill. A four-tier trust model governs delegate() write capabilities. Interface parameter schemas are authoritative in §Interfaces; configuration fields are defined in the Policy Reference (`documenter-service/policy-reference.md`) and runtime data structures in the Configuration Guide (`documenter-service/configuration-guide.md`).
+
+Scope boundary: Documenter operates exclusively on manifest-tracked documentation artifacts and its own operational state (`documenter/` directory). Files outside these namespaces — session workspace files (`sessions/<id>/`), archive outputs, and any other non-manifest artifacts — are explicitly excluded from Documenter's scope. The `audit()` and `delegate()` interfaces accept only `target_id` values from the manifest; any invocation referencing non-manifest files is rejected with `error_category: unknown`.
 
 ---
 
@@ -172,7 +174,7 @@ At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ s
 8. **Post-mortem capture**: On critical-tier findings triggered by delegate() failure, Documenter captures full operation trace (all steps attempted, intermediate states, timestamps) for operator review.
 9. **Multi-file commit protocol**: For changesets spanning multiple files (document, `index-RU.md`, changelog, manifest, hash store), enforce a two-phase commit using only file operations — no background processes or daemons.
   a. **Stage**: write all new content to `.tmp` paths in their target directories. Validate all temp files before proceeding to phase 2.
-  b. **Intent record**: before the first rename, write an intent record to `documenter/intent/<tx_id>.json` (see §Configuration Guide, Intent Record) identifying every file in the changeset. This record survives crashes and enables reconstruction. Write MUST use temp-file + rename pattern (same as §5) to prevent partial intent on crash mid-write; cold-start validates intent integrity before using it.
+  b. **Intent record**: before the first rename, write an intent record to `documenter/intent/<tx_id>.json` (see §Configuration Guide, Intent Record) identifying every file in the changeset. This record survives crashes and enables reconstruction. Write MUST use temp-file + rename pattern (same as §5) to prevent partial intent on crash mid-write; cold-start validates intent integrity before using it. Intent record entries MUST reference only manifest-tracked file paths. Any attempt to stage a non-manifest path during a changeset causes `delegate()` to reject with `error_category: unknown` and no writes proceed.
   c. **Ordered renames**: execute renames in a fixed order — document content → `index-RU.md` → changelog → `docs-manifest.yaml` → `documenter/hashes.json`. Manifest is committed last among documents so that a crash before the manifest leaves orphaned but readable files (safe, auditable), rather than dangling cross-references (breaking).
   d. **Cleanup**: after all renames, emit audit events to the append-only audit log, update the hash store contents (the file was already renamed in 9c), then delete the intent record. The intent record MUST be the last element removed — it is the sole durable fallback for post-crash event reconstruction.
   Recovery: on cold-start, if leftover intent records exist, compare each entry's `before_hash` and `after_hash` with actual file content. Three branches: (1) if files match `after_hash` — already committed by a prior successful run, skip; (2) if files match `before_hash` — no external modification since crash, roll forward from staged `.tmp` files automatically; (3) if neither matches — external modification detected, abort and escalate to the operator with `error_category: unknown` and post-mortem trace (§8). The intent record stores structural metadata (tx_id, target_id, created_at, entries[path, before_hash, after_hash]) sufficient to reconstruct which files were changed but does NOT contain the event decisions, operator stances, or full payload of protocol events. The claim that "lost audit events are reconstructed" is incorrect at MVP — only file-change provenance is recoverable; true event reconstruction requires the append-only audit log (§Delivery Semantics, configuration-guide).
