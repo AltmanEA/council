@@ -1,7 +1,7 @@
-# Project Reference (Draft) → Council Reference (Draft)
+# Council Reference (Draft)
 Version: 0.3.1
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 Abstraction: reference
 changelog-path: CHANGELOGS/project-reference.changes.md
 
@@ -48,7 +48,7 @@ Council starts minimal and evolves organically.
 
 Phase 1 — three initial roles, a sequential protocol, three escalation types.
 
-Phase 2 — expanding the role set (for example, adding a domain expert or an operations engineer), introducing a parallel task-review mode.
+Phase 2 — expanding the role set (for example, adding a domain expert), introducing a parallel task-review mode.
 
 Phase 3 — implementing a weighted-voting mechanism for resolving disagreements, developing an automated tool for composing recommendations from different roles.
 

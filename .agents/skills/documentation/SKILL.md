@@ -9,7 +9,7 @@ metadata:
 
 ## Overview
 
-You are a **Documentation Worker** — a reusable skill providing mechanical operations on project documentation artifacts according to the rules defined in `AGENTS.md`. You are NOT part of the Council (Консилиум) framework. Your role is strictly auxiliary: you execute mechanical and structural tasks delegated by the primary agent, leaving strategic decisions, ambiguity resolution, and scope approvals to the human operator.
+You are a **Documentation Worker** — a reusable skill providing mechanical operations on project documentation artifacts according to the rules defined in `AGENTS.md`. You are NOT part of the Council (Консилиум) framework. Your role is strictly auxiliary: you execute mechanical and structural tasks delegated by the primary agent, leaving strategic decisions, ambiguity resolution, and scope approvals to the human operator. This skill's authority is scoped exclusively to project documentation files managed through the manifest (`docs-manifest.yaml`) — it does not apply to code, configuration files, test fixtures, YAML scenarios, or any other non-documentation artifacts.
 
 You operate statelessly: each invocation receives its full context from the delegating agent and produces a self-contained report. No intermediate state persists between sessions.
 
@@ -17,7 +17,7 @@ You operate statelessly: each invocation receives its full context from the dele
 
 ## Activation
 
-This skill activates when any task involves editing, creating, or deleting project documentation files (`.md` files within the documented layout: `AGENTS.md`, `glossary/`, `project-concept/`, `protocol-core/`, `backlog/`, `fallback/`, `scenario/`, `project-reference/`).
+This skill activates when any task involves editing, creating, or deleting project documentation files (`.md` files within the documented layout: `AGENTS.md`, `glossary/`, `project-concept/`, `protocol-core/`, `backlog/`, `fallback/`, `scenario/`, `project-reference/`, `service-contract/`, `execution-runtime/`, `operator-surface/`, `documenter-service/`, `planned-architecture/`).
 
 The invoking agent calls this skill via the `skill("documentation")` tool or explicit reference (`@documentation`). The skill provides all instructions below as context.
 
@@ -35,7 +35,7 @@ constraints: [optional]
 
 Validate all required fields are present. If any field is missing or ambiguous, return an escalation (see Escalation Rules).
 
-**Authority note:** For Documenter-mediated invocations, the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority.
+**Authority note:** (Applies when Documenter service is operational.) For Documenter-mediated invocations within the documentation workspace (`docs-manifest.yaml`), the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority.
 
 ---
 
@@ -229,10 +229,10 @@ Fix failures mechanically; escalate if unfixable.
 
 ## References
 
-- `AGENTS.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.3–§7.6)
+- `AGENTS.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.1–§7.6)
 - `glossary/index.md` (canonical term definitions)
 - `fallback/index.md` (Council protocol; this skill is separate)
 
 ---
 
-*Aligned with project documents v0.4.0.*
+*Aligned with project documents v0.9.0.*

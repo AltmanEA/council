@@ -1,0 +1,70 @@
+# Default Scenario — Council Collaboration Protocol
+# ID: default-council-session
+# Abstraction: reference
+# Status: active (MVP baseline)
+# Last Modified: 2026-11-09
+# Generated: 2026-11-09 as resolution of readiness finding E-02
+
+---
+scenario_id: default-council-session
+name: Default Council Session
+problem_type: >
+  General-purpose collaborative design session using core protocol tiers.
+  Suitable for broad technical problems where multiple perspectives improve
+  outcomes without domain-specific pre-phases.
+description: >
+  Standard collaborative design session using core protocol tiers.
+  Activates base roles (Architect, Reliability & Security Specialist,
+  Human-Centric Designer, Operations Engineer). Extended roles added
+  per task scope via scenario catalog overrides.
+no_consensus_budget: 3
+version: "1.0"
+
+# Required fields per §Schema
+roles:
+  - Architect
+  - Reliability & Security Specialist
+  - Human-Centric Designer
+  - Operations Engineer
+
+# Timeout defaults (override protocol/defaults when present)
+round_timeout_minutes: 15
+escalation_timeout_minutes: 30
+
+# Role activation (tier-based)
+role_activation:
+  mode: tier_based  # matches protocol-core §Role Activation Tiers
+  base_roles:
+    - Architect
+    - Reliability & Security Specialist
+    - Human-Centric Designer
+    - Operations Engineer
+  extended_roles_allowed: true
+
+# Protocol parameters (overrides tier defaults)
+protocol:
+  max_discussion_rounds: 2
+  targeted_resolution_rounds: 1
+
+# Safety constraints
+safety:
+  # Core role presence enforced per session manifest: locked_roles + operator_approval override the default-all-active rule.
+  auto_apply_severity_floor: medium     # only medium+ block
+  critical_requires_justification: true
+
+# Output settings
+output:
+  format: markdown           # fallback uses Markdown; moderator uses JSON
+  include_transparency_list: true
+  language: english          # canonical; RU translations handled separately
+
+metadata:
+  version: 1.0
+  category: default
+  applicable_modes: [fallback, moderator]  # works in both modes
+  notes: >
+    This is the minimal default scenario used when no explicit scenario_id
+    is provided by the operator. It provides sensible defaults for all
+    protocol-core and execution-runtime parameters. Override any field by
+    specifying an alternative scenario in the session manifest or via
+    council.submit_task parameter.

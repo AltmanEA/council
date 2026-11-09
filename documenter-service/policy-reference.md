@@ -1,6 +1,6 @@
 # Documenter Policy Reference
 
-Version: 0.4.0-draft
+Version: 0.5.0-draft
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference
@@ -34,12 +34,15 @@ documenter_policy:
   retry_max_attempts: 3           # count; retry attempts before escalation to operator
   operator_approval_timeout: 300  # seconds; synchronous wait for approve/reject inside delegate()
   notification_mode: inline       # inline only — no asynchronous notification channel exists
+  approval_expiry_window: 30            # minutes; maximum time between Tier 2+ authorization and the first delegate() invocation under that approval
   rescan_batch_ceiling: 50        # documents per full-rescan invocation before partial-report return
   glossary_staleness_days: 30     # days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing
   briefing_ref: null              # path to operator briefing artifact; required when active_tier >= 2
 ```
 
 At Tier 0–1, `allowed_operations` must remain empty regardless of content. The operator updates this file explicitly when advancing tiers. Documenter refuses to execute any operation not listed.
+
+**Preview exemption:** Calls to `delegate()` with no write intent (preview mode, returning diff without applying changes) are exempt from the `allowed_operations` check at all tiers. Tier 1 specifically relies on this exemption to produce diffs. These calls always return the computed diff but never modify files. Preview is controlled via the `preview` boolean parameter (§Interfaces, delegate()) — when set to `true`, no tier validation or gate enforcement applies; only schema validity of required fields (`target_id`, `change_type`, `diff`) is checked.
 
 ### Field Reference
 
@@ -48,16 +51,20 @@ At Tier 0–1, `allowed_operations` must remain empty regardless of content. The
 | `version` | string | Yes | `"0.2.0"` | Policy schema version for compatibility detection |
 | `active_tier` | int | Yes | `0` | Current trust tier (0–3). Must match Tier table (§Trust Tiers, main spec). |
 | `allowed_operations` | array | Yes | `[]` | Operations authorized at current tier. Empty below Tier 2. May only tighten the trust floor (§Authority rule above). |
+| `approval_expiry_window` | int | No | `30` | Maximum time (minutes) before an unapproved `approval_id` expires. Range: 5–1440 (5 minutes to 24 hours). Used together with the out-of-band `documenter.approve(approval_id, operator_id)` call described in operator-surface §Documenter Integration. |
+| `audit_freshness` | int | No | `30` | Maximum age (minutes) of an `audit_id` accepted by the `delegate()` pre-audit gate. The gate additionally validates scope coverage (exact match or `*`), blocking findings, and scan completion (`has_remaining` must not be `true`) against the audit registry (`documenter-service/configuration-guide.md`, §Audit Registry). Set to `0` to disable the gate entirely (no audit required; `audit_id` will be ignored if provided). Any other value enforces the freshness window. |
+| `briefing_ref` | string | No | `null` | Path to the archived operator briefing artifact documenting the scope of delegated authority. MUST be non-null when `active_tier >= 2` (§Authorization Workflow, step 4). |
 | `glossary_enforcement` | enum | No | `draft` | Controls glossary compliance noise reduction (§Glossary Compliance, configuration guide). |
-| `audit_freshness` | int | No | `30` | Maximum age (minutes) of an `audit_id` accepted by the `delegate()` pre-audit gate. The gate additionally validates scope coverage and blocking findings against the audit registry (`documenter-service/configuration-guide.md`, §Audit Registry). Set `0` to disable the gate. |
+| `glossary_staleness_days` | int | No | `30` | Days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing (§Glossary Compliance, configuration guide). |
 | `lock_wait_timeout` | int | No | `30` | Seconds to wait for the operation-level advisory lock before aborting with the lock-owner error described in §Safety Protocol #2 (main spec). |
+| `notification_mode` | enum | No | `inline` | Delivery mode for operator-facing prompts. `inline` is the only accepted value in MVP: prompts, diffs, and verdicts are returned inside the invocation response. Unknown values are rejected at load time. |
+| `operator_approval_timeout` | int | No | `300` | Seconds the active `delegate()` invocation waits for an explicit approve/reject before emitting `error_category: operator_timeout`. Not an auto-approve window (§Approval semantics, main spec). |
+| `rescan_batch_ceiling` | int | No | `50` | Documents processed per full-rescan invocation. When reached, the response includes `has_remaining: true` and a `scan_cursor` continuation token; passing it back resumes from where the previous invocation stopped. Partial scans never authorize delegates for unscanned documents — the operator must complete all batches before delegation is permitted. No background execution. |
 | `retry_backoff_base` | int | No | `1` | Base delay (seconds) for the exponential backoff with jitter used by retry invocations (§Conflict Resolution, configuration guide). |
 | `retry_max_attempts` | int | No | `3` | Maximum retry invocations after a `hash_mismatch` before Documenter escalates to the operator instead of retrying. |
-| `operator_approval_timeout` | int | No | `300` | Seconds the active `delegate()` invocation waits for an explicit approve/reject before emitting `error_category: operator_timeout`. Not an auto-approve window (§Approval semantics, main spec). |
-| `notification_mode` | enum | No | `inline` | Delivery mode for operator-facing prompts. `inline` is the only accepted value in MVP: prompts, diffs, and verdicts are returned inside the invocation response. Unknown values are rejected at load time. |
-| `rescan_batch_ceiling` | int | No | `50` | Documents processed per full-rescan invocation before the response returns a partial report with remaining-document count; the operator re-invokes `audit()` to process the remainder. No background execution. |
-| `glossary_staleness_days` | int | No | `30` | Days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing (§Glossary Compliance, configuration guide). |
-| `briefing_ref` | string | No | `null` | Path to the archived operator briefing artifact documenting the scope of delegated authority. MUST be non-null when `active_tier >= 2` (§Authorization Workflow, step 4). |
+| `temperature` | float | No | `0.1` | LLM generation randomness; higher values increase diversity (range: 0.0–2.0). Applied per role-agent inference (§Zero silent defaults, layer-1.md). |
+| `top_p` | float | No | `0.9` | Nucleus sampling parameter; tokens with cumulative probability below this threshold are excluded (range: 0.0–1.0). Applied per role-agent inference (§Zero silent defaults, layer-1.md). |
+| `frequency_penalty` | float | No | `0.0` | Reduces token repetition; positive values penalize repeated tokens (range: -2.0–2.0). Neutral default, explicitly set rather than inferred (§Zero silent defaults, layer-1.md). |
 
 ### Per-Operation Entries
 
@@ -105,8 +112,8 @@ Which knob governs which failure path. All values are policy fields from §Field
 | File changed between scan and write | `retry_backoff_base` + `retry_max_attempts` | Escalate to operator; re-run `audit()` for a fresh `audit_id` |
 | Operator absent while diff is presented | `operator_approval_timeout` | Emit `error_category: operator_timeout`; nothing is written, staged `.tmp` files are discarded |
 | Expectation of out-of-band alerts | `notification_mode` | Not applicable — no asynchronous channel exists; see §Notification Semantics |
-| Full rescan exceeds document count | `rescan_batch_ceiling` | Partial report returned with remaining count; operator re-invokes `audit()` |
-| Stale or invalid `audit_id` presented to `delegate()` | `audit_freshness` | Reject with `error_category: audit_mismatch` (registry absent/expired/scope mismatch) or `error_category: blocking_finding` (high/critical findings present) and a re-run-`audit()` action |
+| Full rescan exceeds document count | `rescan_batch_ceiling` | Response includes `has_remaining: true` and `scan_cursor`; operator re-invokes `audit(scan_cursor=<value>)` to resume from where previous invocation stopped |
+| Stale, invalid, or incomplete `audit_id` presented to `delegate()` | `audit_freshness` | Reject with `error_category: audit_mismatch` (registry absent/expired/scope mismatch) or `error_category: blocking_finding` (high/critical findings present or scan incomplete, `has_remaining: true`) and a re-run-`audit()` action. If registry is absent/unreadable, FAILS CLOSED — all writes denied until authenticated override via `documenter.override_gate(reason, operator_id)` |
 
 ### Notification Semantics
 
@@ -139,4 +146,4 @@ Procedure for advancing write capability. Each step is a discrete operator actio
 
 ---
 
-*Defines the configuration surface for Documenter Service v0.11.0; extracted from Configuration Guide v0.5.0.*
+*Defines the configuration surface for Documenter Service v0.5.0-draft; extracted from Configuration Guide.*

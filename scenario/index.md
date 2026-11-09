@@ -40,10 +40,11 @@ Each Scenario declaration carries the following fields:
 | name | string | yes | Human-readable identifier |
 | problem_type | string | yes | Free-text description of the problem domain this scenario solves |
 | roles | array of role identifiers | yes | Roles to activate; must include Reliability & Security Specialist unless explicitly excluded with documented operator justification |
-| pre_phases | array of objects | no | Preparatory steps before Phase 1. Each object has: name, description, max_rounds, output_contract |
-| phase_overrides | mapping | no | Per-phase parameter overrides (e.g., max_discussion_rounds, severity_filter). Must not alter structural phase logic |
+| no_consensus_budget | integer | yes | Maximum number of targeted discussion rounds before a `no-consensus` outcome automatically transitions to `blocked-escalation` with `escalation_reason = information-gap`. Budget counts downward from each round in Phase 3; when it reaches zero, Phase 4 evaluates budget as exhausted rather than `no-consensus`. |
 | version | semantic version string | yes | Independent scenario version |
-| composed_of | reserved | no (blocked) | Reserved for future composition support. Validations reject schemas with this field populated at MVP |
+| scenario_id | string | yes | Stable unique identifier for this scenario definition. REQUIRED — every scenario must provide its own identifier matching the catalog entry. Identifiers are kebab-case and must be globally unique across all scenarios. Inferred from the filename when present in the default catalog (`default-council-session.yaml` → `default-council-session`). |
+| round_timeout_minutes | integer | no | Default timeout (minutes) for each discussion round. Defaults to `protocol.max_discussion_rounds * 5` when omitted. Used by the runtime to set per-round `timeout_at` (§Execution Runtime §Escalation Routing). |
+| escalation_timeout_minutes | integer | no | Default timeout (minutes) for escalated sessions awaiting operator resolution. Defaults to `defaults/policy.yaml` value (30 min) when omitted. Overrides the policy file when present. |
 
 ---
 
@@ -64,6 +65,18 @@ Each Scenario declaration carries the following fields:
 5. **Fixed catalog at launch.** Scenarios are authored exclusively by framework maintainers. Operator authoring is deferred until a governance model exists.
 
 6. **No composability at MVP.** Scenarios reference other scenarios via a reserved field but cannot compose others at launch. Composition validation semantics will be defined in a later milestone.
+
+---
+
+## Scenario Catalog
+
+Scenarios are stored in the `scenario/` directory alongside this specification at MVP. The default scenario (`default-council-session.yaml`) is always available regardless of catalog contents. New scenarios must be added to both the catalog table below AND their own YAML file under `scenario/`.
+
+| File | scenario_id | name | problem_type | roles (base) | Status |
+|------|-------------|------|--------------|--------------|--------|
+| `default-council-session.yaml` | `default-council-session` | Default Council Session | General-purpose collaborative design session using core protocol tiers; suitable for broad technical problems without domain-specific pre-phases | Architect, Reliability & Security Specialist, Human-Centric Designer, Operations Engineer | Active (MVP) |
+
+When loaded from the filesystem, `scenario_id` is inferred from the filename (without extension). When specified explicitly in the manifest, it MUST match the catalog entry. Conflicts between catalog definition and YAML content produce a `CONFIG.002` error.
 
 ---
 

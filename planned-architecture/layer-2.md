@@ -1,6 +1,6 @@
 # Layer 2 — External Interfaces / Adapters
 
-Version: 0.3.0
+Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-08
 Abstraction: protocol
@@ -24,7 +24,7 @@ Pydantic models at ingress gate validating before any data reaches Layer 0. Comp
 
 ### Schema versioning (ADR-005)
 
-External mapper file `schema_versions.json` handles backward compatibility with single-level migration chain. Each migration step transforms old → next version only (no multi-hop direct mappings). Sequential application. Adding/removing migrations requires PR through codified gate. Python model versions are self-contained; mapper only orchestrates transitions.
+EXTERNAL MAPPER — RESERVED FOR FUTURE USE. The external mapper file `schema_versions.json` and its migration chain will NOT ship at MVP. This section exists solely to document what was decided: no migration capability at MVP; the `schema_version` field in Service Contract schemas exists for future additions only. When migration is later implemented, it will support single-level (old→next) transformation steps only, requiring PR approval for any changes.
 
 Validation rules enforced:
 
@@ -45,6 +45,7 @@ Deterministic lookup table mapping error codes to localized messages. No LLM gen
 | MODEL. | LLM provider issues | rate limit, auth failure, timeout |
 | IO. | Filesystem/persistence | write failure, read corruption |
 | CONFIG. | Configuration errors | missing API key, invalid scenario |
+| AUTH. | Authentication/authorization failures | expired credential, invalid signature, unrecognized caller, revoked credential |
 
 Operator-configurable verbosity level: minimal (highly summarized), balanced (default), full (actionable technical details included).
 

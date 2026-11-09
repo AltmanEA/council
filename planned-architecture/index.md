@@ -1,6 +1,6 @@
 # Planned Architecture
 
-Version: 0.3.0
+Version: 0.4.0
 Status: draft
 Last Modified: 2026-11-08
 Abstraction: conceptual
@@ -25,7 +25,9 @@ Layer 0 ─ Protocol Enforcement
           deterministic consensus · validation rules
 
 Supporting services (outside the layer chain)
-          Documenter · fallback mode · JSON persistence
+          Documenter · JSON persistence
+
+FALLBACK NOTICE — see §Operational Modes
 ```
 
 ## Layer Summary
@@ -51,8 +53,11 @@ Supporting services sit outside the layer chain. They may call Layer 1 and MUST 
 | Service | Role | Call surface |
 |---------|------|--------------|
 | Documenter | Documentation audit and delegated writes | Invoked by the Layer 2 operator surface; LLM-backed writes use a Layer 1 execution port |
-| Fallback mode | Manual protocol execution by named subagents | Operator-driven; replaces the code Moderator; shares only the artifact format |
 | JSON persistence | Session state store (`sessions/<id>/`) | Used by Layer 1 `persistence/`; local-only, not committed |
+
+## Operational Modes
+
+**Fallback mode** is an operational mode that replaces the code-based Moderator before implementation (see `fallback/index.md`). It operates via named subagents launched through this agent harness. Fallback sessions are excluded from `SessionManifest` requirements (see `execution-runtime/index.md` §Namespace Rule) and share only the artifact format with the canonical specification. The code-based Moderator, once implemented, will replace fallback as the default mode for development.
 
 ## Migration Path
 

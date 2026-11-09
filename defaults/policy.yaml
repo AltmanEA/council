@@ -1,0 +1,59 @@
+# Central Default Policy Whitelist — Council Framework
+# Version: 1.0
+# Status: active (MVP baseline)
+# Last Modified: 2026-11-09
+# Generated: 2026-11-09 as resolution of readiness finding E-03
+# Reference: planned-architecture/layer-1.md §Zero silent defaults policy
+
+---
+defaults:
+  # LLM parameters (Layer 1 role-agent generation)
+  llm:
+    temperature: 0.7                    # randomness; higher values increase creativity (0–2 range)
+    top_p: 0.9                          # nucleus sampling; tokens with cumulative probability < p are excluded
+    frequency_penalty: 0.0             # reduces token repetition; positive values penalize repeated tokens
+
+  # Documenter security parameters (MVP safe values)
+  documenter:
+    audit_freshness: 30                  # minutes; max age of audit_id accepted by delegate() pre-audit gate
+    rescan_batch_ceiling: 50             # docs scanned per audit() invocation
+    retry_backoff_base_seconds: 1        # exponential backoff base delay
+    retry_max_attempts: 3                # max retries before giving up
+    trust_floor_safe_changes: true       # Tier 1 safe changes allowed?
+    approval_expiry_window: 30           # minutes; Tier 2+ approval validity window
+
+  # Execution runtime parameters
+  execution_runtime:
+    max_session_duration_minutes: 120  # hard timeout for entire session
+    max_phase_retries: 3               # re-run attempt ceiling per phase
+    crash_recovery_graceful: true      # resume after crash if possible
+    state_persistence: json_filesystem # persistent state mechanism
+    lock_timeout_seconds: 30           # single-writer lock TTL
+
+  # Escalation handling (matches protocol-core escalation params)
+  escalation:
+    default_timeout_minutes: 30        # timeout_at if not set explicitly
+    fallback_strategy: defer           # default: defer pending operator decision
+    max_open_escalations_per_session: 5 # cap concurrent escalations
+
+  # Schema versioning (reserved for future — see ADR-005 / A-04)
+  schema_versioning:
+    current_version: 1                # fixed at 1 for MVP
+    migration_enabled: false          # reserved post-MVP
+    # migration steps: []            # empty — will be populated later
+
+  # Operational safety gates
+  safety_gates:
+    pre_check_enabled: true           # run documenter audit before writes
+    validate_input_schema: true       # reject unknown fields at ingress
+
+metadata:
+  version: 1.0
+  expansion_policy: "PR + justification required for adding entries"
+  review_interval_quarterly: true
+  notes: >
+    This file manages the central default whitelist. Expansion requires PR
+    with justification and quarterly review per planned-architecture/layer-1.md.
+    Conflicts between scenario config and policy file produce CONFIG.002 error.
+    Safe defaults listed here are visible in session records under
+    "configuration_source": "scenario_defaults".

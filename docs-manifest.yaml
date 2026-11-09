@@ -1,70 +1,74 @@
 # Documentation Manifest
 # Single source of truth for project documentation layout.
-# Updated: 2026-11-08 — added service-contract 0.1.0, execution-runtime 0.1.0, operator-surface 0.1.0 (pre-implementation spec set from sess-services-readiness); planned-architecture 0.3.0 (variant C + D3), documenter-service 0.15.0, configuration-guide 0.9.1, glossary 0.8.0; stale entries removed.
+# Updated: 2026-11-09 — pre-implementation spec set from sess-services-readiness session; planned-architecture v0.4.0 (variant C + D3); documenter-service 0.16.0-draft; all versions synchronized to match document headers; added has_translation to scenario.
 # Language field removed per §7.2 update. RU translations are inline (index-RU.md) and indicated by has_translation.
 
 documents:
   - id: agents
     path: AGENTS.md
-    title: Agent Instructions (Documentation Process Guide)
-    version: 0.6.0
+    title: Documentation Agent Instructions (AGENTS.md)
+    version: 0.8.0
     status: active
     abstraction: reference
 
   - id: backlog
     path: backlog/index.md
-    title: Backlog — Operational Notes & Ideas
+    title: Backlog
     version: 0.1.0
     status: active
     abstraction: reference
 
   - id: documenter-service
     path: documenter-service/index.md
-    title: Documenter Service (Main Specification)
-    version: 0.15.0
+    title: Documenter Service
+    version: 0.16.0-draft
     status: draft
     abstraction: protocol
+    allow_non_index_paths: true
     references:
       - documenter-policy-reference
       - documenter-configuration-guide
 
   - id: documenter-configuration-guide
     path: documenter-service/configuration-guide.md
-    title: Documenter Configuration Guide (Hash Store, Intent Record, Event Schema)
-    version: 0.9.1
+    title: Documenter Configuration Guide
+    version: 0.11.0-draft
     status: draft
     abstraction: reference
+    allow_non_index_paths: true
     references:
       - documenter-policy-reference
 
   - id: documenter-policy-reference
     path: documenter-service/policy-reference.md
-    title: Documenter Policy Reference (Policy Schema, Operational Tuning, Authorization Workflow)
-    version: 0.4.0
+    title: Documenter Policy Reference
+    version: 0.5.0-draft
     status: draft
     abstraction: reference
+    allow_non_index_paths: true
 
   - id: fallback-mode
     path: fallback/index.md
     title: Subagent Fallback Mode
-    version: 0.2.0
+    version: 0.3.0
     status: draft
     abstraction: reference
 
   - id: glossary
     path: glossary/index.md
     title: Glossary
-    version: 0.8.0
+    version: 0.9.0
     status: draft
     abstraction: reference
     has_translation: index-RU.md
 
   - id: planned-architecture
     path: planned-architecture/index.md
-    title: Planned Architecture (Complete)
-    version: 0.3.0
+    title: Planned Architecture
+    version: 0.4.0
     status: draft
     abstraction: conceptual
+    allow_non_index_paths: true
     references:
       - planned-architecture-layer-0
       - planned-architecture-layer-1
@@ -77,6 +81,7 @@ documents:
     version: 0.2.0
     status: draft
     abstraction: protocol
+    allow_non_index_paths: true
 
   - id: planned-architecture-layer-1
     path: planned-architecture/layer-1.md
@@ -84,25 +89,28 @@ documents:
     version: 0.2.0
     status: draft
     abstraction: protocol
+    allow_non_index_paths: true
 
   - id: planned-architecture-layer-2
     path: planned-architecture/layer-2.md
     title: Layer 2 — External Interfaces / Adapters
-    version: 0.3.0
+    version: 0.4.0
     status: draft
     abstraction: protocol
+    allow_non_index_paths: true
 
   - id: planned-architecture-decisions
     path: planned-architecture/decisions/index.md
-    title: Decisions Index (ADR-001–005)
-    version: 0.2.0
+    title: Decisions Index
+    version: 0.3.0
     status: draft
     abstraction: reference
+    allow_non_index_paths: true
 
   - id: execution-runtime
     path: execution-runtime/index.md
     title: Execution Runtime & Session Lifecycle
-    version: 0.1.0
+    version: 0.3.2
     status: draft
     abstraction: protocol
     references:
@@ -112,7 +120,7 @@ documents:
   - id: operator-surface
     path: operator-surface/index.md
     title: Operator Surface & Escalation
-    version: 0.1.0
+    version: 0.1.2
     status: draft
     abstraction: protocol
     references:
@@ -122,13 +130,13 @@ documents:
   - id: service-contract
     path: service-contract/index.md
     title: Cross-Service Artifact & Event Contract
-    version: 0.1.0
+    version: 0.1.6
     status: draft
     abstraction: format
 
   - id: project-concept
     path: project-concept/index.md
-    title: Council — Conceptual Overview
+    title: Council
     version: 0.3.1
     status: draft
     abstraction: conceptual
@@ -136,15 +144,16 @@ documents:
 
   - id: scenario
     path: scenario/index.md
-    title: Scenarios — Declarative Role & Protocol Configuration
+    title: Scenarios
     version: 0.1.0
     status: draft
     abstraction: protocol
+    has_translation: index-RU.md
 
   - id: protocol-core
     path: protocol-core/index.md
     title: Protocol Core
-    version: 0.5.0
+    version: 0.5.3
     status: draft
     abstraction: protocol
     has_translation: index-RU.md

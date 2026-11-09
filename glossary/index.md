@@ -1,7 +1,7 @@
 # Glossary
-Version: 0.8.0
+Version: 0.9.0
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 changelog-path: CHANGELOGS/glossary.changes.md
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.
@@ -15,6 +15,10 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Role Agent** (Ролевой агент) An LLM-backed agent instance initialized with a specific role's prompt and context. One instance is created per active role for each session.
 
 **Auxiliary Agent** (Вспомогательный агент) A non-role LLM-backed worker invoked by the Execution Runtime for supporting tasks — for example, the Documentation Worker behind Documenter. Auxiliary Agents never participate in consensus, never vote, and never advance a phase.
+
+**Primary agent** (Основной агент) The orchestrating entity responsible for strategic decisions, ambiguity resolution, scope approval, and change-plan confirmation. In the documentation workflow, it directly reads files (manifest, documents, glossary, changelogs) and delegates mechanical operations to skills like Documentation Worker. During fallback mode before the code-based Moderator exists, named subagents serve as the primary agent's operational substitute.
+
+**Subagent** (Подагент) A named LLM-backed agent that executes delegated tasks within a session or workflow. Subagents operate under the direction of a primary agent or moderator, each assigned a specific role (e.g., Role Agent, Auxiliary Agent per protocol-core). They are distinct from auxiliary agents invoked by the execution runtime: subagents participate in structured multi-agent protocols with explicit task delegation and output aggregation.
 
 **Architect** (Архитектор) The role responsible for evaluating how a design decision fits into the overall system structure — component boundaries, integration points, data flows, coupling, and structural scalability.
 
@@ -116,6 +120,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **Council** The name of the AI-Agent Collaborative Design Framework project. Used as a canonical identifier and shorthand reference across all documentation (e.g., "the Council framework," "Council protocol"). Provides a stable named entity for cross-referencing without repeated use of the full title.
 
+**Documenter** (Документатор) An automated Supporting service under development that performs quality audits on project documentation and delegates write operations through the Documentation Worker skill. Provides two main interfaces: `audit()` for scanning documents and producing structured reports, and `delegate()` for applying approved changes with trust-level control and safety protocols. Unlike the Documentation Worker skill itself, Documenter adds policy enforcement, tier-based authorization, audit registries, rollback/reconciliation, and event logging. The Documenter classifier determines the effective trust level for delegated operations. Not yet implemented; the specification exists in `documenter-service/index.md`.
+
 **Documentation Worker** A reusable skill providing mechanical and structural operations on project documentation artifacts. NOT part of the Council framework itself — it is an operational instrument provided as a skill and invoked via the skill tool by the primary agent to handle updates, splits, translations, and compliance audits under defined trust levels. Full contract and capabilities are at `/.agents/skills/documentation/SKILL.md`.
 
 ---
@@ -142,10 +148,10 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **Trust Floor** (Базовый уровень доверия) The minimum trust level permitted for an operation. Two forms: *static floor*, computed at policy load from `change_type` and used to validate `allowed_operations`; and *derived floor* (dynamic), computed at invocation from the actual diff and used to validate the caller's request. A request below the derived floor is rejected with `trust_mismatch`.
 
-**Mechanical Edit** (Механическое изменение) A deterministic, reversible change that does not alter semantic content: patch-level version bump, changelog append, metadata or typo/anchor correction, formatting normalization. The normative enumeration is in Documenter §Trust Classification; this term is the glossary-level summary.
+**Mechanical Edit** (Механическое изменение) A deterministic, reversible change that does not alter semantic content. The complete enumeration is: (1) patch-level version bump in YAML headers; (2) append-only changelog entry insertion (`CHANGELOGS/<id>.changes.md`); (3) metadata corrections (Last Modified date, version numbers up by patch only); (4) typographical or grammatical corrections that do not affect technical meaning; (5) cross-reference anchor stabilization (replacing line numbers with heading anchors); (6) whitespace and indentation normalization; (7) format conversions within the same document structure (e.g., adding/removing table cells where content is preserved). Any change beyond these categories is classified as a semantic edit requiring higher trust levels. This list is normative — the authoritative source for trust classification.
 
 **Effective Trust Level** (Фактический уровень доверия) The trust level actually applied to a `delegate()` invocation. Equal to the caller's requested level when that request is at or above the derived floor; never a silently upgraded value.
 
 ---
 
-*Aligned with project documents v0.8.0 — split: project-concept/index.md, protocol-core/index.md, project-reference/index.md.*
+*Aligned with project documents v0.9.0 — expanded Mechanical Edit definition into normative seven-item enumeration (§Technical Concepts) to resolve C-04; added Primary agent and Subagent terms in Roles & Agents section to resolve T-06.*

@@ -122,4 +122,4 @@ Before writing the final version, verify:
 
 ---
 
-*Aligned with fallback/index.md Phase 4–5 workflow.*
+*Aligned with fallback/index.md 0.3.0 — session consolidation prompt.*

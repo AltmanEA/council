@@ -1,6 +1,6 @@
 # Decisions Index
 
-Version: 0.2.0
+Version: 0.3.0
 Status: draft
 Last Modified: 2026-11-08
 Abstraction: reference
@@ -22,6 +22,6 @@ The standalone ADR document referenced by earlier versions is no longer part of 
 | ADR-002 | Zero silent defaults; every parameter traceable in the session manifest | `layer-1.md` |
 | ADR-003 | Deterministic error localization lookup; no LLM-generated messages | `layer-2.md` |
 | ADR-004 | Hybrid checkpoint/resume (deferred to Phase 2+) | Execution Runtime specification |
-| ADR-005 | Single-level schema migration chain | `layer-2.md` |
+| ADR-005 | Schema migration chain — deferred until after MVP | `layer-2.md` |
 
 D3 (Documenter as a Supporting service) is recorded in `../index.md` and `../../documenter-service/index.md`.

@@ -1,0 +1,159 @@
+# Golden Test Fixtures Registry — Council Framework
+# Version: 1.0
+# Status: populated per remediation plan R-26 (E-01, B-03)
+# Generated: 2026-11-09 as resolution of readiness finding E-01
+
+---
+
+fixtures:
+  # 1. Critical without justification → downgrade to high
+  critical-without-justification:
+    description: >
+      A critical-severity Finding submitted with missing or invalid justification.
+      Schema acceptance passes; protocol downgrade applies (severity → high);
+      original text preserved in transparency record.
+    input_scenario: session_critical_finding_no_justification
+    expected_outcome: severity_downgrade_high
+    validation_codes: [VAL.001]
+    payload:
+      schema_version: 1
+      subject_id: "SUBJ-001"
+      severity: critical
+      stance: oppose
+      summary: "Security concern about data storage format"
+      recommendation: "Encrypt data at rest using AES-256"
+      justification: ""
+
+  # 2. Absent vs null stance — different semantics
+  absent_vs_null_stance:
+    description: >
+      Two submissions for the same subject: one omits stance (subject not addressed),
+      another sets stance: null (addressed but no opinion). These are distinct states.
+    input_scenario: session_subject_missing_vs_null_stance
+    expected_outcome: distinct_interpretation
+    validation_codes: [VAL.003]
+    payload_omit:
+      schema_version: 1
+      subject_id: "SUBJ-002"
+      severity: low
+      summary: "Minor UI suggestion"
+      # stance field omitted entirely — subject not addressed by role
+    payload_null:
+      schema_version: 1
+      subject_id: "SUBJ-002"
+      severity: low
+      stance: null
+      summary: "No opinion on this minor suggestion"
+
+  # 3. Support vs oppose disagreement on same subject
+  support_oppose_disagreement:
+    description: >
+      Two roles with opposite stances (support vs oppose) on the same subject identifier.
+      Triggers disagreement detection → ConsensusVerdict.outcome = no-consensus.
+    input_scenario: session_role_disagreement_on_subject
+    expected_outcome: outcome_no_consensus
+    validation_codes: [PROT.003]
+    payload_roles:
+      - role_id: Architect
+        stance: support
+        summary: "Direct connection is acceptable with proper firewall rules"
+      - role_id: "Reliability & Security Specialist"
+        stance: oppose
+        summary: "Unauthorized access threat via direct component connection"
+
+  # 4. Invalid format status → blocked-escalation with information-gap
+  invalid_format_status:
+    description: >
+      Role review contains unparseable status text. Layer 0 extract_role_status()
+      returns extraction=invalid-format. Session enters blocked-escalation with
+      escalation_reason=information-gap. Error code: PROT.002.
+    input_scenario: session_invalid_role_status
+    expected_outcome: blocked_escalation_information_gap
+    validation_codes: [PROT.002]
+    payload:
+      schema_version: 1
+      review_id: "rev-invalid-status-test"
+      session_id: "sess-test-001"
+      role_id: Architect
+      phase_id: 2
+      round: 0
+      status: "xyzzy-wobble-bogus"
+      summary_position: "Everything looks fine except this status field"
+
+  # 5. Missing core role → blocked-escalation with risk-threshold-breach
+  missing_core_role:
+    description: >
+      Session manifest activates all Core roles except one (e.g., Reliability & Security
+      Specialist removed from base_roles without locked_roles/operator_approval).
+      Blocks session start with blocked-escalation and risk-threshold-breach.
+      Error code: PROT.001.
+    input_scenario: session_missing_core_role
+    expected_outcome: blocked_escalation_risk_threshold_breach
+    validation_codes: [PROT.001]
+    payload_manifest:
+      schema_version: 1
+      session_id: "sess-missing-role-001"
+      mode: moderator
+      scenario_id: default-council-session
+      current_phase: 1
+      locked_roles: []          # empty — no deliberate exclusion
+      operator_approval: false   # explicit approval not present
+      active_roles:
+        - Architect
+        - Human-Centric Designer
+        - Operations Engineer
+      # Missing: Reliability & Security Specialist (Core tier)
+      configuration_source: scenario_defaults
+
+  # 6. Manifest hash chain break
+  manifest_hash_break:
+    description: >
+      Previous manifest hash stored in `previous_manifest_hash` does not match
+      the computed sha256 of the prior canonical manifest. Indicates possible
+      tampering or corruption. Error code: IO.002.
+    input_scenario: session_manifest_hash_mismatch
+    expected_outcome: io_error_chain_broken
+    validation_codes: [IO.002]
+    payload_manifest:
+      schema_version: 1
+      session_id: "sess-hash-broken-001"
+      mode: moderator
+      manifest_hash: "sha256:aabbccdd11223344556677889900aabbccddeeff0011223344556677889900aabb"
+      previous_manifest_hash: "sha256:deadbeef00000000000000000000000000000000000000000000000000000000"
+
+  # 7. Documenter error category mapping verification
+  documenter_error_category_mapping:
+    description: >
+      Every Documenter error_category maps to exactly one registry code.
+      No ambiguity, no overlap, no gaps. Each entry tested individually.
+    input_scenario: session_all_documenter_errors_mapped
+    expected_outcome: deterministic_code_assignment
+    validation_codes: []
+    mappings:
+      - error_category: hash_mismatch
+        registry_code: IO.002
+      - error_category: trust_mismatch
+        registry_code: VAL.004
+      - error_category: audit_mismatch
+        registry_code: VAL.005
+      - error_category: blocking_finding
+        registry_code: PROT.005
+      - error_category: skill_failure
+        registry_code: IO.004
+      - error_category: operator_timeout
+        registry_code: PROT.006
+      - error_category: gate_failure
+        registry_code: PROT.GATE.001
+      - error_category: unknown
+        registry_code: IO.999
+
+metadata:
+  version: 1.0
+  schema_version: 1
+  generated_by: R-26 remediation task (E-01, B-03, D-03)
+  notes: >
+    All seven fixtures populated per remediation plan R-26. Before Layer 0 coding,
+    each fixture must produce a concrete payload that matches the corresponding
+    EventEnvelope, RoleReview, ConsensusVerdict, or Finding schemas defined in
+    service-contract/index.md §Artifact Schemas. See also AC-9 and B-03
+    (validation order pipeline: schema acceptance → protocol downgrade → transparency record).

@@ -1,8 +1,8 @@
 # Execution Runtime & Session Lifecycle
 
-Version: 0.1.0
+Version: 0.3.2
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/execution-runtime.changes.md
 
@@ -27,7 +27,7 @@ Import rules: `orchestrator/` may import the other modules; `agents/` MUST NOT i
 
 ## Deterministic Control Plane
 
-Moderator control flow and every phase, consensus, and escalation decision are deterministic functions of validated role outputs. No LLM participates in control flow or safety verification. The Moderator may read free text only for display; it never interprets it to make a decision.
+Moderator control flow and every phase, consensus, and escalation decision are deterministic functions of validated role outputs. No LLM participates in control flow or safety verification. The Moderator may read free text only for display; it never interprets it to make a decision. Scenario loading falls back to `default-council-session` (see `scenario/default-council-session.yaml`) when no explicit `scenario_id` is provided in the session manifest.
 
 ## Phase State Machine
 
@@ -35,23 +35,24 @@ States: `1` task submission, `2` individual review, `3` discussion, `4` consensu
 
 | From | To | Guard |
 |------|----|-------|
-| 1 | 2 | Task validated; scenario loaded; all Core roles active |
+| 1 | 2 | Task validated; scenario loaded; locked_roles resolved against operator_approval per service-contract §SessionManifest |
 | 2 | 3 | Every active role has `RoleStatus` with `extraction = parsed` |
 | 2 | awaiting-operator | Any `invalid-format` status or missing Core role |
 | 3 | 4 | Round limit reached, or no new `blocked-in-scope` |
 | 3 | 3 | At least one `blocked-in-scope` and targeted-round budget remains |
-| 4 | 5 | Outcome `consensus` or `conditional` |
-| 4 | 3 | Outcome `no-consensus` and discussion budget remains |
-| 4 | awaiting-operator | Outcome `blocked-escalation`, or `no-consensus` after budget |
+| 4 | 5 | Per protocol-core §Outcome-to-Transition table: `consensus` or `conditional` → Phase 5 |
+| 4 | 3 | Per protocol-core §Outcome-to-Transition table: `no-consensus` with remaining budget → re-enter Phase 3; decrements `no_consensus_budget`. |
+| 4 | awaiting-operator | Per protocol-core §Outcome-to-Transition table: `blocked-escalation`; OR `no-consensus` with exhausted budget (`no_consensus_budget` reaches zero → `blocked-escalation` with `escalation_reason = information-gap`) → `awaiting-operator` |
 | 5 | resolved | Final artifact persisted; manifest updated last |
 | awaiting-operator | `resume_phase` | Operator resolution bound to `escalation_id` |
+| N → N+1 | Mandatory at phase boundaries per layer definition. Fails fast on high/critical Documenter finding (percheck failed). Precheck unavailable → override permitted via council.override_precheck (precheck.overridden event). Override recorded in manifest as pre_check_override; permits exactly one transition after which another pass or new override required. |
 | any | failed | Unrecoverable IO or protocol violation |
 
 Only `orchestrator/` advances a phase. The operator never edits phase state directly; resolution arrives through the operator surface. The `SUBJ-007` quick-review upgrade hook is reserved but not implemented at MVP.
 
 ## Role Status Handling
 
-`extract_role_status()` is the only source of truth for consensus. An `invalid-format` extraction is a blocking protocol error: the session enters `blocked-escalation` with `information-gap`, the raw review is preserved, and the role is never counted as `agree`. A missing Core role is `blocked-escalation` with `risk-threshold-breach`. Core-role presence is checked on every path, not only before simplification.
+`extract_role_status()` is the only source of truth for consensus. An `invalid-format` extraction is a blocking protocol error: the session enters `blocked-escalation` with `escalation_reason = information-gap` produced structurally by the extraction pipeline, the raw review is preserved, and the role is never counted as `agree`. A critical finding with invalid justification follows the same non-rejection principle (per service-contract §Critical Finding Validation Process): it is downgraded to `high` with the original text preserved, rather than causing an outright review rejection. A missing Core role is `blocked-escalation` with `escalation_reason = risk-threshold-breach`. Core-role presence is checked on every path, not only before simplification. The pre_check gate operates independently of role status extraction but must succeed before any protocol advancement.
 
 ## Artifact Assembly Order
 
@@ -66,7 +67,7 @@ A failed step aborts the remaining steps. The session remains at the last comple
 
 ## Escalation Routing
 
-Escalation is stop-and-resume. The runtime writes an `EscalationRecord`, sets `phase_state = awaiting-operator`, emits `escalation.opened`, and returns control to the operator. No blocking stdin, no background waiter, and no automatic timeout enforcement at MVP: `timeout_at` is informational, and the operator surface owns the clock on the next invocation.
+Escalation is stop-and-resume. The runtime writes an `EscalationRecord`, sets `phase_state = awaiting-operator`, emits `escalation.opened`, and returns control to the operator. No blocking stdin or background waiter at MVP: the runtime checks `timeout_at` on each subsequent session invocation. When the current time exceeds `timeout_at`, the runtime automatically applies the `fallback_strategy` defined in the `EscalationRecord` and transitions the phase forward. On manual invocation before timeout, the operator surface owns the clock; the operator can also override via explicit approval.
 
 Resume requires an authenticated resolution bound to `escalation_id` and `operator_id`. On resume, the runtime applies the decision, sets `current_phase = resume_phase`, records the resolution in the escalation record and event log, and continues. A rejected or superseded escalation follows its `fallback_strategy`.
 
@@ -117,13 +118,10 @@ Re-running a phase invokes the LLM again and may produce different findings. The
 
 ## Namespace Rule
 
-`mode: fallback | moderator` is mandatory in the manifest.
+Both modes share the session directory structure (`sessions/<session_id>/`) but differ in their internal artifacts:
 
-- A code Moderator MUST NOT resume a `fallback` session.
-- Fallback tooling MUST NOT resume a `moderator` session.
-- Both modes share the session directory layout, the artifact schemas, and the consensus document format.
-- There is no converter between modes; a session stays in the mode in which it started.
-- The operator may read both modes through the same status projection.
+- **Moderator mode:** Uses the canonical schema — `manifest.json` (SessionManifest), `phase-*.json` files, `events.jsonl`, and `.lock` (see §Session Directory Contract). All phases produce structured JSON artifacts.
+- **Fallback mode (exempt):** Uses plain-text Markdown files (`task-brief.md`, `review-*.md`, `consensus-doc.md`). Fallback sessions do NOT require `SessionManifest` or structured phase files; they follow the layout defined in `fallback/index.md`, §Session workspace convention. This exemption exists because the code-based Moderator is not yet implemented (§1.5 Project Stage in AGENTS.md). When the Moderator is available, an adapter MAY translate fallback outputs into the canonical schema.
 
 ## Supporting Service Rule (D3)
 

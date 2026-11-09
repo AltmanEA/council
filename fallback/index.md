@@ -1,7 +1,7 @@
 # Subagent Fallback Mode
-Version: 0.2.0
+Version: 0.3.0
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 Abstraction: reference
 changelog-path: CHANGELOGS/fallback-mode.changes.md
 
@@ -11,17 +11,22 @@ changelog-path: CHANGELOGS/fallback-mode.changes.md
 
 This document defines how to run the Council interaction protocol using named subagents when the Moderator (code-based orchestrator) is not yet implemented. It is a manual approximation of the same protocol defined in `../protocol-core/index.md`; all artifacts and role status semantics remain identical. Use this mode until a dedicated tool layer replaces it.
 
-### Fixed Roles
+### Base Roles
 
-The following three roles constitute the initial set:
+Every fallback session activates at least one Core-tier role by default. The standard base set includes:
 
 | Role | Perspective | Responsibility |
 |------|-------------|----------------|
 | **Architect** | System structure, component boundaries, data flows | Architecture, coupling, scalability, integration points |
 | **Reliability & Security Specialist** | Failure modes, vulnerabilities, recovery strategies | Resilience, attack vectors, compliance, data confidentiality |
 | **Human-Centric Designer** | User experience, cognitive load, trust calibration | Accessibility, understandability, real-user capabilities |
+| **Operations Engineer** | Production-readiness, operational sustainability | Deployment, observability, scaling, cost estimation |
 
-Additional roles are added per §7.5 (version bump minor) and documented in `../protocol-core/index.md` (§1.x).
+### Extended Roles
+
+Additional roles from the Extended tier (`protocol-core/index.md`, §Role Activation Tiers) may be activated when the task explicitly involves relevant domains (e.g., operations-heavy systems → include Operations Engineer if not already present; security-heavy → add a security-specific role; etc.). Role selection follows the same justification rules as protocol-core §Role Activation Rules.
+
+At minimum, **at least one Core role must participate**. The operator decides the role set per session via the task brief or explicit configuration. When no extended roles apply, the base set above serves as the full roster.
 
 ### Output Structure
 
@@ -140,6 +145,8 @@ See also: `../protocol-core/index.md` §4–5 (consensus check and resolution fo
 
 ### Session workspace convention
 
+- **Exemption from runtime contract.** Fallback sessions use a plain-text Markdown layout (`task-brief.md`, `review-*.md`, `consensus-doc.md`) instead of the structured JSON schema defined in `execution-runtime/index.md` (§Session Directory Contract) and `service-contract/index.md` (§SessionManifest). Fallback sessions do NOT produce a `SessionManifest`, `phase-*.json`, or `events.jsonl`. They exist outside the moderator's namespace contract until a future adapter translates them. This exemption was formalized to resolve readiness finding A-02.
+
 All per-session artifacts created by or for the operator go into `sessions/<session-id>/`:
 
 - `task-brief.md` — filled-out task brief
@@ -155,4 +162,4 @@ The workspace directory is isolated from the root project directory. When a sess
 
 This fallback mode implements the same five-phase interaction protocol as `../protocol-core/index.md` with operator-in-the-loop substitution for the code-based Moderator. All terminology inherits from `../glossary/index.md`. Role prompts are derived from the role definitions in `../protocol-core/index.md` (§1).
 
-*Aligned with project documents v0.3.1.*
+*Aligned with planned architecture v0.4.0 and project reference 0.3.1.*

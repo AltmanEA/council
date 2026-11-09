@@ -1,8 +1,8 @@
 # Cross-Service Artifact & Event Contract
 
-Version: 0.1.0
+Version: 0.1.6
 Status: draft
-Last Modified: 2026-11-08
+Last Modified: 2026-11-09
 Abstraction: format
 changelog-path: CHANGELOGS/service-contract.changes.md
 
@@ -52,10 +52,23 @@ Glossary labels map to wire values: `information gap` → `information-gap`, `ir
 | `recommendation` | string \| null | no | Operator-facing action |
 | `evidence_ref` | string \| null | no | Artifact path or hash; redacted |
 
+### InvalidFormat
+
+Produced by Layer 0 `extract_role_status()` when the review text cannot be parsed (status enum unrecognizable, required fields absent). Consumers MUST NOT infer a default status; the session enters `blocked-escalation` with `escalation_reason = information-gap`.
+
+| Field | Type | Required | Rule |
+|-------|------|----------|------|
+| `error_code` | string | yes | Always `invalid-format` |
+| `raw_text_hash` | string | yes | `sha256` of the original review text submitted by the role |
+| `parse_attempted` | boolean | yes | `true` — indicates an attempt was made and failed |
+| `role_id` | string \| null | no | If known from the envelope context; absent if the review itself is malformed |
+| `session_id` | string \| null | no | If known from the envelope context; absent if the review itself is malformed |
+
 ### RoleReview
 
 | Field | Type | Required | Rule |
 |-------|------|----------|------|
+| `escalation_reason` | enum \| null | no | Required when status = `blocked-escalation`; one of: information-gap, irresolvable-conflict, risk-threshold-breach. Otherwise null. Extracted structurally from the review text via Layer 0 `extract_role_status()`. |
 | `review_id` | string | yes | Identifier format |
 | `session_id` | string | yes | |
 | `role_id` | string | yes | Must exist in the role catalog |
@@ -71,7 +84,14 @@ The review also carries `recommended_actions` and `open_questions` (string array
 
 Produced by Layer 0 `extract_role_status()`; the review's declared status is not trusted until it appears here.
 
-`{role_id: string, status: role_status, phase_id: integer, source_review_id: string, extraction: parsed|invalid-format}` — all fields required.
+| Field | Type | Required | Rule |
+|-------|------|----------|------|
+| `role_id` | string | yes | Must exist in the role catalog |
+| `status` | enum | yes | `role_status` (`agree`, `concerns`, `blocked-in-scope`, `blocked-escalation`) |
+| `phase_id` | integer | yes | Phase producing this status |
+| `source_review_id` | string | yes | Identifier of the review this status derives from |
+| `escalation_reason` | enum \| null | conditional | Required when status = `blocked-escalation`; one of `information-gap`, `irresolvable-conflict`, `risk-threshold-breach`. Null otherwise. Extracted structurally from the review, never inferred from free text. |
+| `extraction` | enum | yes | `parsed` or `invalid-format` |
 
 ### ConsensusVerdict
 
@@ -104,7 +124,7 @@ Produced by Layer 0 `extract_role_status()`; the review's declared status is not
 | `operator_request` | string | yes | One concrete decision or missing input |
 | `fallback_strategy` | string | yes | What happens if the operator does not answer |
 | `timeout_at` | timestamp \| null | yes | `null` when no deadline is set |
-| `resolution` | object | yes | `{state: pending\|accepted\|rejected\|superseded, note, operator_id, resolved_at}` |
+| `resolution` | object | yes | `{state: pending\|accepted\|rejected\|superseded\|expired, note, operator_id, resolved_at}` |
 | `resume_phase` | integer | yes | Exact phase to resume |
 
 ### SessionManifest
@@ -117,8 +137,11 @@ Produced by Layer 0 `extract_role_status()`; the review's declared status is not
 | `scenario_id` | string | yes | |
 | `task_ref` | string | yes | Relative path to the task brief |
 | `current_phase` | integer | yes | `1`–`5` |
+| `locked_roles` | string[] | no | Explicitly excluded Core role identifiers. Empty or absent when all Core roles are active. Each entry must refer to a defined Core tier role ID. Used only when `operator_approval` is present. |
+| `operator_approval` | boolean | no | `true` when Core role exclusions are deliberate and approved by the operator. Must be `false` or absent when `locked_roles` is empty. If `true`, `locked_roles` MUST not be empty. |
+| `no_consensus_budget` | integer | yes | Maximum discussion rounds before budget exhaustion transitions 4→`awaiting-operator`. See protocol-core §Outcome-to-Transition table for semantics. Budget decrements per Phase 3 round; zero exhausts it and forces `blocked-escalation` on next Phase 4 evaluation. |
 | `phase_state` | enum | yes | `active`, `awaiting-operator`, `resolved`, `failed` |
-| `active_roles` | string[] | yes | Core roles always present |
+| `active_roles` | string[] | yes | Core roles unless listed in `locked_roles` with `operator_approval: true`; see §InvalidFormat Policy for the full rule. |
 | `pending_operator_action` | string \| null | yes | `null` when none |
 | `configuration_source` | enum | yes | `scenario_defaults`, `operator_explicit`, `mixed` |
 | `role_agent_config` | object | yes | Per-role parameters actually used |
@@ -126,6 +149,7 @@ Produced by Layer 0 `extract_role_status()`; the review's declared status is not
 | `created_at` / `updated_at` | timestamp | yes | |
 | `manifest_hash` | string | yes | Hash of canonical JSON without this field |
 | `previous_manifest_hash` | string \| null | yes | Hash chain; `null` on first write |
+| `pre_check_override` | string \| null | no | Reason recorded when `council.override_precheck` is invoked (operator verb). Empty or absent when no override was applied. Logged as a `precheck.overridden` event in the event log. |
 
 ## InvalidFormat Policy
 
@@ -141,14 +165,17 @@ One envelope for all services. Documenter's `documenter.issue` and `documenter.a
 |-------|------|----------|------|
 | `schema_version` | integer | yes | `1` |
 | `event_id` | string | yes | Unique; idempotency key |
-| `event_type` | enum | yes | `session.phase-changed`, `role.review-completed`, `consensus.computed`, `escalation.opened`, `escalation.resolved`, `documenter.issue`, `documenter.approval`, `notice.simplification-applied`, `notice.fallback-deferred` |
-| `occurred_at` | timestamp | yes | |
-| `session_id` | string \| null | yes | `null` only for corpus-wide Documenter audits |
+| `event_type` | enum | yes | `session.phase-changed`, `role.review-completed`, `consensus.computed`, `escalation.opened`, `escalation.resolved`, `documenter.issue`, `documenter.approval`, `documenter.override_gate`, `notice.simplification-applied`, `notice.fallback-deferred`, `precheck.passed`, `precheck.failed`, `precheck.overridden`, `precheck.unavailable`, `notice.quick_review_disabled`, `notice.documenter_tier2_interlock` |
+| `emitted_at` | timestamp | yes | |
+| `session_id` | string \| null | yes | Mandatory for session-specific events; nullable (`null`) only for corpus-wide Documenter audits that scan across all sessions. |
 | `phase_id` | integer \| null | yes | |
 | `actor` | object | yes | `{kind: operator\|agent\|service, id}` |
 | `severity` | enum \| null | yes | |
 | `payload` | object | yes | Type-specific; redacted |
 | `causation_id` / `correlation_id` | string \| null | yes | Cause event and protocol round |
+| `caller_class` | string \| null | no | When present, echoes the auth layer's caller class resolution (`operator`, `agent`, or `service`). Set by Layer 2 ingress before events flow to Layer 1; omitted when auth is not applicable to this event source (e.g., internal Layer 1 transitions). |
+
+Actor carries two distinct fields: `actor.kind` is the caller class (`operator`, `agent`, or `service`); `actor.id` is the principal identifier (e.g. `op-...` for operators, UUID for agents). The envelope also implicitly records the auth layer's validation result via `severity` when an auth-related event is emitted (see AUTH.* error codes below).
 
 Redaction rule: manifests and events MUST NOT contain secrets, full prompts, or document text. Hashes, identifiers, counts, and short summaries are allowed.
 
@@ -167,6 +194,7 @@ Redaction rule: manifests and events MUST NOT contain secrets, full prompts, or 
 | `PROT.004` | Invalid phase transition | Retry; escalate if persistent |
 | `PROT.005` | Blocking finding present | Resolve finding, re-audit |
 | `PROT.006` | Operator approval timed out | Resume or cancel |
+| `PROT.007` | Pre-check integrity gate failed | Block execution; run audit or request override |
 | `MODEL.001` | Provider rate limit | Retry |
 | `MODEL.002` | Provider authentication failure | Fix configuration |
 | `MODEL.003` | Provider timeout | Retry |
@@ -176,20 +204,72 @@ Redaction rule: manifests and events MUST NOT contain secrets, full prompts, or 
 | `IO.004` | Delegated skill failure | Inspect trace, retry |
 | `CONFIG.001` | Missing API key | Fix configuration |
 | `CONFIG.002` | Invalid scenario or conflicting configuration | Fix configuration |
+| `AUTH.001` | Expired credential | Fix request |
+| `AUTH.002` | Invalid signature / tampered token | Fix credential |
+| `AUTH.003` | Unrecognized caller class | Fix MCP or integration config |
+| `AUTH.004` | Revoked credential | Re-authenticate |
+| `PROT.GATE.001` | Pre-check or pre-audit gate failure requiring override | Record override via `documenter.override_gate(reason, operator_id)` and re-attempt |
+| `PROT.008` | Pre-check integrity gate unavailable (Documenter unreachable) | Block transition; request `council.override_precheck` |
+| `IO.999` | Unhandled exception during delegate() execution | Capture post-mortem trace (§Safety Protocol #8), escalate |
 
-Documenter mapping: `hash_mismatch` → `IO.002`; `trust_mismatch` → `VAL.004`; `audit_mismatch` → `VAL.005`; `blocking_finding` → `PROT.005`; `skill_failure` → `IO.004`; `operator_timeout` → `PROT.006`; `unknown` → `IO.999`.
+Documenter mapping: `hash_mismatch` → `IO.002`; `trust_mismatch` → `VAL.004`; `audit_mismatch` → `VAL.005`; `blocking_finding` → `PROT.005`; `skill_failure` → `IO.004`; `operator_timeout` → `PROT.006`; `gate_failure` → `PROT.GATE.001`; `unknown` → `IO.999`.
 
 ## Configuration Precedence
 
-Highest to lowest: (1) explicit MCP request value; (2) scenario file; (3) `documenter_policy.yml` for Documenter operations; (4) `defaults/policy.yaml`; (5) built-in safe defaults. `schema_versions.json` selects a schema version, not a value. A conflict between scenario and policy on a safety parameter is `CONFIG.002`, never a silent winner.
+Highest to lowest: (1) explicit MCP request value; (2) scenario file; (3) `documenter_policy.yml` for Documenter operations; (4) `defaults/policy.yaml`; (5) built-in safe defaults. No external schema-mapper file is shipped at MVP — `schema_versions.json` mentioned in prior drafts is explicitly reserved but non-runtime per ADR-005 (§Schema Versioning). A conflict between scenario and policy on a safety parameter is `CONFIG.002`, never a silent winner.
 
 ## Schema Versioning
 
-`schema_version` is reserved and fixed at `1` for MVP. Unknown versions are rejected with `VAL.001`. No migration chain ships at MVP; the field exists so a chain can be added without changing artifact identity. Any future migration MUST preserve the downgraded-critical transparency list.
+`schema_version` is reserved and fixed at `1` for MVP. Unknown versions are rejected with `VAL.001`. No migration chain ships at MVP; the field exists so a chain can be added without changing artifact identity. Any future migration MUST preserve the downgraded-critical transparency list. The file `schema_versions.json` referenced in prior drafts is **not shipped at MVP** — it is explicitly reserved (non-runtime) for a post-MVP migration decision per ADR-005. Producers MUST NOT emit events referencing it; consumers MUST ignore it if present.
 
-## Golden Fixtures
+## Critical Finding Validation Process
 
-Required before Layer 0 is coded, stored in `tests/fixtures/contracts/` and versioned with `schema_version`: critical-without-justification downgrade; absent vs `null` stance; `support`/`oppose` disagreement; `invalid-format` status → `blocked-escalation`; missing Core role → `risk-threshold-breach`; manifest hash break → `IO.002`; every Documenter `error_category` mapping to exactly one registry code.
+Validation follows a strict three-phase pipeline. Each phase operates on the original text and its outputs feed into the next:
+
+1. **Schema Acceptance.** The artifact structure is validated against the JSON schema only (required fields present, correct types, known field names). The `justification` field is NOT required at this stage regardless of severity; a missing justification does not block submission (`VAL.003` is not emitted for missing `justification`). An invalid schema blocks submission entirely (`VAL.001`).
+2. **Protocol Downgrade.** If the finding has `severity = critical`, the moderator checks whether the justification passes format validation (non-empty string naming at least one concrete failure mode or attack scenario AND referencing at least one subject identifier from the task's subject list). Valid justification → severity stays `critical`. Invalid or missing justification → severity is downgraded to `high` for protocol purposes. The original finding object is preserved unchanged in the transparency record.
+3. **Transparency Record.** Every critical-or-downgraded finding is logged with its original severity, effective severity (after downgrade), and validation result. This log appears in the resolution document and is visible to the operator. No modification of the original text occurs in phases 1 or 2.
+
+### Golden Fixtures
+
+Golden fixtures live in `tests/fixtures/contracts/golden_test_cases.yaml`. Each fixture defines a concrete payload for validation against the canonical schemas (§Artifact Schemas) and error codes (§Error Code Registry). Before Layer 0 is coded, populate the `input_payload` field with concrete JSON/YAML matching the artifact schema, and set `validation_codes` per the table below.
+
+#### Fixture Test Matrix
+
+| Fixture ID | Expected Outcome | validation_codes |
+|-----------|------------------|------------------|
+| `critical-without-justification` | Severity downgraded from `critical` to `high`; transparency record created; original text preserved | `[VAL.001]` (schema acceptance passes — justification no longer required at MVP) |
+| `absent_vs_null_stance` | Distinct interpretation: absent = subject not addressed by role; null = role addressed subject but has no stance | `[VAL.003]` |
+| `support_oppose_disagreement` | Disagreement detected; `ConsensusVerdict.outcome = no-consensus` | `[PROT.003]` |
+| `invalid_format_status` | extraction = `invalid-format` → session enters `blocked-escalation` with `information-gap` | `[PROT.002]` |
+| `missing_core_role` | Missing Core role → `blocked-escalation` with `risk-threshold-breach` | `[PROT.001]` |
+| `manifest_hash_break` | Hash chain integrity check fails | `[IO.002]` |
+| `documenter_error_category_mapping` | Every Documenter error_category maps deterministically to one registry code | See mapping table below |
+
+#### Documenter Error Category → Registry Mapping (pre-populated for Layer 0)
+
+| error_category | Registry code | Description |
+|---------------|--------------|-------------|
+| `hash_mismatch` | `IO.002` | Manifest hash chain broken |
+| `trust_mismatch` | `VAL.004` | Trust floor mismatch |
+| `audit_mismatch` | `VAL.005` | Audit token missing/expired/out-of-scope |
+| `blocking_finding` | `PROT.005` | Blocking finding present |
+| `skill_failure` | `IO.004` | Delegated skill failure |
+| `operator_timeout` | `PROT.006` | Operator approval timed out |
+| `gate_failure` | `PROT.GATE.001` | Pre-check/pre-audit gate failure requiring override |
+| `unknown` | `IO.999` | Unhandled exception during delegate() execution |
+
+Each entry must be validated by injecting the corresponding error_category into a documenter event and verifying the emitted registry code matches exactly. Duplicate mappings are prohibited.
+
+## Content Precedence
+
+When specifications conflict across documents, the following precedence order applies (highest to lowest):
+
+1. Format contracts (`service-contract`) — schema fields, enumerations, error codes, event schemas.
+2. Protocol/runtime specs (`protocol-core`, `execution-runtime`, `operator-surface`) — phase transitions, escalation logic, session semantics.
+3. Configuration/service docs (`planned-architecture`, `documenter-service/*`) — interfaces, policies, tooling behavior.
+4. Fallback and scenario docs (`fallback`, `scenario`) — operational notes tied to specific modes or scenarios.
+5. Conceptual and legacy docs (`project-concept`, `project-reference`) — goals, roles, roadmap references.
 
 ## Cross-References
 

@@ -1,7 +1,7 @@
 # Protocol Core
-Version: 0.5.0
+Version: 0.5.3
 Status: draft
-Last Modified: 2026-11-04
+Last Modified: 2026-11-09
 Abstraction: protocol
 changelog-path: CHANGELOGS/protocol-core.changes.md
 
@@ -95,10 +95,10 @@ Not all assigned roles participate in every session. As the role set grows, univ
 | Extended | Core + one or more additional roles | Activate only when the task explicitly involves the relevant domain (e.g., operations-heavy systems → include Operations Engineer) |
 
 **Rules:**
-- The Core tier is always active unless explicitly overridden by the operator.
+- The Core tier is always active unless explicitly overridden by the operator via `locked_roles` and `operator_approval` fields in `SessionManifest`.
 - Additional roles activate only when justified by the task's scope. Justification must be stated in Phase 1 (Task Submission).
 - Maximum role count under the current sequential protocol is **five**. Beyond that, the parallel review mode (Roadmap Phase 2) must be implemented before adding more participants.
-- A task that activates fewer than all Core-tier roles must include an operator-stated reason.
+- Omitting any Core role requires both `locked_roles` (array of omitted role IDs) and `operator_approval: true` in the session manifest; otherwise the session is invalid and MUST NOT start.
 
 **Scenario-driven assignment.** A Scenario (`scenario/index.md`) declares which Roles activate, parameters the base five-phase protocol, and optionally defines pre-phases. When no Scenario is specified, activation falls back to the tier-based defaults (§Role Activation Tiers). Until a full scenario catalog exists, the tier model serves as the default overlay mechanism.
 
@@ -154,6 +154,22 @@ Blocked — at least one participant's final status is blocked-escalation. The e
 
 Disagreement — two or more roles recorded opposite stances (support vs oppose) on the same subject identifier in their final-round findings. This is a deterministic code join, not a textual judgment. If the structured data is insufficient to determine whether roles agree on a subject (missing subject references, ambiguous stances), the moderator raises an information-gap escalation rather than inferring agreement or conflict.
 
+### Outcome-to-Transition Table
+
+The following table maps each `ConsensusVerdict.outcome` value to its next state transition and escalation reason (if applicable). This is the canonical reference for outcome routing.
+
+| `ConsensusVerdict.outcome` | Next phase / state | Escalation reason | Notes |
+|----------------------------|-------------------|-------------------|-------|
+| `consensus` | Phase 5 (Resolution Formation) | — | All participants agreed. Proceed to artifact production. |
+| `conditional` | Phase 5 (Resolution Formation) | — | Concerns present but nothing blocks. Record reservations and proceed. |
+| `no-consensus` | Phase 3 (re-enter discussion round) | — | Budget has not been exhausted; additional discussion rounds may resolve the issue. |
+| `blocked-escalation` | `awaiting-operator` | `information-gap` \| `irresolvable-conflict` \| `risk-threshold-breach` | Escalation protocol triggered. See §Escalation Protocol below. |
+
+Where:
+- `no-consensus` applies when `no_consensus` budget remains (phase_state transitions 4→3 per runtime contract).
+- When budget is exhausted, the effective outcome is equivalent to `blocked-escalation` with `reason = information-gap`.
+- Missing Core role or invalid-format status also routes to `blocked-escalation` with the appropriate reason, checked independently of this table.
+
 ### Phase 5 — Resolution Formation
 
 When consensus is reached, a final document is produced containing the decision taken, the rationale for the chosen approaches, a list of open questions, and a list of action items raised during the discussion. This document is written in technical English.
@@ -185,5 +201,5 @@ Every request to the operator is accompanied by a structured record. It includes
 There are three possible escalation outcomes:
 
 - **Operator intervention.** The human provides the missing information or decides between the conflicting parties. Once a response is received, work continues.
-- **Deferred fallback.** If there is no response within the allotted time, a pre-defined strategy is applied at the project's discretion.
+- **Deferred fallback.** If there is no response within the allotted time, a pre-defined strategy is applied at the project's discretion. The runtime enforces this automatically: when a session is resumed and `timeout_at` has passed, the `fallback_strategy` from the `EscalationRecord` is applied without further operator input.
 - **Partial continuation.** The parts of the task not blocked by the escalation are executed; the remaining information is carried over into the next processing cycle.
