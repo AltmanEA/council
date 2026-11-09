@@ -25,7 +25,7 @@ MVP ships one transport: MCP over stdio. The operator surface is an adapter in L
 Three caller classes: `operator`, `agent`, `service`.
 
 - AuthN: local stdio process plus `COUNCIL_OPERATOR_ID` and `COUNCIL_OPERATOR_TOKEN` from the environment. The surface verifies the token and never forwards it to Layer 1.
-- AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in §Authentication; structural schema violations remain `VAL.001`.
+- AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in `operator-surface/index.md` §Caller Identity and Authorization; structural schema violations remain `VAL.001`.
 - `operator_id` is a human principal. Agent principals MUST NOT approve Documenter writes or resolve escalations at MVP.
 
 #### Authentication (MVP)

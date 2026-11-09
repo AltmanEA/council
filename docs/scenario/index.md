@@ -10,7 +10,7 @@ changelog-path: CHANGELOGS/scenario.changes.md
 
 ## Overview
 
-A **Scenario** defines a set of active Roles and a parameterization of the base five-phase interaction protocol (§Interaction Protocol) for solving problems of a particular kind. It is a declarative recipe, not an execution instance: a Scenario is what gets selected; a Session is what gets created when a Scenario runs against a Task.
+A **Scenario** defines a set of active Roles and a parameterization of the base five-phase interaction protocol (see `protocol-core/index.md` §Interaction Protocol) for solving problems of a particular kind. It is a declarative recipe, not an execution instance: a Scenario is what gets selected; a Session is what gets created when a Scenario runs against a Task.
 
 Scenarios do not replace or extend the core protocol structure. They select roles, tune parameters, and optionally define preparatory pre-phases that feed input into Phase 1 (Task Submission). Protocol-level modifications (different phase sequences, different consensus logic) are handled by separate protocol variants, not by scenarios.
 
@@ -43,7 +43,7 @@ Each Scenario declaration carries the following fields:
 | no_consensus_budget | integer | yes | Maximum number of targeted discussion rounds before a `no-consensus` outcome automatically transitions to `blocked-escalation` with `escalation_reason = information-gap`. Budget counts downward from each round in Phase 3; when it reaches zero, Phase 4 evaluates budget as exhausted rather than `no-consensus`. |
 | version | semantic version string | yes | Independent scenario version |
 | scenario_id | string | yes | Stable unique identifier for this scenario definition. REQUIRED — every scenario must provide its own identifier matching the catalog entry. Identifiers are kebab-case and must be globally unique across all scenarios. Inferred from the filename when present in the default catalog (`default-council-session.yaml` → `default-council-session`). |
-| round_timeout_minutes | integer | no | Default timeout (minutes) for each discussion round. Defaults to `protocol.max_discussion_rounds * 5` when omitted. Used by the runtime to set per-round `timeout_at` (§Execution Runtime §Escalation Routing). |
+| round_timeout_minutes | integer | no | Default timeout (minutes) for each discussion round. Defaults to `protocol.max_discussion_rounds * 5` when omitted. Used by the runtime to set per-round `timeout_at` (see `execution-runtime/index.md` §Escalation Routing). |
 | escalation_timeout_minutes | integer | no | Default timeout (minutes) for escalated sessions awaiting operator resolution. Defaults to `defaults/policy.yaml` value (30 min) when omitted. Overrides the policy file when present. |
 
 ---

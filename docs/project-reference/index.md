@@ -54,13 +54,4 @@ Phase 3 — implementing a weighted-voting mechanism for resolving disagreements
 
 Phase N — full support for nested sessions, cross-session dependencies, and automated audit logs.
 
----
 
-## Out of Scope (Technical Details)
-
-- Software code generation or code analysis
-- Code execution or runtime monitoring
-- General-purpose chat or conversational AI
-- Project management beyond the boundary of a single task
-
-These capabilities may be built on top of Council, but they are not part of its core design.

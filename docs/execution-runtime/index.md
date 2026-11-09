@@ -35,7 +35,7 @@ States: `1` task submission, `2` individual review, `3` discussion, `4` consensu
 
 | From | To | Guard |
 |------|----|-------|
-| 1 | 2 | Task validated; scenario loaded; locked_roles resolved against operator_approval per service-contract §SessionManifest |
+| 1 | 2 | Task validated; scenario loaded; locked_roles resolved against operator_approval per `service-contract/index.md` §Session Manifest |
 | 2 | 3 | Every active role has `RoleStatus` with `extraction = parsed` |
 | 2 | awaiting-operator | Any `invalid-format` status or missing Core role |
 | 3 | 4 | Round limit reached, or no new `blocked-in-scope` |
@@ -52,7 +52,7 @@ Only `orchestrator/` advances a phase. The operator never edits phase state dire
 
 ## Role Status Handling
 
-`extract_role_status()` is the only source of truth for consensus. An `invalid-format` extraction is a blocking protocol error: the session enters `blocked-escalation` with `escalation_reason = information-gap` produced structurally by the extraction pipeline, the raw review is preserved, and the role is never counted as `agree`. A critical finding with invalid justification follows the same non-rejection principle (per service-contract §Critical Finding Validation Process): it is downgraded to `high` with the original text preserved, rather than causing an outright review rejection. A missing Core role is `blocked-escalation` with `escalation_reason = risk-threshold-breach`. Core-role presence is checked on every path, not only before simplification. The pre_check gate operates independently of role status extraction but must succeed before any protocol advancement.
+`extract_role_status()` is the only source of truth for consensus. An `invalid-format` extraction is a blocking protocol error: the session enters `blocked-escalation` with `escalation_reason = information-gap` produced structurally by the extraction pipeline, the raw review is preserved, and the role is never counted as `agree`. A critical finding with invalid justification follows the same non-rejection principle (per `service-contract/error-management/index.md` §Critical Finding Validation Process): it is downgraded to `high` with the original text preserved, rather than causing an outright review rejection. A missing Core role is `blocked-escalation` with `escalation_reason = risk-threshold-breach`. Core-role presence is checked on every path, not only before simplification. The pre_check gate operates independently of role status extraction but must succeed before any protocol advancement.
 
 ## Artifact Assembly Order
 
