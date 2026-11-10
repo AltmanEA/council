@@ -58,13 +58,17 @@ Relationship between the two: the Documentation Worker skill is the executor; Do
 
 ### 2.1 On-Disk Layout
 
-Documents are stored in individual folders under the `docs/` directory, named after their manifest identifier. The primary document is `index.md` inside that folder; a Russian translation, if present, is `index-RU.md` in the same folder. A changelog file `CHANGELOGS/<id>.changes.md` stores version history separately from content (changelogs remain at repository root as operational artifacts). Examples: `docs/protocol-core/index.md`, `docs/project-concept/index-RU.md`, `docs/glossary/index.md`. Documents at the repository root — such as `AGENTS.md` and `docs-manifest.yaml` — serve as operational rules and the manifest index itself. New documents are created by making a new folder under `docs/` and an `index.md`; the manifest must be updated simultaneously.
+Documents are stored under the `docs/` directory in a dual-language structure: English originals live under `docs/en/<id>/`, Russian translations (when present) live under `docs/ru/<id>/`, with identical directory nesting in both trees. The primary document is `index.md` inside the English folder; a Russian translation, if present, is `index-RU.md` in the mirrored path under `docs/ru/`. A changelog file `CHANGELOGS/<id>.changes.md` stores version history separately from content (changelogs remain at repository root as operational artifacts).
 
-Multi-document exceptions: The following pre-existing folders contain additional documents beyond `index.md`. Their non-primary file paths are recorded in the manifest explicitly and do not set a precedent for new documents: `documenter-service/*` (configuration-guide, policy-reference, remains at root as operational file), `docs/planned-architecture/*` (layer-0, layer-1, layer-2, decisions/index).
+Examples: `docs/en/protocol-core/index.md` (English source), `docs/ru/protocol-core/index-RU.md` (Russian translation), `docs/en/glossary/index.md`. Documents at the repository root — such as `AGENTS.md` and `docs-manifest.yaml` — serve as operational rules and the manifest index itself.
+
+New documents are created by making a new folder under `docs/en/<id>/` and an `index.md`; the manifest must be updated simultaneously with both the English path and the RU path (if a translation exists).
+
+Multi-document exceptions: The following pre-existing folders contain additional documents beyond `index.md`. Their non-primary file paths are recorded in the manifest explicitly and do not set a precedent for new documents: `documenter-service/*` (configuration-guide, policy-reference, remains at root as operational file), `docs/en/planned-architecture/*` (layer-0, layer-1, layer-2, decisions/index).
 
 ### 2.2 AI View (Manifest)
 
-A **manifest** file (`docs-manifest.yaml` or equivalent index) is the single source of truth. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md`), title, version, status (active / draft / deprecated), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field. Each document entry also omits the `language` field; English is implied by presence in the manifest. If no manifest exists yet, the agent creates one on first interaction and updates it after every add/rename/delete operation. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`.
+A **manifest** file (`docs-manifest.yaml` or equivalent index) is the single source of truth. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which now contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. If no manifest exists yet, the agent creates one on first interaction and updates it after every add/rename/delete operation. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`.
 
 ### 2.3 Relationship Rules
 
@@ -94,11 +98,11 @@ All project documentation is authored in **technical English**. English is the a
 
 ### 3.2 Russian Translations
 
-Russian variants (`index-RU.md` inside the same folder as the English source) are provided exclusively for user convenience. They are secondary/derivative copies and **not** machine-readable sources. The manifest tracks Russian availability via the `has_translation` field — no separate manifest entry exists for a Russian file.
+Russian variants live under `docs/ru/<id>/index-RU.md` (mirroring the English structure under `docs/en/`). They are provided exclusively for user convenience. They are secondary/derivative copies and **not** machine-readable sources. The manifest tracks Russian availability via the `has_translation` field, which contains the full relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). No separate manifest entry exists for a Russian file.
 
 ### 3.3 Translation Workflow
 
-When modifying an English document: apply the change to `index.md` first → locate the corresponding `index-RU.md` in the same folder → perform a fast version check (compare section counts, heading structures, paragraph positions) → if structural mismatch detected, translate the changed portions into Russian and update the Russian file → append a brief log entry documenting the action taken (section updated, translation aligned, or verified consistent).
+When modifying an English document: apply the change to `docs/en/<id>/index.md` first → look up the corresponding RU path from the manifest `has_translation` field → perform a fast version check (compare section counts, heading structures, paragraph positions) → if structural mismatch detected, translate the changed portions into Russian and update the Russian file at `docs/ru/<id>/index-RU.md` → append a brief log entry documenting the action taken (section updated, translation aligned, or verified consistent).
 
 Translation does not apply to code, configuration, or non-document artifacts.
 
@@ -110,7 +114,7 @@ Translation does not apply to code, configuration, or non-document artifacts.
 
 ### 4.1 Structure
 
-The glossary lives in `docs/glossary/index.md`. Each term entry includes: term name (canonical form), definition (English), Russian equivalent (if applicable), and optional category tag (e.g., `[roles]`, `[protocol]`).
+The glossary lives in `docs/en/glossary/index.md`. Each term entry includes: term name (canonical form), definition (English), Russian equivalent (if applicable), and optional category tag (e.g., `[roles]`, `[protocol]`).
 
 ### 4.2 Agent Responsibilities
 
@@ -152,7 +156,7 @@ An ambiguity exists whenever more than one reasonable approach exists with no pr
 
 ### 7.1 Naming and Layout
 
-Use kebab-case for folder names; primary document is `index.md`; Russian translation is `index-RU.md` in the same folder. Draft files carry `.draft` suffix temporarily. Changelog files use format `CHANGELOGS/<id>.changes.md`.
+Use kebab-case for folder names under `docs/en/` and `docs/ru/`; primary document is `index.md`; Russian translation is `index-RU.md` in the mirrored path under `docs/ru/`. Draft files carry `.draft` suffix temporarily. Changelog files use format `CHANGELOGS/<id>.changes.md`.
 
 ### 7.2 Metadata & Format Conventions
 
