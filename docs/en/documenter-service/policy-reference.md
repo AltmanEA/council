@@ -1,6 +1,6 @@
 # Documenter Policy Reference
 
-Version: 0.5.0-draft
+Version: 0.6.0-draft
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference

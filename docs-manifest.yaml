@@ -8,6 +8,36 @@
 # to support separated language directories (ru-restructure consensus, 2026-11-10).
 
 documents:
+  - id: documenter-service
+    path: docs/en/documenter-service/index.md
+    title: Documenter Service
+    version: 0.18.0-draft
+    status: draft
+    abstraction: protocol
+    allow_non_index_paths: true
+    has_translation: docs/ru/documenter-service/index-RU.md
+    references:
+      - documenter-service-configuration-guide
+      - documenter-service-policy-reference
+
+  - id: documenter-service-configuration-guide
+    path: docs/en/documenter-service/configuration-guide.md
+    title: Documenter Configuration Guide
+    version: 0.13.0-draft
+    status: draft
+    abstraction: reference
+    allow_non_index_paths: true
+    has_translation: docs/ru/documenter-service/configuration-guide-RU.md
+
+  - id: documenter-service-policy-reference
+    path: docs/en/documenter-service/policy-reference.md
+    title: Documenter Policy Reference
+    version: 0.6.0-draft
+    status: draft
+    abstraction: reference
+    allow_non_index_paths: true
+    has_translation: docs/ru/documenter-service/policy-reference-RU.md
+
   - id: execution-runtime
     path: docs/en/execution-runtime/index.md
     title: Execution Runtime & Session Lifecycle

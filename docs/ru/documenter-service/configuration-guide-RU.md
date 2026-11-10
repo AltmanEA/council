@@ -1,6 +1,8 @@
-# Documenter Configuration Guide
+# Руководство по конфигурации Документатора
 
-Version: 0.12.0-draft
+<!-- CHANGES v0.1.0: Translated from English source. -->
+
+Version: 0.13.0-draft
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference
@@ -10,13 +12,13 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
 ## Scope
 
-This document defines runtime data structures and their integrity rules: hash store, audit registry, intent record, event schema, glossary compliance modes, and RU alignment procedure. The policy file schema, load-time validation rules, operational tuning parameters, and the tier authorization workflow live in `documenter-service/policy-reference.md` — the single source of truth for configuration. Where this guide references a policy field by name (e.g. `audit_freshness`, `rescan_batch_ceiling`), §Field Reference in the policy reference defines its type, default, and allowed values; behavior attributed to a field here is not restated there.
+Этот документ определяет структуры данных рантайма и их правила целостности: хранилище хешей, реестр аудита, запись намерения (intent record), схему событий, режимы compliance глоссария и процедуру RU-выравнивания. Схема файла политики, правила валидации во время загрузки, параметры операционной настройки и рабочий процесс авторизации тира живут в `documenter-service/policy-reference.md` — едином источнике истины для конфигурации. Где этот гайд ссылается на поле политики по имени (например, `audit_freshness`, `rescan_batch_ceiling`), §Field Reference в справочнике политик определяет его тип, значение по умолчанию и допустимые значения; поведение, приписываемое полю здесь, не повторяется там.
 
 ---
 
 ## Hash Store
 
-Content-hash tokens are stored externally in `documenter/hashes.json` — managed exclusively by Documenter, hidden from operator. Provides optimistic concurrency control for delegate-mode writes.
+Токены хешей содержимого хранятсяexternally в `documenter/hashes.json` — управляется исключительно Документатором, скрыт от оператора. Обеспечивает оптимистичный контроль конкурентности для записей в режиме delegate.
 
 ### Structure
 
@@ -35,14 +37,14 @@ Content-hash tokens are stored externally in `documenter/hashes.json` — manage
 }
 ```
 
-Two conceptual subsystems with distinct persistence and lifecycle semantics:
+Две концептуальные подсистемы с различной persistency и семантикой lifecycle:
 
-| Subsystem | Content | Persistence | Lifecycle |
+| Подсистема | Содержимое | Persistency | Lifecycle |
 |-----------|---------|-------------|-----------|
-| **Snapshot** | `last_hash`, `last_modified` | Persists between invocations | Updated after each `audit()` or `delegate()` cycle |
-| **History** | `history[]` of hash-change entries | Indefinite | Appended only; periodic GC before Tier 2+ |
+| **Snapshot** | `last_hash`, `last_modified` | Сохраняется между вызовами | Обновляется после каждого цикла `audit()` или `delegate()` |
+| **History** | `history[]` записей изменения хеша | Бессрочно | Только append; периодический GC перед Tier 2+ |
 
-The snapshot provides O(1) OCC conflict detection. The history provides audit trail and replay capability.
+Snapshot обеспечивает обнаружение конфликтов OCC O(1). History обеспечивает журнал аудита и возможность replay.
 
 ### Conflict Resolution
 

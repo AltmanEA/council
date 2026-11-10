@@ -1,6 +1,6 @@
 # Documenter Service
 
-Version: 0.17.0-draft
+Version: 0.18.0-draft
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: protocol
