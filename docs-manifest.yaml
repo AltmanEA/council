@@ -52,7 +52,7 @@ documents:
   - id: glossary
     path: docs/en/glossary/index.md
     title: Glossary
-    version: 0.10.2
+    version: 0.11.0
     status: draft
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md

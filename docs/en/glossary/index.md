@@ -1,7 +1,7 @@
 # Glossary
-Version: 0.10.1
+Version: 0.11.0
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-10
 Abstraction: reference
 changelog-path: CHANGELOGS/glossary.changes.md
 
@@ -156,6 +156,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Mechanical Edit** (Механическое изменение) A deterministic, reversible change that does not alter semantic content. The complete enumeration is: (1) patch-level version bump in YAML headers; (2) append-only changelog entry insertion (`CHANGELOGS/<id>.changes.md`); (3) metadata corrections (Last Modified date, version numbers up by patch only); (4) typographical or grammatical corrections that do not affect technical meaning; (5) cross-reference anchor stabilization (replacing line numbers with heading anchors); (6) whitespace and indentation normalization; (7) format conversions within the same document structure (e.g., adding/removing table cells where content is preserved). Any change beyond these categories is classified as a semantic edit requiring higher trust levels. This list is normative — the authoritative source for trust classification.
 
 **Effective Trust Level** (Фактический уровень доверия) The trust level actually applied to a `delegate()` invocation. Equal to the caller's requested level when that request is at or above the derived floor; never a silently upgraded value.
+
+**Trust Tier** (Ступень доверия) One of four progressively broader deployment-level write-capability levels governing Documenter's `delegate()` operations: Tier 0 (audit only), Tier 1 (diff preview), Tier 2 (confirm-per-change), Tier 3 (pattern-based batch approve). Each advancement requires an explicit operator command. A tier governs what a deployment may do at all; it is distinct from trust *level* (`safe`/`review`), which scopes a single operation's autonomy (see Effective Trust Level). Defined in `documenter-service/index.md`, §Trust Tiers.
 
 ---
 
