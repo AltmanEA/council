@@ -1,7 +1,5 @@
 # Справочник политик Документатора
 
-<!-- CHANGES v0.1.0: Translated from English source. -->
-
 Version: 0.6.0-draft
 Status: draft
 Last Modified: 2026-11-09
@@ -12,17 +10,17 @@ changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
 
 ## Purpose
 
-Авторитетная схема для файла политики Документатора: определения полей, правила валидации во время загрузки, параметры операционной настройки и пошаговый рабочий процесс авторизации тир. Семантика протокола, которую настраивают эти поля (тиры доверия, протокол безопасности, контракты интерфейсов), определена в `documenter-service/index.md`; структуры данных рантайма (хранилище хешей, запись намерения, схема событий) определены в `documenter-service/configuration-guide.md`. Этот документ не определяет собственного поведения — это поверхность конфигурации для поведения, определённого в другом месте.
+Авторитетная схема для файла политики Документатора: определения полей, правила валидации во время загрузки, параметры операционной настройки и пошаговый рабочий процесс авторизации тиров. Семантика протокола, которую настраивают эти поля (тиры доверия, протокол безопасности, контракты интерфейсов), определена в `documenter-service/index.md`; структуры данных рантайма (хранилище хешей, журнал намерения, схема событий) определены в `documenter-service/configuration-guide.md`. Этот документ не определяет собственного поведения — это поверхность конфигурации для поведения, определённого в другом месте.
 
 ---
 
 ## Policy File
 
-YAML-конфигурация, определяющая какие операции разрешены на каждом тире и режимы compliance. Записывается и поддерживается оператором. Автопроход по времени не является частью модели: одобрение всегда явное действие оператора в рамках вызова `delegate()`, и единственный путь автовыполнения — автоприменение по паттерну Tier 3 (см. §Trust Tiers и §Approval semantics в основной спецификации, `documenter-service/index.md`).
+YAML-конфигурация, определяющая, какие операции разрешены на каждом тире и режимы соответствия (compliance). Составляется и поддерживается оператором. Автопроход по времени не является частью модели: одобрение — всегда явное действие оператора в рамках вызова `delegate()`, и единственный путь автовыполнения — автоприменение по паттерну на Tier 3 (см. §Trust Tiers и §Approval semantics в основной спецификации, `documenter-service/index.md`).
 
-**Правило валидатора:** Документатор ДОЛЖЕН отклонить загрузку любого файла политики, где `allowed_operations` непуст, пока `active_tier < 2`. Это предотвращает misconfiguration при развёртывании. **Правило авторитета:** Записи политики могут только сужать built-in trust classification floor из основной спецификации (§Trust Classification): запись `allowed_operations` может требовать `review` там, где таблица разрешает `safe`, но сочетание политики, авторизующее `trust_level` ниже *static floor* для его `change_type`, недействительно и ДОЛЖНО быть отклонено во время загрузки — Документатор рассматривает это как ошибку misconfiguration, последовательно с правилом валидатора выше.
+**Правило валидатора:** Документатор ДОЛЖЕН отклонить загрузку любого файла политики, где `allowed_operations` не пусто, пока `active_tier < 2`. Это предотвращает ошибку конфигурации (misconfiguration) при развёртывании. **Правило авторитета:** Записи политики могут только сужать встроенный базовый уровень доверия (built-in trust classification floor) из основной спецификации (§Trust Classification): запись `allowed_operations` может требовать `review` там, где таблица разрешает `safe`, но сочетание политики, авторизующее `trust_level` ниже *статического базового уровня* (static floor) для своего `change_type`, недействительно и ДОЛЖНО быть отклонено во время загрузки — Документатор рассматривает это как ошибку конфигурации, последовательно с правилом валидатора выше.
 
-**Правило совместимости:** Каждое поле в §Field Reference опционально, кроме `version`, `active_tier` и `allowed_operations`. Файл политики, написанный против более ранней версии схемы, загружается успешно: отсутствующие поля разрешаются к значениям по умолчанию, и никакой удаление или rename поля не подразумевается bump'ом версии схемы.
+**Правило совместимости:** Каждое поле в §Field Reference опционально, кроме `version`, `active_tier` и `allowed_operations`. Файл политики, написанный против более ранней версии схемы, загружается успешно: отсутствующие поля разрешаются к значениям по умолчанию, и никакое удаление или переименование поля не подразумевается повышением версии схемы.
 
 ```yaml
 documenter_policy:
@@ -42,35 +40,35 @@ documenter_policy:
   briefing_ref: null              # path to operator briefing artifact; required when active_tier >= 2
 ```
 
-На Tir 0–1 `allowed_operations` должен оставаться пустым независимо от содержимого. Оператор обновляет этот файл явно при продвижении тиров. Документатор отказывается выполнять любую операцию, не указанную в списке.
+На Tier 0–1 `allowed_operations` должен оставаться пустым независимо от содержимого. Оператор обновляет этот файл явно при продвижении тиров. Документатор отказывается выполнять любую операцию, не указанную в списке.
 
-**Preview exemption:** Calls to `delegate()` with no write intent (preview mode, returning diff without applying changes) are exempt from the `allowed_operations` check at all tiers. Tier 1 specifically relies on this exemption to produce diffs. These calls always return the computed diff but never modify files. Preview is controlled via the `preview` boolean parameter (§Interfaces, delegate()) — when set to `true`, no tier validation or gate enforcement applies; only schema validity of required fields (`target_id`, `change_type`, `diff`) is checked.
+**Preview exemption:** Вызовы `delegate()` без намерения записи (режим предварительного просмотра, возвращающий diff без применения изменений) не подлежат проверкам `allowed_operations` ни на одном тире. Tier 1 конкретно полагается на это исключение для формирования diff. Эти вызовы всегда возвращают вычисленный diff, но никогда не изменяют файлы. Предварительный просмотр управляется булевым параметром `preview` (§Interfaces, delegate()) — при значении `true` никакие проверки тира или enforcement вентиля не применяются; проверяется только валидность схемы обязательных полей (`target_id`, `change_type`, `diff`).
 
 ### Field Reference
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `version` | string | Yes | `"0.2.0"` | Policy schema version for compatibility detection |
-| `active_tier` | int | Yes | `0` | Current trust tier (0–3). Must match Tier table (§Trust Tiers, main spec). |
-| `allowed_operations` | array | Yes | `[]` | Operations authorized at current tier. Empty below Tier 2. May only tighten the trust floor (§Authority rule above). |
-| `approval_expiry_window` | int | No | `30` | Maximum time (minutes) before an unapproved `approval_id` expires. Range: 5–1440 (5 minutes to 24 hours). Used together with the out-of-band `documenter.approve(approval_id, operator_id)` call described in operator-surface §Documenter Integration. |
-| `audit_freshness` | int | No | `30` | Maximum age (minutes) of an `audit_id` accepted by the `delegate()` pre-audit gate. The gate additionally validates scope coverage (exact match or `*`), blocking findings, and scan completion (`has_remaining` must not be `true`) against the audit registry (`documenter-service/configuration-guide.md`, §Audit Registry). Set to `0` to disable the gate entirely (no audit required; `audit_id` will be ignored if provided). Any other value enforces the freshness window. |
-| `briefing_ref` | string | No | `null` | Path to the archived operator briefing artifact documenting the scope of delegated authority. MUST be non-null when `active_tier >= 2` (§Authorization Workflow, step 4). |
-| `glossary_enforcement` | enum | No | `draft` | Controls glossary compliance noise reduction (§Glossary Compliance, configuration guide). |
-| `glossary_staleness_days` | int | No | `30` | Days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing (§Glossary Compliance, configuration guide). |
-| `lock_wait_timeout` | int | No | `30` | Seconds to wait for the operation-level advisory lock before aborting with the lock-owner error described in §Safety Protocol #2 (main spec). |
-| `notification_mode` | enum | No | `inline` | Delivery mode for operator-facing prompts. `inline` is the only accepted value in MVP: prompts, diffs, and verdicts are returned inside the invocation response. Unknown values are rejected at load time. |
-| `operator_approval_timeout` | int | No | `300` | Seconds the active `delegate()` invocation waits for an explicit approve/reject before emitting `error_category: operator_timeout`. Not an auto-approve window (§Approval semantics, main spec). |
-| `rescan_batch_ceiling` | int | No | `50` | Documents processed per full-rescan invocation. When reached, the response includes `has_remaining: true` and a `scan_cursor` continuation token; passing it back resumes from where the previous invocation stopped. Partial scans never authorize delegates for unscanned documents — the operator must complete all batches before delegation is permitted. No background execution. |
-| `retry_backoff_base` | int | No | `1` | Base delay (seconds) for the exponential backoff with jitter used by retry invocations (§Conflict Resolution, configuration guide). |
-| `retry_max_attempts` | int | No | `3` | Maximum retry invocations after a `hash_mismatch` before Documenter escalates to the operator instead of retrying. |
-| `temperature` | float | No | `0.1` | LLM generation randomness; higher values increase diversity (range: 0.0–2.0). Applied per role-agent inference (§Zero silent defaults, layer-1.md). |
-| `top_p` | float | No | `0.9` | Nucleus sampling parameter; tokens with cumulative probability below this threshold are excluded (range: 0.0–1.0). Applied per role-agent inference (§Zero silent defaults, layer-1.md). |
-| `frequency_penalty` | float | No | `0.0` | Reduces token repetition; positive values penalize repeated tokens (range: -2.0–2.0). Neutral default, explicitly set rather than inferred (§Zero silent defaults, layer-1.md). |
+| `version` | string | Yes | `"0.2.0"` | Версия схемы политики для обнаружения совместимости |
+| `active_tier` | int | Yes | `0` | Текущий тир доверия (0–3). Должен совпадать с таблицей Tier (§Trust Tiers, main spec). |
+| `allowed_operations` | array | Yes | `[]` | Операции, авторизованные на текущем тире. Пусто ниже Tier 2. Может только сужать базовый уровень доверия (§Authority rule above). |
+| `approval_expiry_window` | int | No | `30` | Максимальное время (в минутах), после которого неутверждённый `approval_id` истекает. Диапазон: 5–1440 (от 5 минут до 24 часов). Используется вместе с внеполосным вызовом `documenter.approve(approval_id, operator_id)`, описанным в operator-surface §Documenter Integration. |
+| `audit_freshness` | int | No | `30` | Максимальный возраст (в минутах) `audit_id`, принимаемого вентилем предварительного аудита `delegate()`. Вентиль дополнительно проверяет покрытие области (точное совпадение или `*`), блокирующие выводы и завершение сканирования (`has_remaining` не должен быть `true`) по реестру аудита (`documenter-service/configuration-guide.md`, §Audit Registry). Установите `0`, чтобы отключить вентиль полностью (аудит не требуется; `audit_id` будет проигнорирован, если предоставлен). Любое другое значение обеспечивает соблюдение окна свежести. |
+| `briefing_ref` | string | No | `null` | Путь к заархивированному артефакту брифинга оператора, документирующему объём делегированных полномочий. ДОЛЖНО быть не null при `active_tier >= 2` (§Authorization Workflow, step 4). |
+| `glossary_enforcement` | enum | No | `draft` | Управляет снижением шума при соответствии глоссарию (§Glossary Compliance, configuration guide). |
+| `glossary_staleness_days` | int | No | `30` | Дней с последней модификации глоссария; термины, появляющиеся ≥3 раза в этом окне, помечаются как отсутствующие (§Glossary Compliance, configuration guide). |
+| `lock_wait_timeout` | int | No | `30` | Секунды ожидания рекомендательной блокировки (advisory lock) уровня операции перед прерыванием с ошибкой владельца блокировки, описанной в §Safety Protocol #2 (main spec). |
+| `notification_mode` | enum | No | `inline` | Режим доставки для операторских подсказок. `inline` — единственное допустимое значение в MVP: подсказки, diff и вердикты возвращаются внутри ответа вызова. Неизвестные значения отклоняются при загрузке. |
+| `operator_approval_timeout` | int | No | `300` | Секунды, которые активный вызов `delegate()` ждёт явного approve/reject перед излучением `error_category: operator_timeout`. Не является окном автоодобрения (§Approval semantics, main spec). |
+| `rescan_batch_ceiling` | int | No | `50` | Документы, обрабатываемые за один полный вызов пересканирования. При достижении ответ включает `has_remaining: true` и токен продолжения `scan_cursor`; передача его обратно возобновляет сканирование с места, на котором остановился предыдущий вызов. Частичные сканирования никогда не авторизуют делегатов для несоканированных документов — оператор должен завершить все пакеты перед разрешением делегирования. Фоновое выполнение отсутствует. |
+| `retry_backoff_base` | int | No | `1` | Базовая задержка (в секундах) для экспоненциального backoff с джиттером, используемого повторными вызовами (§Conflict Resolution, configuration guide). |
+| `retry_max_attempts` | int | No | `3` | Максимальное число повторных вызовов после `hash_mismatch` перед тем, как Документатор эскалирует оператору вместо повторной попытки. |
+| `temperature` | float | No | `0.1` | Случайность генерации LLM; более высокие значения увеличивают разнообразие (диапазон: 0.0–2.0). Применяется в рамках вывода role-agent (§Zero silent defaults, layer-1.md). |
+| `top_p` | float | No | `0.9` | Параметр ядерной выборки; токены с кумулятивной вероятностью ниже этого порога исключаются (диапазон: 0.0–1.0). Применяется в рамках вывода role-agent (§Zero silent defaults, layer-1.md). |
+| `frequency_penalty` | float | No | `0.0` | Снижает повторение токенов; положительные значения штрафуют повторяющиеся токены (диапазон: -2.0–2.0). Нейтральное значение по умолчанию, задаётся явно, а не выводится (§Zero silent defaults, layer-1.md). |
 
 ### Per-Operation Entries
 
-Per-operation entries in `allowed_operations` follow this structure:
+Записи операций в `allowed_operations` следуют этой структуре:
 
 ```yaml
 # Tier 2+ operation entry (default type — no explicit type field needed):
@@ -92,60 +90,60 @@ allowed_operations:
     requires_diff_preview: true
 ```
 
-Pattern entry fields:
+Поля записи паттерна:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | `operation` \| `pattern` | Discriminator. Omitted defaults to `operation` (backward compatible). |
-| `pattern_id` | string | Unique identifier for this pattern (kebab-case). |
-| `pattern_description` | string | Human-readable description of what the pattern matches. |
-| `match_criteria.change_type` | enum | Limits matching to a specific `change_type`. |
-| `match_criteria.file_pattern` | string | Glob-style path pattern relative to workspace root. `*` = any chars except `/`, `**` = any chars including `/`, `?` = single char except `/`. Invalid patterns rejected at policy load time. |
+| `type` | `operation` \| `pattern` | Дискриминатор. По умолчанию `operation` (если опущено), обратно совместимо. |
+| `pattern_id` | string | Уникальный идентификатор этого паттерна (kebab-case). |
+| `pattern_description` | string | Человекочитаемое описание того, что сопоставляет данный паттерн. |
+| `match_criteria.change_type` | enum | Ограничивает совпадение конкретным `change_type`. |
+| `match_criteria.file_pattern` | string | Паттерн пути в стиле glob относительно корня рабочей области. `*` — любые символы кроме `/`, `**` — любые символы включая `/`, `?` — один символ кроме `/`. Недействительные паттерны отклоняются при загрузке политики. |
 
 ---
 
 ## Operational Tuning
 
-Which knob governs which failure path. All values are policy fields from §Field Reference; none require a code change or a restart beyond policy reload.
+Какая ручка управляет каким путём отказа. Все значения — поля политики из §Field Reference; ни одно не требует изменения кода или перезапуска помимо перезагрузки политики.
 
-| Failure or Pressure | Field | On Exhaustion |
+| Сбой или нагрузка | Field | При исчерпании |
 |---------------------|-------|---------------|
-| Concurrent `delegate()` from another agent | `lock_wait_timeout` | Abort before any write; error names lock owner PID/IP and acquisition timestamp (§Safety Protocol #2) |
-| File changed between scan and write | `retry_backoff_base` + `retry_max_attempts` | Escalate to operator; re-run `audit()` for a fresh `audit_id` |
-| Operator absent while diff is presented | `operator_approval_timeout` | Emit `error_category: operator_timeout`; nothing is written, staged `.tmp` files are discarded |
-| Expectation of out-of-band alerts | `notification_mode` | Not applicable — no asynchronous channel exists; see §Notification Semantics |
-| Full rescan exceeds document count | `rescan_batch_ceiling` | Response includes `has_remaining: true` and `scan_cursor`; operator re-invokes `audit(scan_cursor=<value>)` to resume from where previous invocation stopped |
-| Stale, invalid, or incomplete `audit_id` presented to `delegate()` | `audit_freshness` | Reject with `error_category: audit_mismatch` (registry absent/expired/scope mismatch) or `error_category: blocking_finding` (high/critical findings present or scan incomplete, `has_remaining: true`) and a re-run-`audit()` action. If registry is absent/unreadable, FAILS CLOSED — all writes denied until authenticated override via `documenter.override_gate(reason, operator_id)` |
+| Одновременный `delegate()` от другого агента | `lock_wait_timeout` | Прервать до любой записи; ошибка называет PID/IP владельца блокировки и метку времени захвата (§Safety Protocol #2) |
+| Файл изменён между сканированием и записью | `retry_backoff_base` + `retry_max_attempts` | Эскалировать оператору; заново запустить `audit()` для получения свежего `audit_id` |
+| Оператор отсутствует, пока diff показан | `operator_approval_timeout` | Излучить `error_category: operator_timeout`; ничего не записано, staged `.tmp` файлы отброшены |
+| Ожидание внеполосных оповещений | `notification_mode` | Не применимо — асинхронного канала не существует; см. §Notification Semantics |
+| Полный рескан превышает число документов | `rescan_batch_ceiling` | Ответ включает `has_remaining: true` и `scan_cursor`; оператор повторно вызывает `audit(scan_cursor=<value>)` для возобновления с места, где остановился предыдущий вызов |
+| Устаревший, недействительный или неполный `audit_id` предоставлен `delegate()` | `audit_freshness` | Отклонить с `error_category: audit_mismatch` (реестр отсутствует/истёк/несоответствие области) или `error_category: blocking_finding` (присутствуют выводы high/critical или сканирование неполное, `has_remaining: true`) и действием re-run-`audit()`. Если реестр отсутствует/нечитаем, ЗАКРЫВАЕТСЯ ОТКАЗОМ — все записи запрещены до аутентифицированного переопределения через `documenter.override_gate(reason, operator_id)` |
 
 ### Notification Semantics
 
-Documenter has no notification subsystem: no timer, no daemon, no push channel, no background poller (see §Purpose and §Approval semantics, main spec). Every operator-visible signal — audit report, diff preview, lock-conflict prompt, approval request — is produced inside the synchronous response of the invocation that generated it, and is additionally persisted to the append-only event log (§Event Schema, configuration guide) for later replay. `notification_mode` exists to make this explicit and to reserve the field namespace: introducing an asynchronous channel would be a model change to the main spec, not a policy edit, and requires a new `notification_mode` value plus a defined delivery contract.
+У Документатора нет подсистемы оповещений: нет таймера, демона, канала push-уведомлений и фонового опросника (см. §Purpose и §Approval semantics, main spec). Каждый видимый оператору сигнал — отчёт аудита, предварительный просмотр diff, подсказка конфликта блокировки, запрос одобрения — производится внутри синхронного ответа вызова, который его сгенерировал, и дополнительно сохраняется в журнал событий только для добавления (§Event Schema, configuration guide) для последующего воспроизведения. `notification_mode` существует, чтобы сделать это явным и зарезервировать пространство имён полей: введение асинхронного канала было бы изменением модели в основной спецификации, а не правкой политики, и потребовало бы нового значения `notification_mode` плюс определённый контракт доставки.
 
 ---
 
 ## Authorization Workflow
 
-Procedure for advancing write capability. Each step is a discrete operator action; Documenter never performs a step on its own behalf. Steps 1–3 precede the first Tier 2+ invocation; the main spec §Trust Tiers states both the policy file and the briefing as mandatory preconditions.
+Процедура продвижения возможности записи. Каждый шаг — дискретное действие оператора; Документатор никогда не выполняет шаг от своего имени. Шаги 1–3 предшествуют первому вызову Tier 2+; основная спецификация §Trust Tiers указывает и файл политики, и брифинг как обязательные предварительные условия.
 
-1. **Audit at current tier.** Run `audit("*")` and resolve findings at `high` and `critical`. Tier 2+ on a non-compliant corpus automates drift, not cleanup.
-2. **Draft the policy file.** Author `documenter_policy.yml` per §Policy File: set the intended `change_type` + `trust_level` + `targets` combinations in `allowed_operations`, and set operational knobs per §Operational Tuning.
-3. **Validate offline.** Load the candidate file in check-only mode. Load fails on: `allowed_operations` non-empty below Tier 2 (validator rule), a `trust_level` below the derived floor for its `change_type` (authority rule), or an unrecognized `notification_mode` value.
-4. **Record the briefing.** Write and archive the operator briefing — which documents and `change_type` values are delegated, the maximum number of documents a single invocation may touch, and the reversal procedure — then set `briefing_ref` to its path. This artifact is the human-readable counterpart of `allowed_operations`.
-5. **Advance the tier.** Set `active_tier` in the same edit as `briefing_ref`, so a partial edit cannot leave Tier 2+ without a briefing reference.
-6. **First write at the new tier.** Invoke `delegate()` on a single low-risk target with a fresh `audit_id`. Review the diff item by item regardless of tier; Tier 2 grants capability, not reduced scrutiny.
-7. **Evaluate for Tier 3.** Advance only on documented evidence: ≥90% approval rate at Tier 2 across the preceding two weeks of the event log (§Tier Selection Guidance, main spec), computable from `decision` fields in the event log (§Event Schema, configuration guide). Approved patterns are then enumerated explicitly in `allowed_operations` using `type: pattern` entries with `pattern_id`, `pattern_description`, and `match_criteria` (§Per-Operation Entries); Tier 3 never infers a pattern the operator did not authorize.
+1. **Аудит на текущем тире.** Выполнить `audit("*")` и устранить выводы `high` и `critical`. Tier 2+ на некомплаентном корпусе автоматизирует дрейф, а не уборку.
+2. **Черновик файла политики.** Составить `documenter_policy.yml` per §Policy File: установить предполагаемые сочетания `change_type` + `trust_level` + `targets` в `allowed_operations` и настроить операционные ручки per §Operational Tuning.
+3. **Валидация офлайн.** Загрузить файл-кандидат в режиме только проверки. Загрузка падает на: `allowed_operations` не пусто ниже Tier 2 (правило валидатора), `trust_level` ниже выводимого базового уровня для своего `change_type` (правило авторитета) или нераспознанное значение `notification_mode`.
+4. **Записать брифинг.** Составить и заархивировать брифинг оператора — какие документы и значения `change_type` делегированы, максимальное число документов, которые может затронуть один вызов, и процедура отката — затем установить `briefing_ref` на его путь. Этот артефакт — читаемый человеком аналог `allowed_operations`.
+5. **Продвинуть тир.** Установить `active_tier` в той же правке, что и `briefing_ref`, чтобы частичная правка не оставила Tier 2+ без ссылки на брифинг.
+6. **Первая запись на новом тире.** Вызвать `delegate()` на одном низко-рисковом объекте со свежим `audit_id`. Просмотреть diff поэлементно независимо от тира; Tier 2 даёт возможность, а не сниженную тщательность.
+7. **Оценка для Tier 3.** Продвигаться только на основе задокументированных свидетельств: доля одобрения ≥90% на Tier 2 за предшествующие две недели журнала событий (§Tier Selection Guidance, main spec), вычисляемая из полей `decision` в журнале событий (§Event Schema, configuration guide). Затем авторизованные паттерны явно перечисляются в `allowed_operations` с использованием записей `type: pattern` с `pattern_id`, `pattern_description` и `match_criteria` (§Per-Operation Entries); Tier 3 никогда не выводит паттерн, который оператор не авторизовал.
 
-**Rollback:** set `active_tier` to a lower value. The change takes effect at the next invocation; an in-flight `delegate()` completes under the tier at which it was accepted, holding the operation-level lock to §Safety Protocol #2.
+**Откат:** установить `active_tier` на меньшее значение. Изменение вступает в силу при следующем вызове; выполняющийся `delegate()` завершается под тиром, на котором был принят, удерживая блокировку уровня операции согласно §Safety Protocol #2.
 
 ---
 
 ## Cross-References
 
-- **§Documenter Service (index.md)** — Main specification: interface contracts, trust tiers, safety protocol, trust classification floor
-- **§Configuration Guide** — Hash store, intent record schema, event schema, glossary compliance, RU alignment
-- `AGENTS.md` — All documentation rules this service enforces
-- `glossary/index.md` — Canonical term definitions for compliance verification
+- **§Documenter Service (index.md)** — Основная спецификация: контракты интерфейсов, тиры доверия, протокол безопасности, базовый уровень классификации доверия
+- **§Configuration Guide** — Хранилище хешей, схема журнала намерения, схема событий, соответствие глоссарию, выравнивание RU
+- `AGENTS.md` — Все правила документации, которые обеспечивает этот сервис
+- `glossary/index.md` — Канонические определения терминов для проверки соответствия
 
 ---
 
-*Defines the configuration surface for Documenter Service v0.5.0-draft; extracted from Configuration Guide.*
+*Определяет поверхность конфигурации для Documenter Service v0.5.0-draft; извлечено из Configuration Guide.*

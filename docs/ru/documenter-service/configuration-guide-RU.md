@@ -1,7 +1,5 @@
 # Руководство по конфигурации Документатора
 
-<!-- CHANGES v0.1.0: Translated from English source. -->
-
 Version: 0.13.0-draft
 Status: draft
 Last Modified: 2026-11-09
@@ -12,13 +10,13 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
 ## Scope
 
-Этот документ определяет структуры данных рантайма и их правила целостности: хранилище хешей, реестр аудита, запись намерения (intent record), схему событий, режимы compliance глоссария и процедуру RU-выравнивания. Схема файла политики, правила валидации во время загрузки, параметры операционной настройки и рабочий процесс авторизации тира живут в `documenter-service/policy-reference.md` — едином источнике истины для конфигурации. Где этот гайд ссылается на поле политики по имени (например, `audit_freshness`, `rescan_batch_ceiling`), §Field Reference в справочнике политик определяет его тип, значение по умолчанию и допустимые значения; поведение, приписываемое полю здесь, не повторяется там.
+Этот документ определяет структуры данных рантайма и их правила целостности: хранилище хешей, реестр аудита, журнал намерения (intent record), схему событий, режимы обеспечения соответствия глоссарию и процедуру выравнивания русских переводов. Схема файла политики, правила валидации во время загрузки, параметры операционной настройки и рабочий процесс авторизации тиров находятся в `documenter-service/policy-reference.md` — едином источнике истины для конфигурации. Там, где это руководство ссылается на поле политики по имени (например, `audit_freshness`, `rescan_batch_ceiling`), §Field Reference в справочнике политик определяет его тип, значение по умолчанию и допустимые значения; поведение, приписываемое поле здесь, там не повторяется.
 
 ---
 
 ## Hash Store
 
-Токены хешей содержимого хранятсяexternally в `documenter/hashes.json` — управляется исключительно Документатором, скрыт от оператора. Обеспечивает оптимистичный контроль конкурентности для записей в режиме delegate.
+Токены хешей содержимого хранятся во внешнем файле (externally) `documenter/hashes.json` — управляется исключительно Документатором, скрыт от оператора. Обеспечивает оптимистичный контроль конкурентности (optimistic concurrency control) для записей в режиме delegate.
 
 ### Structure
 
@@ -37,42 +35,42 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 }
 ```
 
-Две концептуальные подсистемы с различной persistency и семантикой lifecycle:
+Две концептуальные подсистемы с различными свойствами сохраняемости и семантикой жизненного цикла:
 
-| Подсистема | Содержимое | Persistency | Lifecycle |
+| Подсистема | Содержимое | Сохраняемость | Жизненный цикл |
 |-----------|---------|-------------|-----------|
 | **Snapshot** | `last_hash`, `last_modified` | Сохраняется между вызовами | Обновляется после каждого цикла `audit()` или `delegate()` |
 | **History** | `history[]` записей изменения хеша | Бессрочно | Только append; периодический GC перед Tier 2+ |
 
-Snapshot обеспечивает обнаружение конфликтов OCC O(1). History обеспечивает журнал аудита и возможность replay.
+Снимок (snapshot) обеспечивает обнаружение конфликтов OCC за O(1). История (history) обеспечивает журнал аудита и возможность воспроизведения (replay).
 
 ### Conflict Resolution
 
-Read → compare expected hash with current content hash → apply if match → update record. On mismatch: reject with retry signal ("File changed since scan; please re-run audit() then retry"). Retry invocations MUST employ exponential backoff with jitter (base delay: `retry_backoff_base`; attempt ceiling: `retry_max_attempts` — both policy fields, see §Field Reference in `documenter-service/policy-reference.md`). Full rescan is capped by the `rescan_batch_ceiling` policy field (default 50 documents per invocation). When the ceiling is reached, the response includes `has_remaining: true` and a continuation cursor (`scan_cursor`) — pass it back to resume scanning from where the previous invocation stopped. The audit registry entry records the actual scanned document IDs (never `*` unless all documents were scanned in one invocation). A partial scan does NOT authorize delegate() for unscanned documents — the operator must complete the scan before delegation is permitted. No background execution exists. When glossary status changes, full rescan of all documents triggers hash refresh for every entry.
+Чтение → сравнить ожидаемый хеш с текущим хешем содержимого → применить при совпадении → обновить запись. При несовпадении: отклонить с сигналом повтора («Файл изменился после сканирования; пожалуйста, заново запустите audit() и повторите попытку»). Повторные вызовы ДОЛЖНЫ применять экспоненциальный backoff с джиттером (базовая задержка: `retry_backoff_base`; потолок попыток: `retry_max_attempts` — оба поля политики, см. §Field Reference в `documenter-service/policy-reference.md`). Полное пересканирование ограничено полем политики `rescan_batch_ceiling` (по умолчанию 50 документов на вызов). При достижении потолка ответ включает `has_remaining: true` и курсор продолжения (`scan_cursor`) — передайте его обратно, чтобы возобновить сканирование с места, где предыдущий вызов остановился. Запись реестра аудита фиксирует фактические идентификаторы просканированных документов (никогда `*`, если только все документы не были просканированы за один вызов). Частичное сканирование НЕ авторизует delegate() для несоканированных документов — оператор должен завершить сканирование, прежде чем делегирование будет разрешено. Фоновое выполнение отсутствует. Когда статус глоссария меняется, полное пересканирование всех документов запускает обновление хешей для каждой записи.
 
-**Behavioral self-healing guarantee:** Hash store must be recoverable on any startup failure. The implementation MUST combine at least TWO of: atomic write (temp-file + rename), pre-write snapshot hash (CRC32c/SHA-256 alongside content), or `.bak` rotation. WAL is not required for MVP. Cold-start integrity verification checks hashes.json existence, validates structure, and scans `documenter/intent/` for leftover records per §Intent Record rules.
+**Гарантия поведенческого самолечения:** Хранилище хешей должно быть восстановимо при любом сбое запуска. Реализация ДОЛЖНА сочетать как минимум ДВА из: атомарная запись (temp-file + rename), хеш снимка перед записью (CRC32c/SHA-256 наряду с содержимым) или ротация `.bak`. WAL для MVP не требуется. Проверка целостности на холодном старте проверяет наличие hashes.json, валидирует структуру и сканирует `documenter/intent/` на предмет оставшихся записей согласно правилам §Intent Record.
 
-**Git diff as supplementary signal:** `git log` over `hashes.json` may provide historical recovery but does NOT replace CRC/checksum (corruption between commits is undetectable from log alone) nor WAL/backup (crash mid-write loses uncommitted state). Git HEAD diff should remain an **advisory only** signal — it cannot serve as primary conflict detection because refs move independently of content changes. Use direct file checksums with optimistic-lock semantics for authoritative conflict resolution.
+**Git diff как дополнительный сигнал:** `git log` по `hashes.json` может обеспечить историческое восстановление, но НЕ заменяет CRC/контрольную сумму (порча между коммитами необнаружима по одному лишь журналу) и не заменяет WAL/резервную копию (сбой посреди записи теряет незафиксированное состояние). Diff с Git HEAD должен оставаться сигналом **только рекомендательным** (advisory only) — он не может служить основным средством обнаружения конфликтов, поскольку ссылки (refs) перемещаются независимо от изменений содержимого. Для авторитетного разрешения конфликтов используйте прямые контрольные суммы файлов с семантикой оптимистичной блокировки.
 
-`documenter/hashes.json` is tracked by the manifest as an operational artifact (`operational: true`). `documenter/intent/` (intent records) and `documenter/audits.json` (audit registry) are similarly operational — managed exclusively by Documenter, hidden from operator, and excluded from the manifest scope of `audit()` and `delegate()`.
+`documenter/hashes.json` отслеживается манифестом как операционный артефакт (`operational: true`). `documenter/intent/` (журналы намерения) и `documenter/audits.json` (реестр аудита) аналогично операционные — управляются исключительно Документатором, скрыты от оператора и исключены из области манифеста для `audit()` и `delegate()`.
 
 ---
 
 ## Intent Record
 
-A crash-recovery journal written to `documenter/intent/<tx_id>.json` before the first rename in a multi-file commit. Managed exclusively by Documenter, hidden from operator. Provides the "intent" half of the two-phase commit protocol (see main spec, `documenter-service/index.md`, §Safety Protocol #9).
+Журнал восстановления после сбоя, записываемый в `documenter/intent/<tx_id>.json` до первого переименования при многофайловой фиксации. Управляется исключительно Документатором, скрыт от оператора. Обеспечивает половину «намерения» (intent) протокола двухфазной фиксации (см. основную спецификацию, `documenter-service/index.md`, §Safety Protocol #9).
 
-**Schema:** `{tx_id: uuid-v4, target_id: string, created_at: ISO8601Z, entries: [{path, tmp_path, before_hash: sha256, after_hash: sha256}]}` — one entry per file in the changeset.
+**Схема:** `{tx_id: uuid-v4, target_id: string, created_at: ISO8601Z, entries: [{path, tmp_path, before_hash: sha256, after_hash: sha256}]}` — по одной записи на файл в наборе изменений.
 
-**Atomic write:** the intent file MUST be written via temp-file + rename (same pattern as §Safety Protocol #5 in the main spec) to prevent partial writes. Cold-start MUST validate the intent JSON structure before using it for recovery; corrupted or incomplete intent records are logged and skipped.
+**Атомарная запись:** файл журнала намерения ДОЛЖЕН записываться через temp-file + rename (тот же шаблон, что и §Safety Protocol #5 в основной спецификации), чтобы предотвратить частичные записи. Холодный старт ДОЛЖЕН валидировать структуру JSON журнала намерения перед использованием для восстановления; повреждённые или неполные журналы намерения протоколируются и пропускаются.
 
-**Recovery rules (cold-start):** scan `documenter/intent/` on startup; for each leftover `.json`, compare actual file hash with `before_hash`/`after_hash`. Three branches: (1) if files match `after_hash` — already committed by a prior successful run, skip; (2) if files match `before_hash` — no external modification since crash, roll forward by renaming `.tmp` (per commit order in main spec); (3) if neither matches — external modification detected, abort and escalate (`error_category: unknown`).
+**Правила восстановления (холодный старт):** сканировать `documenter/intent/` при запуске; для каждого оставшегося `.json` сравнивать фактический хеш файла с `before_hash`/`after_hash`. Три ветви: (1) если файлы совпадают с `after_hash` — уже зафиксировано предыдущим успешным запуском, пропустить; (2) если файлы совпадают с `before_hash` — внешних изменений после сбоя не было, выполнить прямую докатку (roll forward) переименованием `.tmp` (согласно порядку фиксации в основной спецификации); (3) если не совпадает ни то ни другое — обнаружено внешнее изменение, прервать и эскалировать (`error_category: unknown`).
 
 ---
 
 ## Audit Registry
 
-Audit invocations are persisted to `documenter/audits.json` — managed exclusively by Documenter, hidden from operator. Provides the data backing the `delegate()` pre-audit gate (§Interfaces, main spec). On-demand only: no background writer; the registry is updated synchronously at the end of each `audit()` invocation.
+Вызовы аудита сохраняются в `documenter/audits.json` — управляется исключительно Документатором, скрыт от оператора. Предоставляет данные, на которых работает вентиль предварительного аудита `delegate()` (§Interfaces, main spec). Только по требованию: фонового писателя нет; реестр обновляется синхронно по завершении каждого вызова `audit()`.
 
 ### Structure
 
@@ -96,118 +94,118 @@ Audit invocations are persisted to `documenter/audits.json` — managed exclusiv
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `audit_id` | uuid-v4 | Key. Matches the `audit_id` returned by `audit()`. |
-| `issued_at` | ISO8601Z | Timestamp of audit completion. Used by the gate to check `audit_freshness`. |
-| `scope` | string | `*` only when ALL documents were scanned in a single invocation; otherwise equals the single `target_id` passed to `audit()` (e.g., `audit(target_id="doc-a")`). When partial scans are used (`has_remaining: true`), scope may still equal the `target_id` but delegation is blocked by rule 5 in §Gate Validation. Full coverage is verified via `scanned_ids`, not scope alone. |
-| `findings` | array | Structured findings from `audit()`. Gate checks for `high`/`critical` entries matching `target_id`. |
-| `scanned_ids` | array[string] | List of document IDs actually scanned during this invocation. Populated on every audit — never empty unless the scan covered zero documents. |
-| `has_remaining` | boolean | `true` when the scan was paused due to `rescan_batch_ceiling`; indicates incomplete coverage. False or absent means all documents were scanned. |
-| `scan_cursor` | string \| null | Continuation token for resumed scans. Present only when `has_remaining` is `true`. Opaque value encoding the last processed document position. |
+| `audit_id` | uuid-v4 | Ключ. Совпадает с `audit_id`, возвращаемым `audit()`. |
+| `issued_at` | ISO8601Z | Метка времени завершения аудита. Используется вентилем для проверки `audit_freshness`. |
+| `scope` | string | `*` только когда ВСЕ документы были просканированы за один вызов; иначе равен единственному `target_id`, переданному в `audit()` (например, `audit(target_id="doc-a")`). При использовании частичных сканирований (`has_remaining: true`) область по-прежнему может равняться `target_id`, но делегирование блокируется правилом 5 в §Gate Validation. Полнота покрытия проверяется через `scanned_ids`, а не по одной лишь области. |
+| `findings` | array | Структурированные выводы из `audit()`. Вентиль проверяет записи `high`/`critical`, совпадающие с `target_id`. |
+| `scanned_ids` | array[string] | Список идентификаторов документов, фактически просканированных в этом вызове. Заполняется при каждом аудите — никогда не пуст, если только сканирование не охватило ноль документов. |
+| `has_remaining` | boolean | `true`, когда сканирование было приостановлено из-за `rescan_batch_ceiling`; означает неполное покрытие. False или отсутствие означает, что все документы просканированы. |
+| `scan_cursor` | string \| null | Токен продолжения для возобновлённых сканирований. Присутствует только когда `has_remaining` равно `true`. Непрозрачное значение, кодирующее последнюю обработанную позицию документа. |
 
 ### Gate Validation
 
-When `delegate()` receives an `audit_id`, it reads the registry and validates:
+Когда `delegate()` получает `audit_id`, он читает реестр и валидирует:
 
-1. **Existence:** `audit_id` is a key in `entries`. Absent → reject with `error_category: audit_mismatch`.
-2. **Freshness:** `now - issued_at ≤ audit_freshness` (policy field). Expired → reject with `error_category: audit_mismatch`.
-3. **Scope coverage:** `scope == "*" OR scope == target_id`. Mismatch → reject with `error_category: audit_mismatch`. For full-corpora scans (`target_id: "*"`), completeness is additionally verified via `scanned_ids` — the delegate target must appear in the list; if `has_remaining` is `true`, some documents are unscanned and any delegate is blocked by rule 5 below.
-4. **Blocking findings:** any entry in `findings` with `severity ∈ {high, critical}` AND `target_id` matching the delegate target → reject with `error_category: blocking_finding`.
-5. **Scan completion:** if `has_remaining` was `true` for the registered scan, the delegate is rejected until a completed rescan is performed (cursor-based continuation via `audit(scan_cursor=<value>)`). Rejection uses `error_category: blocking_finding`.
+1. **Существование:** `audit_id` является ключом в `entries`. Отсутствует → отклонить с `error_category: audit_mismatch`.
+2. **Свежесть:** `now - issued_at ≤ audit_freshness` (поле политики). Истёк → отклонить с `error_category: audit_mismatch`.
+3. **Покрытие области:** `scope == "*" OR scope == target_id`. Несовпадение → отклонить с `error_category: audit_mismatch`. Для сканирований всего корпуса (`target_id: "*"`) полнота дополнительно проверяется через `scanned_ids` — цель делегата должна присутствовать в списке; если `has_remaining` равно `true`, часть документов несоканирована и любой делегат блокируется правилом 5 ниже.
+4. **Блокирующие выводы:** любая запись в `findings` с `severity ∈ {high, critical}` И `target_id`, совпадающим с целью делегата → отклонить с `error_category: blocking_finding`.
+5. **Завершённость сканирования:** если `has_remaining` было `true` для зарегистрированного сканирования, делегат отклоняется до выполнения завершённого повторного сканирования (продолжение на основе курсора через `audit(scan_cursor=<value>)`). Отклонение использует `error_category: blocking_finding`.
 
-**Pre-audit gate:** By default, `delegate()` requires a valid `audit_id` from a prior `audit()` invocation. Validation proceeds against the audit registry (§ above): (1) the `audit_id` must exist; (2) its `issued_at` must fall within the `audit_freshness` window (policy field, default 30 minutes; schema: `documenter-service/policy-reference.md`, §Field Reference); (3) its `scope` must fully cover `target_id` (`*` matches any, otherwise exact match); (4) no `high` or `critical` finding may exist for `target_id` in the registry; (5) if `has_remaining` was `true` for the registered scan, the delegate is rejected until a completed rescan is performed (cursor-based continuation via `audit(scan_cursor=<value>)`). Rejection on rules (1–3) uses `error_category: audit_mismatch`; on (4) or rule (5) uses `error_category: blocking_finding`.
+**Вентиль предварительного аудита:** По умолчанию `delegate()` требует действительный `audit_id` из предыдущего вызова `audit()`. Валидация выполняется по реестру аудита (§ выше): (1) `audit_id` должен существовать; (2) его `issued_at` должен попадать в окно `audit_freshness` (поле политики, по умолчанию 30 минут; схема: `documenter-service/policy-reference.md`, §Field Reference); (3) его `scope` должен полностью покрывать `target_id` (`*` совпадает с любым, иначе точное совпадение); (4) для `target_id` в реестре не должно существовать вывода `high` или `critical`; (5) если `has_remaining` было `true` для зарегистрированного сканирования, делегат отклоняется до выполнения завершённого повторного сканирования (продолжение на основе курсора через `audit(scan_cursor=<value>)`). Отклонение по правилам (1–3) использует `error_category: audit_mismatch`; по правилу (4) или (5) — `error_category: blocking_finding`.
 
-**Preview exemption:** Calls to `delegate()` with `change_type=update` and no write intent (preview mode, returning diff without applying changes) are exempt from `allowed_operations` checks across all tiers. These calls always return the computed diff but never modify files.
+**Preview exemption:** Вызовы `delegate()` с `change_type=update` и без намерения записи (режим предварительного просмотра, возвращающий diff без применения изменений) не подлежат проверкам `allowed_operations` ни на одном тире. Эти вызовы всегда возвращают вычисленный diff, но никогда не изменяют файлы.
 
-**Cold-start failure mode:** If the audit registry is absent, corrupted, or unreadable, the gate FAILS CLOSED — all write operations are denied until explicit operator override. Override requires an authenticated action via `documenter.override_gate(reason, operator_id)` which logs the incident and permits exactly one subsequent `delegate()` call without a fresh audit. Repeat overrides require Tier 2+ approval.
+**Режим отказа на холодном старте:** Если реестр аудита отсутствует, повреждён или нечитаем, вентиль ЗАКРЫВАЕТСЯ ОТКАЗОМ (fails closed) — все операции записи запрещены до явного переопределения оператором. Переопределение требует аутентифицированного действия через `documenter.override_gate(reason, operator_id)`, которое протоколирует инцидент и разрешает ровно один последующий вызов `delegate()` без нового аудита. Повторные переопределения требуют одобрения Tier 2+.
 
 ---
 
 ## Event Schema
 
-Documenter events are emitted inside the canonical [EventEnvelope](../docs/service-contract/index.md#event-envelope) defined in the Cross-Service Artifact & Event Contract. The envelope carries routing metadata (`schema_version`, `event_id`, `event_type`, `emitted_at`, `session_id`, `phase_id`, `actor`, `severity`, `causation_id`/`correlation_id`); the Documenter-specific data lives in the `payload` object below.
+События Документатора излучаются внутри канонического [EventEnvelope](../docs/service-contract/index.md#event-envelope), определённого в Cross-Service Artifact & Event Contract. Конверт несёт метаданные маршрутизации (`schema_version`, `event_id`, `event_type`, `emitted_at`, `session_id`, `phase_id`, `actor`, `severity`, `causation_id`/`correlation_id`); специфичные для Документатора данные находятся в объекте `payload` ниже.
 
 ### Issue Payload Schema
 
-Emitted when `audit()` or `delegate()` finds issues. `event_type: documenter.issue`.
+Излучается, когда `audit()` или `delegate()` находит проблемы. `event_type: documenter.issue`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `target_id` | string | yes | Document identifier from manifest |
-| `document_id` | string | yes | Filesystem path (relative to workspace root) |
-| `description` | string | yes | Brief human-readable description of finding |
-| `suggested_trust_level` | `safe` \| `review` | yes | Output of the trust classifier; authoritative floor for delegate() requests |
-| `suggested_action` | string | yes | Brief actionable recommendation |
-| `before_hash` | sha256:hex \| null | no | Content hash before operation (null if no prior state) |
-| `after_hash` | sha256:hex \| null | no | Content hash after operation (null if no change yet) |
-| `tier` | int | yes | Current trust tier at time of emission (0–3) |
-| `error_category` | string \| null | no | Set only on failure events (see §Error Category Values below) |
-| `audit_id` | uuid-v4 \| null | conditional | Present on `delegate()` events that passed the pre-audit gate (UUID of the audit invocation that authorized this call); absent on `audit()` events and on gate-rejection events. Null on events where delegate was invoked without audit (gate explicitly disabled in policy). |
+| `target_id` | string | yes | Идентификатор документа из манифеста |
+| `document_id` | string | yes | Путь в файловой системе (относительно корня рабочей области) |
+| `description` | string | yes | Краткое человекочитаемое описание вывода |
+| `suggested_trust_level` | `safe` \| `review` | yes | Выход классификатора доверия; авторитетный базовый уровень для запросов delegate() |
+| `suggested_action` | string | yes | Краткая выполнимая рекомендация |
+| `before_hash` | sha256:hex \| null | no | Хеш содержимого до операции (null, если предыдущего состояния не было) |
+| `after_hash` | sha256:hex \| null | no | Хеш содержимого после операции (null, если изменения ещё нет) |
+| `tier` | int | yes | Текущий тир доверия на момент излучения (0–3) |
+| `error_category` | string \| null | no | Заполняется только на событиях отказа (см. §Error Category Values ниже) |
+| `audit_id` | uuid-v4 \| null | conditional | Присутствует на событиях `delegate()`, прошедших вентиль предварительного аудита (UUID вызова аудита, авторизовавшего этот вызов); отсутствует на событиях `audit()` и на событиях отклонения вентилем. Null на событиях, где delegate был вызван без аудита (вентиль явно отключён в политике). |
 
-**Envelope-level fields:** `event_id` (unique; idempotency key), `event_type` (`documenter.issue`), `emitted_at` (ISO 8601Z, required), `actor` (`{kind: operator\|agent\|service, id}`), `severity` (`low` | `medium` | `high` | `critical` — unified taxonomy), `session_id` (`string\|null`; mandatory when auditing a specific session; nullable for corpus-wide documenter compliance scans), `phase_id` (integer \| null; present when event correlates to a specific protocol phase, otherwise null).
+**Поли уровня конверта:** `event_id` (уникальный; ключ идемпотентности), `event_type` (`documenter.issue`), `emitted_at` (ISO 8601Z, обязателен), `actor` (`{kind: operator\|agent\|service, id}`), `severity` (`low` | `medium` | `high` | `critical` — унифицированная таксономия), `session_id` (`string\|null`; обязателен при аудите конкретной сессии; необязателен для общекорпусных проверок соответствия Документатора), `phase_id` (integer \| null; присутствует, когда событие соотносится с конкретной фазой протокола, иначе null).
 
 ### Approval Payload Schema
 
-Emitted by Tier 3 approval rate computation or by an explicit `documenter.approve()` invocation. `event_type: documenter.approval`. Fields not listed below replace the corresponding issue-payload fields within the same envelope.
+Излучается вычислением доли одобрения Tier 3 либо явным вызовом `documenter.approve()`. `event_type: documenter.approval`. Перечисленные ниже поля заменяют соответствующие поля issue-payload в том же конверте.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `change_type` | `update` \| `split` \| `create_ru` \| `custom` | Type of the change that was reviewed |
-| `requested_trust_level` | `safe` \| `review` | Caller's requested trust level |
-| `effective_trust_level` | `safe` \| `review` | Trust level actually applied |
-| `diff_hash` | `sha256:hex` | Hash of the diff presented to the operator (bound to `approval_id`) |
-| `approval_id` | uuid-v4 \| null | The `approval_id` returned by `delegate()` when `approval_required` is true; present on out-of-band approvals, null for Tier 3 auto-approve events |
-| `decision` | `approved` \| `rejected` \| `auto_approved` | Out-of-band operator approve/reject or Tier 3 pattern decision |
-| `operator_id` | string | Identity of the operator who approved/rejected; MUST differ from the proposing actor.id (out-of-band). For `auto_approved`, contains `pattern:<pattern_id>` instead of a real operator ID. |
-| `decided_at` | ISO8601Z | Timestamp of the approve/reject action via `documenter.approve()` |
-| `pattern_id` | string \| null | Only populated for `auto_approved` events |
+| `change_type` | `update` \| `split` \| `create_ru` \| `custom` | Тип изменения, которое было просмотрено |
+| `requested_trust_level` | `safe` \| `review` | Запрошенный вызывающим уровень доверия |
+| `effective_trust_level` | `safe` \| `review` | Фактически применённый уровень доверия |
+| `diff_hash` | `sha256:hex` | Хеш diff, показанного оператору (привязан к `approval_id`) |
+| `approval_id` | uuid-v4 \| null | `approval_id`, возвращённый `delegate()`, когда `approval_required` истинно; присутствует при внеполосных одобрениях, null для событий автоодобрения Tier 3 |
+| `decision` | `approved` \| `rejected` \| `auto_approved` | Внеполосное approve/reject оператора либо решение по паттерну Tier 3 |
+| `operator_id` | string | Идентичность оператора, одобрившего/отклонившего; ДОЛЖЕН отличаться от actor.id предлагающего (внеполосно). Для `auto_approved` содержит `pattern:<pattern_id>` вместо реального идентификатора оператора. |
+| `decided_at` | ISO8601Z | Метка времени действия approve/reject через `documenter.approve()` |
+| `pattern_id` | string \| null | Заполняется только для событий `auto_approved` |
 
-Approval rate formula for Tier 3 prerequisite:
+Формула доли одобрения для предварительного условия Tier 3:
 
 ```
 approval_rate = count(decision = approved) / (count(decision = approved) + count(decision = rejected))
 ```
 
-`auto_approved` and `operator_timeout` events are excluded from the denominator. Tier 3 requires `approval_rate >= 0.90` AND a minimum sample size of 20 manual decisions. Pattern auto-apply is blocked if the audit registry contains `high` or `critical` findings for the target.
+События `auto_approved` и `operator_timeout` исключаются из знаменателя. Tier 3 требует `approval_rate >= 0.90` И минимального объёма выборки в 20 ручных решений. Автоприменение по паттерну блокируется, если реестр аудита содержит выводы `high` или `critical` для цели.
 
 ### Error Category Values
 
-| Value | Meaning | Recovery Procedure |
+| Value | Значение | Процедура восстановления |
 |-------|---------|--------------------|
-| `trust_mismatch` | Caller requested `trust_level` below the derived floor (§Trust Classification, main spec) | Re-invoke `delegate()` with the derived level reported in the error |
-| `hash_mismatch` | Read-before-write detected concurrent modification | Re-run `audit()`, obtain fresh diff, retry `delegate()` |
-| `audit_mismatch` | `audit_id` absent from the audit registry, expired per `audit_freshness`, its `scope` does not cover `target_id`, or its scan is incomplete (`has_remaining: true`) (§Audit Registry) | Re-run `audit()` for the target with a `scan_cursor` if a partial scan exists, obtain a fresh `audit_id`, retry `delegate()` |
-| `blocking_finding` | Audit registry contains `high` or `critical` findings for the `target_id`, or the scan is incomplete (`has_remaining: true`) — delegate cannot authorize for unscanned documents (§Audit Registry) | Resolve the blocking findings, re-run `audit()` to obtain a clean `audit_id`, retry `delegate()` |
-| `skill_failure` | Documentation Worker skill crashed or returned error | Check skill logs, verify input parameters, retry |
-| `operator_timeout` | Operator did not respond to the presented diff within `operator_approval_timeout` seconds of the synchronous approval stage of the active `delegate()` invocation (policy field) | Review findings manually, re-issue command with same parameters |
-| `gate_failure` | Audit registry is absent, corrupted, or unreadable on cold-start — FAIL-CLOSED behavior blocks the delegate. Requires authenticated override via `documenter.override_gate(reason, operator_id)` before any write can proceed. Repeat overrides require Tier 2+ approval. | Perform operator override, then retry `delegate()` |
-| `unknown` | Unhandled exception during delegate() execution | Capture post-mortem trace (§Safety Protocol #8), escalate |
+| `trust_mismatch` | Вызывающий запросил `trust_level` ниже выводимого базового уровня (§Trust Classification, main spec) | Повторно вызвать `delegate()` с выводимым уровнем, указанным в ошибке |
+| `hash_mismatch` | Чтение-перед-записью обнаружило одновременное изменение | Заново запустить `audit()`, получить свежий diff, повторить `delegate()` |
+| `audit_mismatch` | `audit_id` отсутствует в реестре аудита, истёк согласно `audit_freshness`, его `scope` не покрывает `target_id`, либо его сканирование неполное (`has_remaining: true`) (§Audit Registry) | Заново запустить `audit()` для цели с `scan_cursor`, если существует частичное сканирование, получить свежий `audit_id`, повторить `delegate()` |
+| `blocking_finding` | Реестр аудита содержит выводы `high` или `critical` для `target_id`, либо сканирование неполное (`has_remaining: true`) — delegate не может авторизовать несоканированные документы (§Audit Registry) | Устранить блокирующие выводы, заново запустить `audit()` для получения чистого `audit_id`, повторить `delegate()` |
+| `skill_failure` | Навык Documentation Worker аварийно завершился или вернул ошибку | Проверить журналы навыка, проверить входные параметры, повторить |
+| `operator_timeout` | Оператор не ответил на представленный diff в течение `operator_approval_timeout` секунд синхронной стадии одобрения активного вызова `delegate()` (поле политики) | Просмотреть выводы вручную, повторно выпустить команду с теми же параметрами |
+| `gate_failure` | Реестр аудита отсутствует, повреждён или нечитаем на холодном старте — поведение FAIL-CLOSED блокирует delegate. Требует аутентифицированного переопределения через `documenter.override_gate(reason, operator_id)` до того, как сможет продолжиться любая запись. Повторные переопределения требуют одобрения Tier 2+. | Выполнить переопределение оператором, затем повторить `delegate()` |
+| `unknown` | Необработанное исключение во время выполнения delegate() | Зафиксировать постмортем-трассировку (§Safety Protocol #8), эскалировать |
 
 ### Delivery Semantics
 
-Events feed into Phase 5 artifacts during Council sessions. In on-demand mode, events are emitted synchronously and persisted via `$WORKSPACE/documenter/events/` for operator replay. Lost events are reconstructed from leftover intent records at cold-start (§Intent Record). Ordering is preserved within a `target_id` scope. During post-crash reconciliation, events are emitted before intent record deletion (§Intent Record, cleanup order). **Single storage location**: all event data corpus-wide lives under `sessions/<session_id>/events.jsonl` (canonical envelope); corpus-wide Documenter audits use `documenter/corpus-audit/events.jsonl`. No other event path exists. Consumers deduplicate by `event_id`; the contract is append-only.
+События поступают в артефакты Phase 5 во время сессий Консилиума. В режиме по требованию события излучаются синхронно и сохраняются через `$WORKSPACE/documenter/events/` для воспроизведения оператором. Утраченные события реконструируются из оставшихся журналов намерения на холодном старте (§Intent Record). Порядок сохраняется в пределах области `target_id`. Во время сверки после сбоя события излучаются до удаления журнала намерения (§Intent Record, порядок очистки). **Единое место хранения:** все данные событий в рамках корпуса находятся в `sessions/<session_id>/events.jsonl` (канонический конверт); общекорпусные аудиты Документатора используют `documenter/corpus-audit/events.jsonl`. Другого пути для событий не существует. Потребители дедуплицируют по `event_id`; контракт — только для добавления.
 
 ---
 
 ## Glossary Compliance
 
-Controlled by `glossary_enforcement` (policy: `draft` or `active`). Staleness guard: flag missing only if term appears ≥3 times AND glossary last modified > `glossary_staleness_days` ago (default 30).
+Управляется полем `glossary_enforcement` (политика: `draft` или `active`). Защита от устаревания: помечать отсутствующим только если термин встречается ≥3 раз И глоссарий изменён более `glossary_staleness_days` назад (по умолчанию 30).
 
 ---
 
 ## Russian Translation Alignment
 
-Auto-fix banned in all tiers during MVP. When enabled (Tier 3+): invokes `change_type: create_ru` with line parity per AGENTS.md §3.3.
+Автоисправление запрещено на всех тирах в период MVP. Когда включено (Tier 3+): вызывает `change_type: create_ru` с построчным паритетом согласно AGENTS.md §3.3.
 
 ---
 
 ## Cross-References
 
-- **§Documenter Service (index.md)** — Main specification: purpose, interfaces, trust tiers, safety protocol (including Multi-file Commit Protocol #9)
-- **§Documenter Policy Reference** (`documenter-service/policy-reference.md`) — Policy file schema, field reference, operational tuning, authorization workflow
-- `AGENTS.md` — All documentation rules this service enforces
-- `glossary/index.md` — Canonical term definitions for compliance verification
-- `.agents/skills/documentation/SKILL.md` — Documentation Worker skill (invoked by delegate())
+- **§Documenter Service (index.md)** — Основная спецификация: назначение, интерфейсы, тиры доверия, протокол безопасности (включая Протокол многофайлового коммита #9)
+- **§Documenter Policy Reference** (`documenter-service/policy-reference.md`) — Схема файла политики, справочник полей, операционная настройка, рабочий процесс авторизации
+- `AGENTS.md` — Все правила документации, которые обеспечивает этот сервис
+- `glossary/index.md` — Канонические определения терминов для проверки соответствия
+- `.agents/skills/documentation/SKILL.md` — Навык Documentation Worker (вызывается delegate())
 
 ---
 
-*Aligned with Documenter Service v0.16.0-draft and sess-documenter-consiliums.*
+*Согласовано с Documenter Service v0.16.0-draft и sess-documenter-consiliums.*
