@@ -166,6 +166,62 @@ After writing the file, perform a verification pass:
 
 For each failed check: if the failure is mechanically correctable (line shift due to missing separator, stray English word, minor whitespace), fix it immediately. For structural deviations (reordered sections, missing content, wrong section count) or semantic concerns, do NOT auto-fix — present them in the report so the primary agent can decide corrective action. Log the final verification result alongside the translation action.
 
+---
+
+#### Translation via project translator (optional)
+
+When the delegation context includes `use_project_translation: true` (alias `use_local_translation` accepted for compatibility — treated identically), replace the skill's internal translation with the project's translator (`tools/local-translate.sh`). This uses the validated configuration from `tools/EXPERIMENTS.md` (E-002 post-factum 2): NVFP4 quantisation of the same 35B-A3B architecture as the cloud base model.
+
+**Validated configuration (defaults):**
+
+| Parameter | Default | Source |
+|---|---|---|
+| Backend | `cloud` | — |
+| Endpoint | `http://127.0.0.1:8000/v1` | Local OpenAI-compatible server (vLLM) |
+| API key | `dummy` | Ignored by vLLM; only placeholder |
+| Model | `Qwen3.6-35B-A3B-NVFP4` | Local server |
+| Thinking mode | `{"enable_thinking":false}` | `CLOUD_CHAT_KWARGS`; mandatory (×15 speedup, E-002 post-factum 2) |
+| Temperature | `0.2` | Reproducibility (E-004) |
+| top_p | `0.95` | No measured effect vs 0.8 (E-008) |
+| Hints style | `plain` | 0/3 contamination (E-003) |
+| Metadata | skip (do not translate) | E-005: preserves convection and line-parity |
+| Code-guard | disabled | E-006: base model preserves code-spans without hints |
+| Chunking | paragraph-based | E-007: no advantage from section-mode |
+
+**Fallback chain (in priority order):**
+
+1. **Local NVFP4** (`127.0.0.1:8000`, default) — first choice; independence from external networks.
+2. **Cloud NeuralDeep** (`https://api.neuraldeep.ru/v1`, model `qwen3.6-35b-a3b-noreason`) — only when the operator explicitly sets `NEURALDEEP_BASE_URL` to the cloud URL (wrapper exit code 3 on local unreachable with no override).
+3. **Native skill translation** — last resort; log a warning in the report.
+
+**Wrapper usage:**
+
+```bash
+tools/local-translate.sh en ru <glossary_path> < input.md > output.md
+```
+
+Example:
+```bash
+tools/local-translate.sh en ru docs/en/glossary/index.md < docs/en/glossary/index.md > docs/en/glossary/index-RU.md
+```
+
+For files exceeding 200 lines, paragraph-based chunking is the default. Splitting at heading boundaries with subsequent reassembly is acceptable for very large documents; the wrapper itself handles paragraph chunking internally.
+
+**Contract that Phase 4 self-verify may rely on:**
+
+- **Line-parity is invariant:** every output line corresponds to exactly one input line (blank lines and structural lines pass through untranslated). Line-count fallback within the wrapper ensures this — if a model response has a different line count, it is re-queried line-by-line.
+- **Metadata, headings, `---`, and code-fences are intact:** these are recognised structural elements and are copied verbatim.
+- **Glossary terms are canonicalised:** if a model leaves an English term untranslated, `enforce_glossary()` replaces it with the Russian equivalent; each such correction is logged as `[gloss-apply] <EN> -> <RU> xN` on stderr.
+- **`[FAIL] L<n>` on stderr means the line on line N was NOT translated** (remained identical to source). Every `[FAIL]` line must be reported in the language-leakage section of the verification report and **blocks `safe` trust level** — the operation must be escalated to `review`.
+
+**Environment variables supported by the wrapper:**
+
+`TRANSLATE_BACKEND`, `CLOUD_MODEL`, `CLOUD_CHAT_KWARGS`, `TRANSLATE_TEMP`, `TRANSLATE_TOP_P`, `TRANSLATE_HINT_STYLE`, `TRANSLATE_METADATA`, `TRANSLATE_PROMPT`, `TRANSLATE_FORCE_SECTION`, `REQUEST_TIMEOUT`, `MAX_RETRIES`.
+
+See `tools/EXPERIMENTS.md` (E-001…E-008) for full experiment history and rationale for each default.
+
+Fallback: if the configured server is unreachable and no explicit cloud override is set, the wrapper exits with code 3 and a diagnostic message on stderr. If the Python translator encounters a key error or network failure, fall back to native skill translation and log a warning in the report.
+
 ### Audit Compliance
 
 When `change_type: audit`:
