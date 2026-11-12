@@ -1,7 +1,7 @@
 # Subagent Fallback Mode
-Version: 0.5.0
+Version: 0.6.0
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-12
 Abstraction: reference
 changelog-path: CHANGELOGS/fallback-mode.changes.md
 
@@ -74,18 +74,18 @@ Roles reference these identifiers exclusively in their findings. A role may prop
 
 ### Phase 2 — Individual Review
 
-Launch three subagents, one per role, in parallel. Each receives:
+Launch one subagent per activated role, in parallel. Each receives:
 
 - Its role identity (prompt identifying perspective and responsibilities).
 - The full task description.
 - The canonical subject list.
 - Required output structure (from the previous section).
 
-All three subagents work independently. No communication between them during this phase. Collect and store each result.
+All subagents work independently. No communication between them during this phase. Collect and store each result.
 
 ### Phase 3 — Discussion Round
 
-Present every role's individual review back to each role as input. Instruct each subagent to examine the others' findings and respond: reaffirm, adjust arguments, counter, or propose compromise. Launch the three subagents again, in parallel. Collect results.
+Present every role's individual review back to each role as input. Instruct each subagent to examine the others' findings and respond: reaffirm, adjust arguments, counter, or propose compromise. Launch the same subagents again, in parallel. Collect results.
 
 For simple tasks: zero or one discussion round is sufficient. For complex tasks: allow up to two rounds. The operator decides when to advance based on whether new positions are being introduced or prior ones simply repeated.
 
@@ -133,9 +133,13 @@ The following auxiliary documents live in the same directory and are referenced 
 
 ### Task Brief (`session-task-brief-template.md`)
 
-Fill out before launching subagents. Defines session goal, focus areas, questionnaires, output limits, and constraints. Pass as context to all three subagents in Phase 2.
+Fill out before launching subagents. Defines session goal, focus areas, questionnaires, output limits, and constraints. Pass as context to every activated subagent in Phase 2.
 
 See also: `../docs/protocol-core/index.md` §1.x (task submission requirements).
+
+### Execution Profile (`koda-execution-mode.md`)
+
+Binds the phases above to the concrete primitives of a given harness. The default profile launches named subagents through the OpenCode harness. An additional **Koda execution profile** (`koda-execution-mode.md`) maps the same phases to child `koda -p` processes for use when the orchestrating agent is the Koda CLI: role invocation contract, context isolation, artifact layout, and failure/retry handling. Protocol semantics, role definitions and status rules are unchanged by the profile; the profile only specifies *how* a subagent is started and how its output is collected.
 
 ### Consolidation Prompt (`session-consolidation-prompt.md`)
 
