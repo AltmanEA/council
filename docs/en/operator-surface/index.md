@@ -1,9 +1,11 @@
 # Operator Surface & Escalation
 
-Version: 0.1.4
+id: operator-surface
+Version: 0.1.5
 Status: draft
-Last Modified: 2026-11-08
 Abstraction: protocol
+has_translation: docs/ru/operator-surface/index-RU.md
+references: [service-contract, execution-runtime]
 changelog-path: CHANGELOGS/operator-surface.changes.md
 
 ---

@@ -1,9 +1,10 @@
 # Scenarios
 
-Version: 0.1.2
+id: scenario
+Version: 0.1.3
 Status: draft
-Last Modified: 2026-11-05
 Abstraction: protocol
+has_translation: docs/ru/scenario/index-RU.md
 changelog-path: CHANGELOGS/scenario.changes.md
 
 ---

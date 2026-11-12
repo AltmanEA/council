@@ -1,4 +1,5 @@
 # Changelog: Scenarios
+<!-- CHANGES v0.1.3 (index.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->
 <!-- CHANGES v0.1.2: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged. -->
 
 All notable changes to the Scenarios document are recorded here.

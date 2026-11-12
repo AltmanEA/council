@@ -1,9 +1,11 @@
 # Documenter Service — MVP Contract
 
-Version: 0.3.0-draft
+id: documenter-service-mvp-contract
+Version: 0.3.1-draft
 Status: draft
-Last Modified: 2026-11-12
 Abstraction: protocol
+references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
 
 ---

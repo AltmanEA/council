@@ -1,8 +1,9 @@
 # Glossary
-Version: 0.12.0
+id: glossary
+Version: 0.12.1
 Status: draft
-Last Modified: 2026-11-12
 Abstraction: reference
+has_translation: docs/ru/glossary/index-RU.md
 changelog-path: CHANGELOGS/glossary.changes.md
 
 Terms and definitions for the AI-Agent Collaborative Design Framework core protocol. All definitions are in English; Russian equivalents are provided where applicable.

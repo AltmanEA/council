@@ -1,9 +1,11 @@
 # Execution Runtime & Session Lifecycle
 
-Version: 0.3.4
+id: execution-runtime
+Version: 0.3.5
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: protocol
+has_translation: docs/ru/execution-runtime/index-RU.md
+references: [service-contract, operator-surface]
 changelog-path: CHANGELOGS/execution-runtime.changes.md
 
 ---

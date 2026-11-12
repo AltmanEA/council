@@ -1,12 +1,12 @@
 # Layer 1 — Execution Runtime
 
-Version: 0.2.2
+id: planned-architecture-layer-1
+Version: 0.2.4
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: protocol
+has_translation: docs/ru/planned-architecture/layer-1-RU.md
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/planned-architecture.changes.md
-
-Source: ../index.md (planned-architecture)
 
 ---
 

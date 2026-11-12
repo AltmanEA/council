@@ -1,8 +1,9 @@
 # Council Reference (Draft)
-Version: 0.3.3
+id: project-reference
+Version: 0.3.4
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: reference
+has_translation: docs/ru/project-reference/index-RU.md
 changelog-path: CHANGELOGS/project-reference.changes.md
 
 ---

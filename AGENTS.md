@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.11.0
+Version: 0.12.0
 Status: active
 Last Modified: 2026-11-12
 changelog-path: CHANGELOGS/agents.changes.md
@@ -31,7 +31,7 @@ This separation is documented in the consensus document from session `sess-docum
 
 ### 1.5 Project Stage
 
-The project is in the **Specification** phase. Core protocols and service contracts are authored but pre-implementation; code implementation (Layer 0+) has not started. The code-based Moderator is not yet built. All Council sessions during this phase run in fallback mode until a Moderator adapter is available.
+The project has moved from the **Specification** phase to **Specification→MVP implementation started**: per operator decision of 2026-11-12 (ADR-011), implementation of Documenter MVP (Tier 0–1) and `tools/` is approved; Tier 2+ remains interlocked (Operator Surface out-of-band approval requirement unchanged) and code implementation beyond that scope (Layer 0+) has not started. The code-based Moderator is not yet built. All Council sessions during this phase run in fallback mode until a Moderator adapter is available.
 
 **Fallback is frozen.** `fallback/index.md` is operational and is the working mode for development. Do not modify fallback documents as part of remediation, refactoring, or consistency cleanup. Changes require an explicit operator request and a confirmed critical defect.
 
@@ -68,7 +68,7 @@ Multi-document exceptions: The following pre-existing folders contain additional
 
 ### 2.2 AI View (Manifest)
 
-The **manifest** file (`docs-manifest.yaml` or equivalent index) is a **generated index**: frontmatter is the truth; the manifest is its printout. The sole writer of the manifest is the generator (`tools/gen_manifest.py`, Stage A); until Stage A lands, the Documentation Worker skill is the sole writer. Hand-editing `docs-manifest.yaml` is prohibited; fixing a wrong manifest means fixing document frontmatter and regenerating. Manifest `version` fields are derivative of document frontmatter; parity is enforced by regenerate-and-diff: regenerate and compare against the on-disk manifest. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`.
+The **manifest** file (`docs-manifest.yaml` or equivalent index) is a **generated index**: frontmatter is the truth; the manifest is its printout. The sole writer of the manifest is the generator (`tools/gen_manifest.py`, Stage A); until Stage A lands, the Documentation Worker skill is the sole writer. Hand-editing `docs-manifest.yaml` is prohibited; fixing a wrong manifest means fixing document frontmatter and regenerating. Manifest `version` fields are derivative of document frontmatter; parity is enforced by regenerate-and-diff: regenerate and compare against the on-disk manifest. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`. The per-field provenance table for manifest fields is normative in `documenter-service/configuration-guide.md`, §Manifest Field Provenance.
 
 ### 2.3 Relationship Rules
 

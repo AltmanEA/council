@@ -1,12 +1,12 @@
 # Layer 0 — Protocol Enforcement
 
-Version: 0.2.2
+id: planned-architecture-layer-0
+Version: 0.2.4
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: protocol
+has_translation: docs/ru/planned-architecture/layer-0-RU.md
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/planned-architecture.changes.md
-
-Source: ../index.md (planned-architecture)
 
 ---
 

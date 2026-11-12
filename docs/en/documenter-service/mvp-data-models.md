@@ -1,9 +1,11 @@
 # Documenter Service — MVP Data Models
 
-Version: 0.3.0-draft
+id: documenter-service-mvp-data-models
+Version: 0.3.1-draft
 Status: draft
-Last Modified: 2026-11-12
 Abstraction: reference
+references: [documenter-service-mvp-interfaces, service-contract]
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service-mvp-data-models.changes.md
 
 ---

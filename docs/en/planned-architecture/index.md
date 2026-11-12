@@ -1,9 +1,12 @@
 # Planned Architecture
 
-Version: 0.4.2
+id: planned-architecture
+Version: 0.4.3
 Status: draft
-Last Modified: 2026-11-08
 Abstraction: conceptual
+has_translation: docs/ru/planned-architecture/index-RU.md
+references: [planned-architecture-layer-0, planned-architecture-layer-1, planned-architecture-layer-2, planned-architecture-decisions]
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
 ---

@@ -1,9 +1,11 @@
 # Documenter Service — MVP Interfaces
 
-Version: 0.3.1-draft
+id: documenter-service-mvp-interfaces
+Version: 0.4.0-draft
 Status: draft
-Last Modified: 2026-11-12
 Abstraction: format
+references: [documenter-service-mvp-data-models]
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
 
 ---
@@ -50,7 +52,9 @@ Read-only. Touches no write path. Scans documents against compliance rules using
 3. **Glossary terms** — every domain term in the body exists in `docs/en/glossary/index.md`.
 4. **Cross-reference resolution** — every reference resolves to an existing heading anchor.
 5. **Abstraction consistency** — declared `abstraction:` matches actual content structure.
-6. **Manifest parity** — on-disk files under `docs/en/` and `docs/ru/` match manifest `path` entries; no orphans.
+6. **Manifest parity** — manifest-to-frontmatter parity is enforced by regenerate-and-diff against the generator (`tools/gen_manifest.py --check`); orphan detection compares on-disk `docs/en/` files against the generated manifest entries.
+
+Rules 3 (glossary terms) and 5 (abstraction consistency) remain skill/AI-reserved judgments; rules 1, 2, 4, 6 and the naming/schema checks are deterministic (see `AGENTS.md` §8).
 
 ### Severity semantics
 

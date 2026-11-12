@@ -1,6 +1,10 @@
 # Session workspace files — local only, not versioned (AGENTS.md §2.4)
 sessions/
 
+# Python bytecode caches for tools/ and tests/
+__pycache__/
+*.pyc
+
 # documenter/ is intentionally NOT ignored: it is the git-tracked audit registry
 # that backs the Documenter MVP threat model (ADR-008, operator decision 2026-11-12).
 # The service never commits; committing documenter/ state is an operator action.

@@ -1,8 +1,9 @@
 # Protocol Core
-Version: 0.5.5
+id: protocol-core
+Version: 0.5.6
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: protocol
+has_translation: docs/ru/protocol-core/index-RU.md
 changelog-path: CHANGELOGS/protocol-core.changes.md
 
 ## Role Model

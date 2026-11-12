@@ -1,9 +1,12 @@
 # Cross-Service Artifact & Event Contract
 
-Version: 0.2.1
+id: service-contract
+Version: 0.2.2
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: format
+has_translation: docs/ru/service-contract/index-RU.md
+references: [service-contract-error-management]
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/service-contract.changes.md
 
 ---

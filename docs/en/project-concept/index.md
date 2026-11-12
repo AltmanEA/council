@@ -1,8 +1,9 @@
 # Council
-Version: 0.3.3
+id: project-concept
+Version: 0.3.4
 Status: draft
-Last Modified: 2026-11-04
 Abstraction: conceptual
+has_translation: docs/ru/project-concept/index-RU.md
 changelog-path: CHANGELOGS/project-concept.changes.md
 
 ## Purpose

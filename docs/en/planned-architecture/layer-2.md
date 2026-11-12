@@ -1,12 +1,13 @@
 # Layer 2 — External Interfaces / Adapters
 
-Version: 0.4.2
+id: planned-architecture-layer-2
+Version: 0.4.4
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: protocol
+has_translation: docs/ru/planned-architecture/layer-2-RU.md
+references: [documenter-service]
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/planned-architecture.changes.md
-
-Source: ../index.md (planned-architecture)
 
 ---
 

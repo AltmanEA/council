@@ -1,9 +1,10 @@
 # Documenter Configuration Guide
 
-Version: 0.14.0-draft
+id: documenter-service-configuration-guide
+Version: 0.15.0-draft
 Status: draft
-Last Modified: 2026-11-12
 Abstraction: reference
+has_translation: docs/ru/documenter-service/configuration-guide-RU.md
 changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
 ---
@@ -11,6 +12,31 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 ## Scope
 
 This document defines runtime data structures and their integrity rules: hash store, audit registry, intent record, event schema, glossary compliance modes, and RU alignment procedure. The policy file schema, load-time validation rules, operational tuning parameters, and the tier authorization workflow live in `documenter-service/policy-reference.md` — the single source of truth for configuration. Where this guide references a policy field by name (e.g. `audit_freshness`, `rescan_batch_ceiling`), §Field Reference in the policy reference defines its type, default, and allowed values; behavior attributed to a field here is not restated there.
+
+---
+
+## Manifest Field Provenance
+
+`docs-manifest.yaml` is a generated index: frontmatter is the truth, the manifest is its printout. The sole writer is `tools/gen_manifest.py` until the Stage A generator ships per plan (sess-doc-reliability-algo), after which it is the only writer.
+
+| Manifest field | Provenance |
+|----------------|------------|
+| `id` | frontmatter `id` (required) |
+| `path` | generator walk of `docs/en/` (actual file location) |
+| `title` | frontmatter `title`, default first H1 |
+| `version` | frontmatter `Version` |
+| `status` | frontmatter `Status` |
+| `abstraction` | frontmatter `Abstraction` |
+| `has_translation` | frontmatter `has_translation` |
+| `references` | frontmatter `references` (author-editable exception) |
+| `allow_non_index_paths` | frontmatter `allow_non_index_paths` |
+
+Rules:
+
+- Non-empty `references` / `allow_non_index_paths` are permitted only for registered multi-document exceptions (AGENTS.md §2.1); the validator flags others as high severity.
+- Entries are sorted by `id`.
+- The generated file carries a `GENERATED — DO NOT EDIT` marker.
+- Historical manifest header comments are preserved by the generator as a fixed preamble constant.
 
 ---
 

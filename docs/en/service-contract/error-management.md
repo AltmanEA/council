@@ -1,12 +1,12 @@
 # Error Management & Policy
 
-Version: 0.2.1
+id: service-contract-error-management
+Version: 0.2.3
 Status: draft
-Last Modified: 2026-11-09
 Abstraction: format
+has_translation: docs/ru/service-contract/error-management-RU.md
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/service-contract.changes.md
-
-Source: index.md (service-contract)
 
 ---
 

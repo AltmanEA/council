@@ -1,9 +1,11 @@
 # Documenter Policy Reference
 
-Version: 0.7.0-draft
+id: documenter-service-policy-reference
+Version: 0.7.1-draft
 Status: draft
-Last Modified: 2026-11-12
 Abstraction: reference
+has_translation: docs/ru/documenter-service/policy-reference-RU.md
+allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
 
 ---

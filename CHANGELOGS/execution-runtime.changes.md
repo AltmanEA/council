@@ -1,4 +1,5 @@
 # Changelog — Execution Runtime & Session Lifecycle
+<!-- CHANGES v0.3.5 (index.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->
 <!-- CHANGES v0.3.4: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged; bump origin was sess-services-readiness path-move series. -->
 
 <!-- CHANGES v0.4.0: Resolved readiness finding A-02 — exempted fallback sessions from SessionManifest requirements; added detailed §Namespace Rule clarifying separate artifact layouts for moderator (canonical JSON) vs fallback (Markdown); versioned to 0.4.0. -->
