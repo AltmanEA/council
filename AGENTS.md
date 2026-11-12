@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.9.1
+Version: 0.11.0
 Status: active
 Last Modified: 2026-11-12
 changelog-path: CHANGELOGS/agents.changes.md
@@ -68,7 +68,7 @@ Multi-document exceptions: The following pre-existing folders contain additional
 
 ### 2.2 AI View (Manifest)
 
-A **manifest** file (`docs-manifest.yaml` or equivalent index) is the single source of truth. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which now contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. If no manifest exists yet, the agent creates one on first interaction and updates it after every add/rename/delete operation. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`.
+The **manifest** file (`docs-manifest.yaml` or equivalent index) is a **generated index**: frontmatter is the truth; the manifest is its printout. The sole writer of the manifest is the generator (`tools/gen_manifest.py`, Stage A); until Stage A lands, the Documentation Worker skill is the sole writer. Hand-editing `docs-manifest.yaml` is prohibited; fixing a wrong manifest means fixing document frontmatter and regenerating. Manifest `version` fields are derivative of document frontmatter; parity is enforced by regenerate-and-diff: regenerate and compare against the on-disk manifest. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`.
 
 ### 2.3 Relationship Rules
 
@@ -130,7 +130,7 @@ The English-only portion of `docs/glossary/index.md` is the primary (machine-rea
 
 ### 5.1 Responsibility Split
 
-Document structure, formatting, content drafting, manifest updates, cross-references, and version bumping → **Documentation Worker skill** (/.agents/skills/documentation/SKILL.md). Russian translation alignment → Documentation Worker per its skill definition. Strategic decisions, ambiguity resolution, scope approval, and change-plan confirmation → **Primary agent**. All mechanical write operations go through the skill; reading files (manifest, documents, glossary, changelogs) is done directly by the primary agent. The Agent MUST NOT modify any document file, manifest, or changelog until after step (5) Approve is confirmed by the human operator. This rule has no exceptions — even typo fixes require explicit go-ahead after the propose step. All mechanical operations use the Documentation Worker skill; no other automation tools are operational at this stage.
+Document structure, formatting, content drafting, manifest updates, cross-references, and version bumping → **Documentation Worker skill** (/.agents/skills/documentation/SKILL.md). Russian translation alignment → Documentation Worker per its skill definition. Strategic decisions, ambiguity resolution, scope approval, and change-plan confirmation → **Primary agent**. All mechanical write operations go through the skill; reading files (manifest, documents, glossary, changelogs) is done directly by the primary agent. The Agent MUST NOT modify any document file, manifest, or changelog until after step (5) Approve is confirmed by the human operator. This rule has no exceptions — even typo fixes require explicit go-ahead after the propose step. All mechanical operations use the Documentation Worker skill; no other automation tools are operational at this stage. Parameterized write-scripts under `tools/` (when shipped) are dispatched exclusively by the Documentation Worker skill and only after step (5) Approve; scripts provide atomicity, not authority. Changeset write order is document content → changelog → manifest (manifest last).
 
 ### 5.2 Document Processing Flow
 
@@ -160,7 +160,7 @@ Use kebab-case for folder names under `docs/en/` and `docs/ru/`; primary documen
 
 ### 7.2 Metadata & Format Conventions
 
-Metadata headers follow YAML-style format; English is implied by presence in the manifest, no `Language` field. Documents reference others by canonical identifier (filename without extension). Cross-references use stable anchors (headings), not line numbers. Creating a new document requires updating the manifest and cross-references in relevant existing documents.
+Metadata headers follow YAML-style format; English is implied by presence in the manifest, no `Language` field. Required frontmatter fields: `id`, `Version`, `Status`, `Abstraction`, `changelog-path`; optional: `has_translation`, `references`, `allow_non_index_paths`. The `Last Modified` field is removed from authored document headers (derived from git at display time when needed). Documents reference others by canonical identifier (filename without extension). Cross-references use stable anchors (headings), not line numbers. Creating a new document requires updating the manifest and cross-references in relevant existing documents.
 
 ### 7.3 Document Size Limits
 
@@ -182,4 +182,4 @@ Document version history in the changelog file using format `<!-- CHANGES vX.Y.Z
 
 ## 8. Compliance Verification
 
-At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian alignment checked per §3.3, all terms exist in glossary, all cross-references resolve, changelog entries appended. While the §3.3 suspension is in effect, Russian alignment is report-only: record drift when an RU file exists, but do not update it. The Documentation Worker skill runs these checks automatically per its compliance checklist (/.agents/skills/documentation/SKILL.md); the primary agent reviews the result before reporting completion.
+At the end of any session that modifies documentation files, perform a final compliance check: manifest up-to-date, Russian alignment checked per §3.3, all terms exist in glossary, all cross-references resolve, changelog entries appended. While the §3.3 suspension is in effect, Russian alignment is report-only: record drift when an RU file exists, but do not update it. The Documentation Worker skill runs these checks automatically per its compliance checklist (/.agents/skills/documentation/SKILL.md); the primary agent reviews the result before reporting completion. Run `tools/check_all` (deterministic rule suite) as part of the end-of-session compliance check. The audit rules "glossary terms" and "abstraction consistency" (`mvp-interfaces.md` rules 3 and 5) remain skill/AI-reserved; the tool MUST NOT claim to implement "audit rules 1–6".

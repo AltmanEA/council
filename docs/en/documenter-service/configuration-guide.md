@@ -1,8 +1,8 @@
 # Documenter Configuration Guide
 
-Version: 0.13.0-draft
+Version: 0.14.0-draft
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-12
 Abstraction: reference
 changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
@@ -53,6 +53,8 @@ Read → compare expected hash with current content hash → apply if match → 
 **Git diff as supplementary signal:** `git log` over `hashes.json` may provide historical recovery but does NOT replace CRC/checksum (corruption between commits is undetectable from log alone) nor WAL/backup (crash mid-write loses uncommitted state). Git HEAD diff should remain an **advisory only** signal — it cannot serve as primary conflict detection because refs move independently of content changes. Use direct file checksums with optimistic-lock semantics for authoritative conflict resolution.
 
 `documenter/hashes.json` is tracked by the manifest as an operational artifact (`operational: true`). `documenter/intent/` (intent records) and `documenter/audits.json` (audit registry) are similarly operational — managed exclusively by Documenter, hidden from operator, and excluded from the manifest scope of `audit()` and `delegate()`.
+
+**Cache semantics (ADR-010):** `documenter/hashes.json` is a **rebuildable cache**, not authoritative state. Documenter may rebuild it from scratch at any time (CLI flag `--rebuild`); a cache miss triggers rebuild-and-continue, not failure. Optimistic-concurrency detection therefore covers races within a single invocation window (between audit and apply) only; the git history is the primary audit trail (per `documenter-service/mvp-contract.md` §2.1 / ADR-007). Local tooling under `tools/` is NOT required to update the hash store when it mutates manifest-tracked documents.
 
 ---
 

@@ -23,7 +23,7 @@ documents:
   - id: documenter-service-mvp-contract
     path: docs/en/documenter-service/mvp-contract.md
     title: Documenter Service — MVP Contract
-    version: 0.2.0-draft
+    version: 0.3.0-draft
     status: draft
     abstraction: protocol
     allow_non_index_paths: true
@@ -55,7 +55,7 @@ documents:
   - id: documenter-service-configuration-guide
     path: docs/en/documenter-service/configuration-guide.md
     title: Documenter Configuration Guide
-    version: 0.13.0-draft
+    version: 0.14.0-draft
     status: draft
     abstraction: reference
     allow_non_index_paths: true
@@ -84,7 +84,7 @@ documents:
   - id: glossary
     path: docs/en/glossary/index.md
     title: Glossary
-    version: 0.11.0
+    version: 0.12.0
     status: draft
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md
@@ -146,7 +146,7 @@ documents:
   - id: planned-architecture-decisions
     path: docs/en/planned-architecture/decisions/index.md
     title: Decisions Index
-    version: 0.4.0
+    version: 0.5.0
     status: draft
     abstraction: reference
     has_translation: docs/ru/planned-architecture/decisions/index-RU.md

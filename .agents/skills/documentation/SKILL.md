@@ -35,7 +35,7 @@ constraints: [optional]
 
 Validate all required fields are present. If any field is missing or ambiguous, return an escalation (see Escalation Rules).
 
-**Authority note:** (Applies when Documenter service is operational.) For Documenter-mediated invocations within the documentation workspace (`docs-manifest.yaml`), the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority.
+**Authority note:** (Applies when Documenter service is operational.) For Documenter-mediated invocations within the documentation workspace (`docs-manifest.yaml`), the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority. Alignment obligation extends to BOTH the Documenter classifier (`documenter-service/index.md`, §Trust Classification) AND the deterministic tools under `tools/` (validator rule suite, generator) when shipped; the tools provide atomicity, not authority.
 
 ---
 
@@ -50,6 +50,7 @@ Apply these changes directly without further approval. They are deterministic, r
 - Formatting normalization (heading hierarchy consistency, YAML alignment)
 - Appending changelog entries to existing changelog files
 - Correcting cross-reference anchors with clear typos (e.g., double dashes or wrong heading text)
+- Dispatch of `tools/` parameterized scripts (patch-level version bump, manifest regeneration) — permitted ONLY as a post-Approve action under `AGENTS.md` §5.2 step (5), dispatched exclusively by this skill. Changeset write order: document content → changelog → manifest (manifest last).
 
 ### `review` — Structural and substantive operations
 
@@ -231,6 +232,7 @@ When `change_type: audit`:
 - Flag non-compliant documents in the REPORT with specific violations.
 - When scanning the filesystem for documents not present in the manifest, distinguish between truly orphaned files (no cross-reference anywhere) and auxiliary/operational files that are cross-referenced from a parent document body (e.g., templates, prompts, helpers mentioned inside `fallback/fallback-mode.md`). Only report true orphans as manifest compliance violations; flag auxiliaries as INFO-level notes instead.
 - Verify the naming convention per `AGENTS.md` §7.1: for every manifest entry whose `path` contains a directory component (i.e., the document lives inside a folder, not at root), confirm the file name is exactly `index.md`. Root-level operational files (`AGENTS.md`, `docs-manifest.yaml`) are exempt from this rule since they live at repository root by design.
+- **Division with `tools/check_all`:** of the Documenter audit rules (`documenter-service/mvp-interfaces.md`, §Compliance rules scanned), rules 3 (glossary terms) and 5 (abstraction consistency) remain skill/AI-reserved judgments. The deterministic `tools/check_all` suite covers rules 1, 2, 4, 6 (+naming/schema) and MUST NOT advertise itself as implementing "audit rules 1–6".
 - DO NOT fix issues automatically during audit mode unless the trust level is `safe` AND the violation is a clear, deterministic correction (e.g., missing `Last Modified` field matching today's date).
 
 ---

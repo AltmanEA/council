@@ -1,7 +1,7 @@
 # Glossary
-Version: 0.11.0
+Version: 0.12.0
 Status: draft
-Last Modified: 2026-11-10
+Last Modified: 2026-11-12
 Abstraction: reference
 changelog-path: CHANGELOGS/glossary.changes.md
 
@@ -150,6 +150,10 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Roll-forward** (Прямая докатка) Reconciliation procedure that re-applies staged renames from leftover `.tmp` files when no external modification occurred since the crash. Opposite of rollback; used by Documenter when an intent record is found at cold-start and all target files still match their `before_hash`.
 
 **Commit Order** (Порядок коммита) The fixed sequence of renames in a multi-file commit: document content → `index-RU.md` → changelog → `docs-manifest.yaml` → `documenter/hashes.json`. Chosen so that a crash before the manifest step leaves orphaned but readable files rather than dangling cross-references.
+
+**Hash Store** (Хранилище хэшей) The Documenter-managed persistence structure (`documenter/hashes.json`) storing content-hash tokens used for optimistic concurrency control on delegate-mode writes. Comprises two subsystems: a snapshot (`last_hash`, `last_modified`) for O(1) conflict detection and an append-only `history[]` for replay. A rebuildable cache, not authoritative state (see Rebuildable Cache, ADR-010). Managed exclusively by Documenter; hidden from the operator.
+
+**Rebuildable Cache** (Восстанавливаемый кэш) A derived state artifact that the owning service may discard and recompute from authoritative sources at any time; a cache miss triggers rebuild-and-continue rather than failure. Distinct from authoritative state. Normative instance: `documenter/hashes.json` (see ADR-010, `documenter-service/configuration-guide.md` §Hash Store).
 
 **Trust Floor** (Базовый уровень доверия) The minimum trust level permitted for an operation. Two forms: *static floor*, computed at policy load from `change_type` and used to validate `allowed_operations`; and *derived floor* (dynamic), computed at invocation from the actual diff and used to validate the caller's request. A request below the derived floor is rejected with `trust_mismatch`.
 

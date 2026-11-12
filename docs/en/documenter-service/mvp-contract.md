@@ -1,6 +1,6 @@
 # Documenter Service — MVP Contract
 
-Version: 0.2.0-draft
+Version: 0.3.0-draft
 Status: draft
 Last Modified: 2026-11-12
 Abstraction: protocol
@@ -32,6 +32,8 @@ Implementation contract for the Documenter Service MVP (Tier 0–1, read-only): 
 | `difflib`, `uuid`, `hashlib`, `datetime`, `json`, `secrets`, `fcntl` (stdlib) | Diff, IDs, hashes, timestamps, events, tokens, advisory lock | Stdlib only |
 
 **Build constraint:** no native compilation dependencies. Installable from wheels only; no build toolchain on any deployment host.
+
+**Local tooling (`tools/`):** scripts under `tools/` (manifest generator, validator, hook, bump script from sess-doc-reliability-algo) are designated **candidates** for the future pure core — they must keep I/O-thin cores per ADR-009 and ship golden fixtures under `tests/fixtures/` from day one. Dependency policy for `tools/` mirrors this contract: Python 3.11+, stdlib + PyYAML (`safe_load`) only.
 
 ### Architecture: Ports & Adapters
 
