@@ -1,4 +1,5 @@
 # Changelog — Execution Runtime & Session Lifecycle
+<!-- CHANGES v0.3.4: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged; bump origin was sess-services-readiness path-move series. -->
 
 <!-- CHANGES v0.4.0: Resolved readiness finding A-02 — exempted fallback sessions from SessionManifest requirements; added detailed §Namespace Rule clarifying separate artifact layouts for moderator (canonical JSON) vs fallback (Markdown); versioned to 0.4.0. -->
 <!-- CHANGES v0.3.3: Moved from root-level `execution-runtime/` to `docs/execution-runtime/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. -->

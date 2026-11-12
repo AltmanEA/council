@@ -1,3 +1,4 @@
+<!-- CHANGES v0.9.1: §1.6 implementation-file examples extended with `tools/` (parity checker relocated to tools/check_parity.py, hardcoded root path replaced with script-relative resolution; operator-approved A1, post-2cd292f review). -->
 <!-- CHANGES v0.8.1: Added session workspace scope note in §2.4 — fallback-mode session files in `sessions/<id>/` are outside Documenter's scope; cleanup and archival are the operator's responsibility. -->
 <!-- CHANGES v0.9.0: §1.6 Documentation Separation — moved all project documents to `docs/` directory, excluded implementation files from Documenter scope. Updated all path references in §§2.1, 2.4, 4.1, 4.3. See consensus from sess-documentation-separation. -->
 <!-- CHANGES v0.8.0: Declared fallback frozen and operational for development in §1.5; suspended Russian translation synchronization in §3.3 and made §8 Russian alignment report-only. -->

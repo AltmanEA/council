@@ -1,3 +1,4 @@
+<!-- CHANGES v0.3.3: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged. -->
 <!-- CHANGES v0.3.2a: Remediated index-RU.md metadata block — removed stray `Source:` line, restored missing `Abstraction:` field to match EN structure (§3.3 compliance). -->
 <!-- CHANGES v0.3.2b: Replaced "Фреймворк" with "Council" on line 47 (project-reference/index-RU.md) to align with glossary canonical name definition per §4 Glossary Management. -->
 <!-- CHANGES v0.3.2: Removed stray `Source:` metadata field from non-RU document per §7.2 compliance fix. -->

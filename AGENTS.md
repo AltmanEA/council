@@ -1,7 +1,7 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.9.0
+Version: 0.9.1
 Status: active
-Last Modified: 2026-11-09
+Last Modified: 2026-11-12
 changelog-path: CHANGELOGS/agents.changes.md
 
 This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `docs/project-concept/index.md`, which describes Council.
@@ -25,7 +25,7 @@ Documentation artifacts are divided into two categories based on their role in t
 
 **Project documents** — specifications and protocols that describe the developing project (Council framework). Stored under `docs/`, managed by Documenter via the manifest. Examples: `docs/protocol-core/`, `docs/project-concept/`, `docs/glossary/`.
 
-**Implementation files** — files for the current temporary operation of the Council system. Stored at repository root, excluded from Documenter control. Examples: `AGENTS.md`, `fallback/`, `documenter-service/`, `.agents/skills/documentation/`, `CHANGELOGS/`, `.opencode/`, `defaults/`, `archive/`, `tests/`, `consensus-non-controlled-files.md`, `notes.md`.
+**Implementation files** — files for the current temporary operation of the Council system. Stored at repository root, excluded from Documenter control. Examples: `AGENTS.md`, `fallback/`, `documenter-service/`, `.agents/skills/documentation/`, `CHANGELOGS/`, `.opencode/`, `defaults/`, `archive/`, `tests/`, `tools/`, `consensus-non-controlled-files.md`, `notes.md`.
 
 This separation is documented in the consensus document from session `sess-documentation-separation` (2026-11-09). The manifest (`docs-manifest.yaml`) tracks only project documents under `docs/`. Implementation files are explicitly excluded from Documenter scope.
 

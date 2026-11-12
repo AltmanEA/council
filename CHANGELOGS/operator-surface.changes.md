@@ -1,4 +1,5 @@
 # Changelog — Operator Surface & Escalation
+<!-- CHANGES v0.1.4: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged. -->
 
 <!-- CHANGES v0.1.2: Resolved readiness findings B-04 and D-02 — updated Notices section to explicitly list concrete event type mappings (`notice.quick_review_disabled`, `notice.documenter_tier2_interlock`, `precheck.passed/fail/overridden`) instead of generic `notice.*` reference; clarified `pre_check` Gate override semantics referencing the `pre_check_override` manifest field added by service-contract updates and synchronous `precheck.overridden` event emission; clarified in Documenter Integration that `pre_check=true` returns a synchronous gate verdict. -->
 <!-- CHANGES v0.1.3: Moved from root-level `operator-surface/` to `docs/operator-surface/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. -->

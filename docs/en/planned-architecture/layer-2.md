@@ -1,6 +1,6 @@
 # Layer 2 — External Interfaces / Adapters
 
-Version: 0.4.1
+Version: 0.4.2
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: protocol

@@ -1,4 +1,5 @@
 # Changelog — Cross-Service Artifact & Event Contract
+<!-- CHANGES v0.2.1 (index.md, error-management.md): Metadata versions aligned to manifest (parity fix, post-2cd292f review). Content unchanged. Note: v0.2.0 bump (RU translation series 76f1cb7) also lacked a changelog entry; recorded here retrospectively. -->
 
 <!-- CHANGES v0.1.6: Resolved readiness findings D-01, D-04, and B-07 — unified timestamp field name across all event schemas from `occurred_at` to `emitted_at`; updated `session_id` nullability rule to explicitly state mandatory for session-specific events and nullable for corpus-wide Documenter audits; added `expired` state to EscalationRecord.resolution enum alongside pending|accepted|rejected|superseded. -->
 <!-- CHANGES v0.1.7: Moved from root-level `service-contract/` to `docs/service-contract/` as part of documentation separation (sess-documentation-separation). Path update only, no content change. -->

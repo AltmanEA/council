@@ -1,5 +1,5 @@
 # Council Reference (Draft)
-Version: 0.3.2
+Version: 0.3.3
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: reference

@@ -1,6 +1,6 @@
 # Layer 1 — Execution Runtime
 
-Version: 0.2.1
+Version: 0.2.2
 Status: draft
 Last Modified: 2026-11-09
 Abstraction: protocol

@@ -1,6 +1,6 @@
 # Scenarios
 
-Version: 0.1.1
+Version: 0.1.2
 Status: draft
 Last Modified: 2026-11-05
 Abstraction: protocol

@@ -1,8 +1,8 @@
 # Documenter Policy Reference
 
-Version: 0.6.0-draft
+Version: 0.7.0-draft
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-12
 Abstraction: reference
 changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
 
@@ -36,6 +36,8 @@ documenter_policy:
   notification_mode: inline       # inline only — no asynchronous notification channel exists
   approval_expiry_window: 30            # minutes; maximum time between Tier 2+ authorization and the first delegate() invocation under that approval
   rescan_batch_ceiling: 50        # documents per full-rescan invocation before partial-report return
+  max_diff_bytes: 524288          # bytes; maximum size of a decoded diff payload (default 512 KiB)
+  sync_latency_budget_ms: 30000   # milliseconds; a synchronous call exceeding this budget returns a structured timeout error instead of blocking
   glossary_staleness_days: 30     # days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing
   briefing_ref: null              # path to operator briefing artifact; required when active_tier >= 2
 ```
@@ -57,6 +59,7 @@ At Tier 0–1, `allowed_operations` must remain empty regardless of content. The
 | `glossary_enforcement` | enum | No | `draft` | Controls glossary compliance noise reduction (§Glossary Compliance, configuration guide). |
 | `glossary_staleness_days` | int | No | `30` | Days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing (§Glossary Compliance, configuration guide). |
 | `lock_wait_timeout` | int | No | `30` | Seconds to wait for the operation-level advisory lock before aborting with the lock-owner error described in §Safety Protocol #2 (main spec). |
+| `max_diff_bytes` | int | No | `524288` | Maximum size in bytes of a decoded `diff`/`diff_input` payload (default 512 KiB). A larger payload is rejected at ingress with a structured error before any diff processing. |
 | `notification_mode` | enum | No | `inline` | Delivery mode for operator-facing prompts. `inline` is the only accepted value in MVP: prompts, diffs, and verdicts are returned inside the invocation response. Unknown values are rejected at load time. |
 | `operator_approval_timeout` | int | No | `300` | Seconds the active `delegate()` invocation waits for an explicit approve/reject before emitting `error_category: operator_timeout`. Not an auto-approve window (§Approval semantics, main spec). |
 | `rescan_batch_ceiling` | int | No | `50` | Documents processed per full-rescan invocation. When reached, the response includes `has_remaining: true` and a `scan_cursor` continuation token; passing it back resumes from where the previous invocation stopped. Partial scans never authorize delegates for unscanned documents — the operator must complete all batches before delegation is permitted. No background execution. |
@@ -64,6 +67,7 @@ At Tier 0–1, `allowed_operations` must remain empty regardless of content. The
 | `retry_max_attempts` | int | No | `3` | Maximum retry invocations after a `hash_mismatch` before Documenter escalates to the operator instead of retrying. |
 | `temperature` | float | No | `0.1` | LLM generation randomness; higher values increase diversity (range: 0.0–2.0). Applied per role-agent inference (§Zero silent defaults, layer-1.md). |
 | `top_p` | float | No | `0.9` | Nucleus sampling parameter; tokens with cumulative probability below this threshold are excluded (range: 0.0–1.0). Applied per role-agent inference (§Zero silent defaults, layer-1.md). |
+| `sync_latency_budget_ms` | int | No | `30000` | Maximum duration in milliseconds for a synchronous `delegate()` call. A call exceeding this budget returns a structured timeout error rather than blocking indefinitely. |
 | `frequency_penalty` | float | No | `0.0` | Reduces token repetition; positive values penalize repeated tokens (range: -2.0–2.0). Neutral default, explicitly set rather than inferred (§Zero silent defaults, layer-1.md). |
 
 ### Per-Operation Entries

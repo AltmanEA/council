@@ -1,8 +1,8 @@
 # Documenter Service
 
-Version: 0.18.0-draft
+Version: 0.19.0-draft
 Status: draft
-Last Modified: 2026-11-09
+Last Modified: 2026-11-12
 Abstraction: protocol
 changelog-path: CHANGELOGS/documenter-service.changes.md
 
@@ -183,6 +183,9 @@ At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ s
 
 ## Cross-References
 
+- **`documenter-service/mvp-contract.md`** — Implementation contract: stack, safety protocol, Tier 2+ reserved interfaces, testing strategy. MVP = read-only surface; write branch structurally absent.
+- **`documenter-service/mvp-interfaces.md`** — Machine-readable interface schemas: `audit()`, `delegate(preview: true)`, `documenter.status()`, error categories, `next_action` enum.
+- **`documenter-service/mvp-data-models.md`** — Runtime data structures: audit registry format, token model, policy file schema, event channel.
 - **`documenter-service/policy-reference.md`** — Policy file schema and field reference, operational tuning parameters, authorization workflow checklist
 - **`documenter-service/configuration-guide.md`** — Hash store structure, intent record schema, event schema, glossary compliance settings, RU alignment procedure
 - `protocol-core/index.md` — Protocol enforcement interface (layer boundary)
