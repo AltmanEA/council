@@ -1,10 +1,9 @@
 """CLI wrapper for the Documenter Service MVP — same core as the MCP path.
 
 mvp-contract §1: "a CLI wrapper exposes the same core so MCP and CLI results
-cannot diverge". The MCP stdio transport is reserved (the MVP build ships no
-server entry point); this module's Service is the composition root the future
-MCP adapter must reuse unchanged — CLI --audit / --status / --delegate-preview
-call the very core functions, no parallel logic.
+cannot diverge". This module's Service is the composition root the MCP adapter
+also reuses unchanged — CLI --audit / --status / --delegate-preview and
+MCP tools/call call the very core functions, no parallel logic.
 
 Usage:
     python3 -m documenter_service --status [--json]
@@ -13,6 +12,8 @@ Usage:
     python3 -m documenter_service --delegate-preview --target <id>
                                   --change-type update --trust-level review
                                   --diff-base64 <b64> | --diff-file <path|->
+                                  [--audit-id <audit_id>]
+    python3 -m documenter_service --mcp   # MCP stdio JSON-RPC mode
 
 Environment (mvp-data-models §5): DOCUMENTER_POLICY_PATH (default
 documenter_policy.yml), DOCUMENTER_DATA_DIR (default documenter/),
@@ -31,6 +32,9 @@ Exit codes (fixed here and in README):
 stdout discipline: event lines ({"event_type": ..., "payload": ...}) may
 interleave before the final response line; the LAST stdout line is the
 response (human text, or one JSON object with --json).
+
+In --mcp mode, stdout carries ONLY JSON-RPC 2.0 messages; events from the
+Service's EventSink go to stderr.
 """
 from __future__ import annotations
 
@@ -54,7 +58,8 @@ __all__ = ["Service", "main"]
 
 _HELP = ("Documenter Service MVP scaffold (Tier 0-1, read-only): audit(), "
          "documenter.status(), delegate(preview: true). Exit codes: 0 success; "
-         "2 structured refusal; 3 internal error.")
+         "2 structured refusal; 3 internal error. Use --mcp for MCP stdio "
+          "JSON-RPC transport.")
 
 
 def _env_path(root: str, name: str, default_rel: str, env=None) -> str:
@@ -120,7 +125,7 @@ class Service:
         return status_core(self.registry, policy, target_id=target_id)
 
     def delegate(self, *, target_id, change_type, trust_level, diff_input,
-                 preview) -> dict:
+                 preview, audit_id=None) -> dict:
         """delegate(preview: true) only — no write branch exists.
 
         Order of refusals (structural interlock supersedes policy-level gates,
@@ -152,11 +157,14 @@ class Service:
                   f"using default max_diff_bytes: {policy_err.reason}",
                   file=sys.stderr)
         cap = int(policy.get("max_diff_bytes")) if policy else MAX_DIFF_BYTES_DEFAULT
+        freshness = (int(policy.get("audit_freshness")) if policy else 30)
         return delegate_preview(self.root, self.manifest,
                                 target_id=target_id, change_type=change_type,
                                 trust_level=trust_level, diff_input=diff_input,
                                 preview=preview, engine=self.engine,
-                                max_diff_bytes=cap)
+                                max_diff_bytes=cap,
+                                audit_id=audit_id, registry=self.registry,
+                                audit_freshness_min=freshness)
 
 
 def _print_json(obj) -> None:
@@ -216,6 +224,9 @@ def main(argv=None) -> int:
     mode.add_argument("--delegate-preview", action="store_true",
                       dest="delegate_preview",
                       help="delegate(preview: true): canonical diff preview")
+    mode.add_argument("--mcp", action="store_true",
+                      help="MCP stdio JSON-RPC transport (stdout=RPC, "
+                           "stderr=events)")
     parser.add_argument("--root", default=os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))),
                         help="repository root (default: parent of the package)")
@@ -243,11 +254,21 @@ def main(argv=None) -> int:
                         help="base64-encoded UTF-8 diff for --delegate-preview")
     parser.add_argument("--diff-file", default=None, dest="diff_file",
                         help="path holding the base64 payload, or - for stdin")
+    parser.add_argument("--audit-id", default=None, dest="audit_id",
+                        help="audit_id for pre-audit gate on delegate preview")
 
     args = parser.parse_args(argv)
     service = Service(args.root)
 
     try:
+        if args.mcp:
+            from .mcp_stdio import serve
+            svc = Service(args.root,
+                          events=StdoutEventSink(sys.stderr))
+            serve(svc,
+                  stdin=sys.stdin, stdout=sys.stdout,
+                  stderr=sys.stderr)
+            return 0
         if args.status:
             resp = service.status(target_id=None)
             if args.json_mode:
@@ -282,7 +303,8 @@ def main(argv=None) -> int:
         resp = service.delegate(target_id=args.target,
                                 change_type=args.change_type,
                                 trust_level=args.trust_level,
-                                diff_input=payload.strip(), preview=True)
+                                diff_input=payload.strip(), preview=True,
+                                audit_id=args.audit_id)
         if args.json_mode:
             _print_json(resp)
         else:

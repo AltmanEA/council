@@ -243,7 +243,9 @@ class TestDelegatePreview(unittest.TestCase):
         self.DIFF = base64.b64encode(
             b"--- a/docs/en/alpha/index.md\n"
             b"+++ b/docs/en/alpha/index.md\n"
-            b"@@ -1,1 +1,1 @@\n-id: alpha\n+id: alpha-renamed\n").decode()
+            b"@@ -1,1 +1,1 @@\n"
+            b"-|alpha|active|protocol|\n"
+            b"+|alpha-renamed|active|protocol|\n").decode()
 
     def test_preview_response_fields(self):
         svc = _service()

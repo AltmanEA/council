@@ -1,7 +1,7 @@
 # Documenter Service — MVP Contract
 
 id: documenter-service-mvp-contract
-Version: 0.3.1-draft
+Version: 0.4.0-draft
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
@@ -23,7 +23,7 @@ Implementation contract for the Documenter Service MVP (Tier 0–1, read-only): 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
 | Language | Python 3.11+ | Matches project tooling (`tools/local_translate.py`); stdlib covers MVP |
-| Transport (MVP) | MCP stdio | Same invocation path as the Council tool layer; CLI wrapper shares one core with MCP so results cannot diverge |
+| Transport (MVP) | MCP stdio | Same invocation path as the Council tool layer; CLI wrapper shares one core with MCP so results cannot diverge. MVP build ships both: `python3 -m documenter_service` (CLI) and `python3 -m documenter_service --mcp` (newline-delimited JSON-RPC 2.0 stdio server exposing `audit`, `status`, `delegate_preview`); the server writes only JSON-RPC to stdout, events go to stderr. Registering it as a workspace MCP server remains an explicit operator decision (AGENTS.md §1.7) |
 | LLM dependency | **None** | Writes (Tier 2+) go through the Layer 1 execution port; importing LLM clients in service code is prohibited |
 
 ### Dependencies

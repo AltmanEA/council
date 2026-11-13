@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.4.0-draft
+Version: 0.5.0-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -82,6 +82,7 @@ Preview only. Returns a diff without write intent; exempt from `allowed_operatio
 | trust_level | enum | Caller request `safe`\|`review`; accepted only when `requested >= derived` floor |
 | diff_input | string | Base64-encoded UTF-8 machine-readable diff |
 | preview | boolean | MUST be `true`. `false` or absent → reject `tier_interlock` |
+| audit_id | string\|null | Optional; when supplied, the pre-audit gate (rules 1–5, `documenter-service/index.md` §Pre-audit gate) runs before the preview completes (`audit_mismatch`/`blocking_finding` on failure). `null` = preview exempt from the gate, as in the write-branch contract where the gate guards apply only at Tier 2+ |
 
 ### Response
 
@@ -93,6 +94,7 @@ Preview only. Returns a diff without write intent; exempt from `allowed_operatio
 | derived_trust_reason | string | Textual cause, e.g. "hunk 3 changes a normative sentence → review" |
 | next_action | enum | See §4 |
 | findings | array | Audit findings relevant to `target_id` |
+| gate | object\|absent | `{audit_id, verdict}`; present only when `audit_id` was supplied and rules 1–5 passed |
 
 ### Canonical diff
 

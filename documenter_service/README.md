@@ -36,9 +36,35 @@ here** — this package never claims "rules 1–6" coverage (AGENTS.md §8).
   commented out. `preview=false`/absent → `tier_interlock`.
 - **intent_record** — schema reserved as a constant (`ports.INTENT_RECORD_TYPE`,
   `core/registry.py`); recognized on read, never written by this build.
-- **MCP stdio transport** — reserved; the CLI composes the core through
-  `__main__.Service`, which the future MCP server must reuse unchanged, so
-  MCP and CLI results cannot diverge.
+
+## MCP stdio transport
+
+The MVP includes an MCP stdio JSON-RPC 2.0 server. Run it with:
+
+```bash
+python3 -m documenter_service --mcp --root <repo-root>
+```
+
+The server exposes three tools: `audit`, `status`, and `delegate_preview`.
+Stdout carries ONLY JSON-RPC messages (one per line); the Service's event
+sink writes to stderr so events and logs never interleave with RPC output.
+
+**Not registered in workspace config.** Per AGENTS.md §7.5 (prohibition),
+the Documenter is NOT registered as an MCP server in the workspace
+configuration — registration is an explicit operator decision, out of
+scope for this MVP build.
+
+## Critical producers
+
+By contract (mvp-interfaces §1 severity semantics, mvp-contract MVP
+boundary) the MVP has **no producers of `critical` findings**: read-only
+diagnostics cannot establish data-integrity compromise, so the severity
+enum keeps `critical` but nothing emits it. This absence is intentional
+(not an oversight); introducing a critical-producer rule is a separate
+change that activates blocking + post-mortem semantics belonging to the
+write path. Do not fabricate example critical findings in tests or fixtures.
+
+## Reserved stub
 
 ## Running
 

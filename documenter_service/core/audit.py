@@ -328,22 +328,30 @@ def audit(root: str, registry, manifest, events, *,
 
 def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
                      trust_level: str, diff_input: str, preview, engine,
-                     max_diff_bytes: int = MAX_DIFF_BYTES_DEFAULT) -> dict:
+                     max_diff_bytes: int = MAX_DIFF_BYTES_DEFAULT,
+                     audit_id: str | None = None, registry=None,
+                     audit_freshness_min: int = 30) -> dict:
     """delegate(preview: true) — minimal MVP preview contour (no write branch).
 
     Flow (mvp-interfaces §2): preview MUST be exactly true (false/absent →
     tier_interlock/preview_denied) → the same scope resolver a write path uses
     (off-manifest target → unknown, so preview cannot become a reconnaissance
-    primitive) → trust floor check (requested >= derived, else trust_mismatch)
-    → decode base64 (size-capped BEFORE processing) → normalize → diff_hash
-    over canonical bytes → render diff_text → findings relevant to target_id.
+    primitive) → [when audit_id is provided] pre-audit gate rules 1–5 run
+    verbatim (mvp-interfaces §Pre-audit gate; mvp-interfaces §4: audit_mismatch
+    → rerun_audit, blocking_finding → resolve_finding or rescan_to_completion)
+    → decode base64 (size-capped BEFORE processing) → normalize →
+    trust floor check (requested >= derived, else trust_mismatch) using the
+    normalized diff to derive the effective trust level → diff_hash over
+    canonical bytes → render diff_text → findings relevant to target_id.
 
     diff_text is returned in the RESPONSE only: it never enters an event or
     the registry (mvp-data-models §3 redaction rule). Policy load failures
     never block preview (mvp-data-models §2 preview exemption); the caller
     supplies max_diff_bytes from the policy when it loaded, else the
     documented 512 KiB default is used. The pre-audit gate guards the write
-    branch only — preview is exempt by contract, so no audit_id is required.
+    branch only — preview is exempt by contract when no audit_id is supplied;
+    when audit_id is provided, the 5 gate rules run verbatim.
+    The trust derivation now uses the normalized diff for dynamic classification.
     """
     if preview is not True:
         raise StructuredError(
@@ -353,13 +361,26 @@ def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
             "Invoke with preview: true.")
     entries, _ = _resolve_scope(manifest, target_id)
     path_to_id = {e["path"]: e["id"] for e in entries}
-    derived, reason = check_invariant(change_type, trust_level)
+    # Pre-audit gate: only when caller supplies audit_id.
+    if audit_id is not None:
+        if registry is None:
+            raise StructuredError(
+                "unknown",
+                "audit_id supplied but registry unavailable to evaluate the "
+                "pre-audit gate — this is a bug, not operator action")
+        record = registry.find_audit(audit_id)
+        now = registry.now()
+        err = pre_audit_gate(record, target_id, now, audit_freshness_min)
+        if err:
+            raise err
     text = decode_diff_input(diff_input, max_diff_bytes)
     normalized = engine.normalize(text)
+    derived, reason = check_invariant(change_type, trust_level,
+                                      diff_text=normalized.decode("utf-8"))
     diff_hash = engine.diff_hash(normalized)
     diff_text = engine.render(normalized)
     findings = _findings_for_target(_raw_findings(root), path_to_id, target_id)
-    return {
+    resp = {
         "diff_hash": diff_hash,
         "diff_text": diff_text,
         "derived_trust_level": derived,
@@ -367,6 +388,9 @@ def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
         "next_action": "preview_only",
         "findings": findings,
     }
+    if audit_id is not None:
+        resp["gate"] = {"audit_id": audit_id, "verdict": "passed"}
+    return resp
 
 
 # ---------------------------------------------------------------------------

@@ -286,7 +286,7 @@ class TestCliCoreParity(unittest.TestCase):
                 import base64
                 diff = base64.b64encode(
                     b"--- a/docs/en/alpha/index.md\n+++ b/docs/en/alpha/index.md\n"
-                    b"@@ -1 +1 @@\n-x\n+y\n").decode()
+                    b"@@ -1 +1 @@\n-|x|\n+|y|\n").decode()
                 rc, out, _ = self._cli(
                     ["--root", FIXTURE_CORPUS, "--delegate-preview",
                      "--target", "alpha", "--change-type", "update",
@@ -317,6 +317,31 @@ class TestCliCoreParity(unittest.TestCase):
             self.assertEqual(cli_del, direct_del)  # fully deterministic
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_delegate_preview_nonexistent_audit_id(self):
+        """CLI --delegate-preview with --audit-id pointing to nonexistent id:
+        exit code 2, JSON error with error_category=audit_mismatch."""
+        import base64
+        diff = base64.b64encode(
+            b"--- a/docs/en/alpha/index.md\n"
+            b"+++ b/docs/en/alpha/index.md\n"
+            b"@@ -1 +1 @@\n"
+            b"-|x|\n"
+            b"+|y|\n").decode()
+        rc, out, _ = self._cli([
+            "--root", FIXTURE_CORPUS,
+            "--delegate-preview",
+            "--target", "alpha",
+            "--change-type", "update",
+            "--trust-level", "safe",
+            "--diff-base64", diff,
+            "--json",
+            "--audit-id", "nonexistent-audit-uuid",
+        ])
+        self.assertEqual(rc, 2)
+        error = self._last_json(out)
+        self.assertEqual(error["error_category"], "audit_mismatch")
+        self.assertEqual(error["next_action"], "rerun_audit")
 
 
 if __name__ == "__main__":
