@@ -2,7 +2,7 @@
 
 Operational scripts for the Council documentation pipeline (implementation
 files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
-+ B of plan `sess-doc-reliability-algo`.
++ B + D of plan `sess-doc-reliability-algo`.
 
 ## Tools
 
@@ -11,6 +11,7 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | `docmeta.py` | Parse and validate document frontmatter headers (required fields, versions, changelog refs). Library used by the tools below. | operational (Stage A) |
 | `gen_manifest.py` | Generate `docs-manifest.yaml` from document frontmatter (`--write` / `--check`, byte-exact, atomic). Sole writer of the manifest. | operational (Stage A) |
 | `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Exit codes: 0 clean, 1 findings, 2 internal error. | operational (Stage B) |
+| `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (AGENTS.md §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) |
 | `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only (soak) by default, blocking once the marker file exists. | operational, soak mode (Stage B) |
 | `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational |
