@@ -1,7 +1,7 @@
 # Documenter Service — MVP Data Models
 
 id: documenter-service-mvp-data-models
-Version: 0.3.1-draft
+Version: 0.3.2-draft
 Status: draft
 Abstraction: reference
 references: [documenter-service-mvp-interfaces, service-contract]
@@ -105,7 +105,7 @@ documenter_policy:
 |---|------|------------------|
 | 1 | `version` recognized | Load fails; no default substitution |
 | 2 | `active_tier ∈ {0,1,2,3}` | Load fails — an unreadable tier MUST NOT silently lower strictness |
-| 3 | `allowed_operations` empty while `active_tier < 2` | Load fails (validator rule, policy-reference §Policy File) |
+| 3 | `allowed_operations` non-empty while `active_tier < 2` | Load fails (validator rule, policy-reference §Policy File) |
 | 4 | No entry with `trust_level` below the static floor for its `change_type` | Load fails (authority rule); covers `type: pattern` entries too |
 | 5 | `targets` are manifest IDs or empty | Load fails |
 | 6 | `briefing_ref` non-null when `active_tier >= 2` | Load fails |

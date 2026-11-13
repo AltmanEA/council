@@ -1,7 +1,7 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.12.0
+Version: 0.13.0
 Status: active
-Last Modified: 2026-11-12
+Last Modified: 2026-11-13
 changelog-path: CHANGELOGS/agents.changes.md
 
 This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `docs/project-concept/index.md`, which describes Council.
@@ -143,6 +143,17 @@ Every task proceeds through three phases controlled by the primary agent. Detail
 ### 5.3 Concurrent Work
 
 Agents working on different documents must coordinate through the manifest. No two agents modify the same file concurrently unless explicitly agreed upon. The Documentation Worker skill handles all concurrent-write protection (TOCTOU detection) per its safety protocol (/.agents/skills/documentation/SKILL.md).
+
+---
+
+### 5.4 Subagent Delegation Budget
+
+Before launching a subagent, the primary agent MUST estimate the task's
+expected size (rough token budget). If the estimate exceeds 40,000 tokens,
+the primary agent MUST consider splitting the work into smaller subtasks
+and delegate each separately rather than launching one oversized run. The
+estimate is recorded in the delegation brief. This keeps subagent outputs
+reviewable and prevents context exhaustion mid-task.
 
 ---
 

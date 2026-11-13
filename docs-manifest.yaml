@@ -43,7 +43,7 @@ documents:
   - id: documenter-service-mvp-data-models
     path: docs/en/documenter-service/mvp-data-models.md
     title: Documenter Service — MVP Data Models
-    version: 0.3.1-draft
+    version: 0.3.2-draft
     status: draft
     abstraction: reference
     references:

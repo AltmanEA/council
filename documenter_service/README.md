@@ -74,14 +74,14 @@ explicit and never runs implicitly. Imports are stdlib + PyYAML (via
 `tools/docmeta` / `yaml.safe_load`); no subprocess, no LLM clients, no
 network libraries.
 
-## Open question (documentation contradiction, recorded not resolved)
+## Resolved: policy validation rule 3 direction
 
-`mvp-data-models.md` §2 rule 3 reads "allowed_operations **empty** while
-`active_tier < 2` → load fails", but the validator rule it cites
-(`policy-reference.md` §Policy File) says the opposite ("reject when
-**non-empty** while active_tier < 2") AND the same reference states "At Tier
-0–1, `allowed_operations` must remain empty", which makes the literal §2
-reading impossible to satisfy for ANY Tier 0/1 policy. The scaffold follows
-the cited validator rule (fail on non-empty ops below Tier 2) — the stricter,
-self-consistent reading — and additionally requires non-empty ops at Tier ≥2
-(mvp-contract §4). Flag for the documenter/protocol owner.
+`mvp-data-models.md` §2 rule 3 originally read "allowed_operations **empty**
+while `active_tier < 2` → load fails", contradicting the validator rule it
+cites (`policy-reference.md` §Policy File: reject when **non-empty** while
+active_tier < 2) and making any legal Tier 0/1 policy (empty
+`allowed_operations`) unparsable. Fixed in the contract at v0.3.2-draft
+(rule 3 now reads "non-empty while `active_tier < 2`", operator-approved).
+The scaffold always followed the cited validator rule (fail on non-empty ops
+below Tier 2) and additionally requires non-empty ops at Tier ≥2
+(mvp-contract §4); no code change was needed.
