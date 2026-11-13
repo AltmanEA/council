@@ -1,0 +1,240 @@
+"""AuditRegistry adapter — append-only JSONL with prev_hash chain.
+
+File: <data_dir>/audit_registry.jsonl (default documenter/, mvp-data-models
+§4). This is the ONLY writer path in the entire service: a single `open(path,
+"a")` per append. The file is never rewritten in place; compaction happens
+only through the explicit, checkpoint-governed `truncate()` below.
+
+Health model (mvp-interfaces §3 "Registry health"):
+  healthy  — readable, prev_hash chain consistent
+  degraded — chain break, or size above retention without a trailing checkpoint
+  corrupt  — truncated or unparsable content (malformed JSON, bad envelope)
+
+Distinction between "missing" and "corrupt": a MISSING or 0-byte file is an
+empty registry — healthy, zero records (the first append lands with
+prev_hash null). Only content that fails to parse is corrupt. That keeps a
+fresh checkout (no runs yet, or a committed empty .gitkeep-only state) from
+reporting as corruption while still failing closed on real damage.
+"""
+from __future__ import annotations
+
+import base64
+import json
+import os
+import secrets
+from datetime import datetime, timezone
+
+from ..core import registry as reg
+from ..core.errors import StructuredError
+from ..ports import AuditRegistry
+
+__all__ = ["JsonlAuditRegistry", "REGISTRY_FILENAME", "new_token"]
+
+#: Registry file name inside the data directory (mvp-data-models §4).
+REGISTRY_FILENAME = "audit_registry.jsonl"
+
+#: scan_cursor token length: 32 random bytes, base64 (mvp-data-models §1).
+TOKEN_BYTES = 32
+
+
+def new_token() -> str:
+    """Opaque continuation token: 32 random bytes, base64url-safe on disk."""
+    return base64.b64encode(secrets.token_bytes(TOKEN_BYTES)).decode("ascii")
+
+
+class JsonlAuditRegistry(AuditRegistry):
+    """Filesystem-backed registry. Writes: append only (see module docstring)."""
+
+    def __init__(self, data_dir: str, clock=None) -> None:
+        self.data_dir = os.path.abspath(data_dir)
+        #: Injectable clock (callable → aware datetime) for deterministic
+        #: freshness boundaries in tests (mvp-contract §3.1 test_clock_injection).
+        self._clock = clock or (lambda: datetime.now(timezone.utc))
+
+    # -- low-level ----------------------------------------------------------
+
+    @property
+    def path(self) -> str:
+        return os.path.join(self.data_dir, REGISTRY_FILENAME)
+
+    def now(self) -> str:
+        """ISO 8601 UTC `Z` timestamp from the injected clock."""
+        return self._clock().astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def _raw_lines(self):
+        """Raw non-empty lines, or None when the file does not exist."""
+        if not os.path.exists(self.path):
+            return None
+        with open(self.path, encoding="utf-8") as fh:
+            return [ln for ln in fh.read().splitlines() if ln.strip()]
+
+    # -- AuditRegistry port ---------------------------------------------------
+
+    def append(self, record_type: str, data: dict) -> dict:
+        """Append one envelope record (the only write path); returns envelope.
+
+        Creates the data directory when absent (permitted state mutation).
+        """
+        lines = self._raw_lines() or []
+        records = [reg.parse_line(ln) for ln in lines]  # corrupt → ValueError
+        prev = reg.record_hash(records[-1]) if records else None
+        envelope = reg.make_envelope(record_type, data, prev)
+        os.makedirs(self.data_dir, exist_ok=True)
+        with open(self.path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(envelope, sort_keys=True) + "\n")
+        return envelope
+
+    def read_all(self) -> tuple:
+        """Return (records, status); status ∈ healthy|degraded|corrupt.
+
+        Never raises: degradation is data the operator must SEE (status is the
+        only channel through which registry degradation becomes observable —
+        mvp-interfaces §3), so parse failures degrade the answer, not crash it.
+        """
+        lines = self._raw_lines()
+        if lines is None or not lines:
+            return [], "healthy"  # missing/0-byte = empty fresh registry
+        try:
+            records = [reg.parse_line(ln) for ln in lines]
+        except ValueError:
+            return [], "corrupt"
+        return records, reg.verify_chain(records)
+
+    def status(self) -> str:
+        _, status = self.read_all()
+        return status
+
+    def find_audit(self, audit_id: str):
+        """Latest audit_record data for ``audit_id``, or None.
+
+        Returns the LAST record with that audit_id: in a paginated scan each
+        batch appends a new record whose scanned_ids/findings are CUMULATIVE,
+        so resuming must continue from the most recent batch, not the first.
+        """
+        records, _ = self.read_all()
+        found = None
+        for rec in records:
+            if rec["record_type"] == reg.AUDIT_RECORD and \
+                    rec["data"].get("audit_id") == audit_id:
+                found = rec["data"]
+        return found
+
+    def last_audit(self):
+        records, _ = self.read_all()
+        for rec in reversed(records):
+            if rec["record_type"] == reg.AUDIT_RECORD:
+                return rec["data"]
+        return None
+
+    # -- token lifecycle (mvp-data-models §1 Token model) ---------------------
+
+    def issue_token(self, token_type: str, token_value: str,
+                    bound_to: dict) -> dict:
+        """Persist a token_record (consumed=False) bound to (audit_id, target_id)."""
+        return self.append(reg.TOKEN_RECORD, {
+            "token_type": token_type,
+            "token_value": token_value,
+            "bound_to": {"audit_id": bound_to["audit_id"],
+                         "target_id": bound_to["target_id"]},
+            "consumed": False,
+            "consumed_at": None,
+        })
+
+    def _latest_token(self, token_value: str):
+        records, _ = self.read_all()
+        found = None
+        for rec in records:
+            if rec["record_type"] == reg.TOKEN_RECORD and \
+                    rec["data"].get("token_value") == token_value:
+                found = rec["data"]
+        return found
+
+    def consume_token(self, token_value: str, target_id: str,
+                      audit_id: str | None = None) -> dict:
+        """Validate + single-use consume a scan_cursor; returns the token data.
+
+        The token is bound to (audit_id, target_id) (mvp-data-models §1): the
+        resuming request must name the same target; a caller that knows its
+        audit_id (audit_id != None) must also match the binding. audit_id=None
+        (the audit() resume path) ADOPTS the bound audit_id — a token for
+        target A can never resume a scan for target B.
+
+        Unknown token → audit_mismatch (forged/expired cursor: pre-audit rules
+        1-3 semantics). Consumed replay → token_replay. Consumption is
+        recorded as a NEW token_record (append-only: records are never
+        rewritten in place).
+        """
+        token = self._latest_token(token_value)
+        if token is None:
+            raise StructuredError(
+                "audit_mismatch",
+                f"scan_cursor {token_value!r} is not a token issued by this "
+                "registry (unknown, expired, or fabricated)")
+        bound = token.get("bound_to") or {}
+        if bound.get("target_id") != target_id or (
+                audit_id is not None and bound.get("audit_id") != audit_id):
+            raise StructuredError(
+                "audit_mismatch",
+                f"scan_cursor is bound to (audit_id={bound.get('audit_id')!r}, "
+                f"target_id={bound.get('target_id')!r}), but the request is "
+                "for target "
+                + repr(target_id) + (f" under audit_id {audit_id!r}" if audit_id
+                                     else "")
+                + " — a cursor for target A cannot resume a scan for target B")
+        if token.get("consumed"):
+            raise StructuredError(
+                "token_replay",
+                "scan_cursor already consumed — tokens are single-use "
+                "(mvp-data-models §1); re-run audit() for a fresh scan")
+        consumed = dict(token)
+        consumed["consumed"] = True
+        consumed["consumed_at"] = self.now()
+        self.append(reg.TOKEN_RECORD, consumed)
+        return consumed
+
+    # -- retention / checkpoint (mvp-data-models §1) ---------------------------
+
+    def truncate(self, count: int) -> dict:
+        """Checkpoint-governed compaction. Refuses without a valid checkpoint.
+
+        Sequence: verify trailing checkpoint_record covers exactly the
+        ``count`` oldest records (core.registry.plan_truncation → StructuredError
+        on refusal), then atomically rewrite the file WITHOUT those records.
+        This rewrite is the single, explicitly-requested, checkpoint-authorized
+        compaction path — it is not an append, and it never runs implicitly
+        from audit()/status().
+        """
+        records, status = self.read_all()
+        if status == "corrupt":
+            raise StructuredError("gate_failure",
+                                  "registry corrupt — truncate refused")
+        try:
+            doomed = reg.plan_truncation(records, count)
+        except ValueError as exc:
+            raise StructuredError("gate_failure", str(exc)) from exc
+        retained = records[count:-1] + [records[-1]]
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                for rec in retained:
+                    fh.write(json.dumps(rec, sort_keys=True) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
+        except BaseException:
+            raise StructuredError("unknown", "registry compaction write failed")
+        return {"truncated_count": len(doomed),
+                "segment_hash": reg.segment_hash(doomed)}
+
+    def write_checkpoint(self) -> dict:
+        """Append a checkpoint_record sized for the oldest segment.
+
+        Convenience for the operator workflow (and tests): the checkpoint's
+        truncated_count is min(count, len(records) - 1) so the checkpoint
+        itself always survives the later truncate(count)."""
+        records, _ = self.read_all()
+        count = min(len(records) - 1, len(records))
+        if count <= 0:
+            raise StructuredError("gate_failure",
+                                  "nothing to checkpoint: fewer than 2 records")
+        return self.append(reg.CHECKPOINT_RECORD,
+                           reg.make_checkpoint_data(records[:count]))

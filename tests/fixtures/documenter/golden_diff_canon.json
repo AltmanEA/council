@@ -1,0 +1,6 @@
+{
+  "description": "golden canonical-diff fixture for documenter_service.adapters.diff_engine: input diff (base64) -> normalized bytes -> diff_hash. Values fixed from the reference implementation (CRLF->LF, trailing whitespace stripped, single final newline); semantically equal CRLF/whitespace variants must hash identically (mvp-contract §3.1 test_canonical_diff).",
+  "input_diff_b64": "LS0tIGEvZG9jcy9lbi9hbHBoYS9pbmRleC5tZA0KKysrIGIvZG9jcy9lbi9hbHBoYS9pbmRleC5tZA0KQEAgLTEsMyArMSwzIEBADQogIyBBbHBoYSBEb2N1bWVudA0KLWlkOiBhbHBoYSAgIA0KK2lkOiBhbHBoYS1yZW5hbWVkCg==",
+  "normalized_text": "--- a/docs/en/alpha/index.md\n+++ b/docs/en/alpha/index.md\n@@ -1,3 +1,3 @@\n # Alpha Document\n-id: alpha\n+id: alpha-renamed\n",
+  "diff_hash": "sha256:56986a73fe8950f7abf8a44a18b3de771e8936765617c0c68dd3547dd3609fe0"
+}

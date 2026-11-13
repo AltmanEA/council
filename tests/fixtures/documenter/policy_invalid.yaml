@@ -1,0 +1,8 @@
+# Invalid policy fixture A (rule 2): typo'd active_tier. An unreadable tier
+# MUST NOT silently lower strictness — load fails (fail closed).
+documenter_policy:
+  version: "0.2.0"
+  active_tier: tier-one
+  allowed_operations: []
+  audit_freshness: 30
+  briefing_ref: null

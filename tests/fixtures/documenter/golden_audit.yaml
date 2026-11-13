@@ -1,0 +1,23 @@
+note: >
+  Golden audit() output for tests/fixtures/documenter/corpus (frozen
+  3-document corpus). Volatile fields (audit_id, timestamps, scan_cursor) are
+  excluded. Findings order is compared as a SET by the golden test. Generated
+  from the Stage 4 scaffold (sess-doc-reliability-algo, 2026-11-13) by running
+  documenter_service.core.audit.audit() against the corpus.
+report_header: 'Coverage: deterministic rules 1, 2, 4, 6 + naming/schema via tools/check_all.scan. Rules
+  3 (glossary terms) and 5 (abstraction consistency) are skill/AI-reserved and NOT checked here.'
+findings:
+- subject_id: gamma
+  severity: medium
+  description: '`Last Modified` field is deprecated (derived from git; remove it)'
+  suggested_action: remove the deprecated Last Modified key
+- subject_id: gamma
+  severity: low
+  description: 'rule-4 cross-ref-anchors: numeric §1 on line 13 matched no numbered heading in docs/en/gamma/index.md;
+    numeric section references are implementation-style, reported LOW'
+  suggested_action: retarget the reference to an existing heading or file
+coverage:
+  scanned_count: 3
+  total_count: 3
+  status: complete
+has_remaining: false

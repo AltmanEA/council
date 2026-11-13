@@ -1,0 +1,33 @@
+# Documentation Manifest
+# Single source of truth for project documentation layout.
+#
+# Language layout: English originals under docs/en/, Russian translations under docs/ru/.
+# Translations use mirrored directory structure (same nesting as English).
+# has_translation field uses relative path from manifest location to the RU file.
+# Schema change v0.2: has_translation changed from bare filename to relative path
+# to support separated language directories (ru-restructure consensus, 2026-11-10).
+
+# GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see AGENTS.md §2.2)
+documents:
+  - id: alpha
+    path: docs/en/alpha/index.md
+    title: Alpha Document
+    version: 1.0.0
+    status: active
+    abstraction: protocol
+    references:
+      - beta
+
+  - id: beta
+    path: docs/en/beta/index.md
+    title: Beta Document
+    version: '0.1'
+    status: draft
+    abstraction: conceptual
+
+  - id: gamma
+    path: docs/en/gamma/index.md
+    title: Gamma Document
+    version: 0.2.0
+    status: draft
+    abstraction: conceptual

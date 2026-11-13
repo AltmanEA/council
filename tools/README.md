@@ -16,6 +16,7 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only (soak) by default, blocking once the marker file exists. | operational, soak mode (Stage B) |
 | `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational |
+| `../documenter_service/` | Documenter Service MVP scaffold (Tier 0–1 read-only): `audit()`/`status()`/`delegate(preview:true)` поверх tools-ядра, без форка правил; status: scaffold (Stage 4, sess-doc-reliability-algo). | scaffold (Stage 4) |
 
 ## Rule coverage (check_all.py)
 

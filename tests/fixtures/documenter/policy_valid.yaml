@@ -1,0 +1,16 @@
+# Valid MVP policy fixture (Tier 1): satisfies all 7 fail-closed rules of
+# docs/en/documenter-service/mvp-data-models.md §2 at active_tier=1.
+documenter_policy:
+  version: "0.2.0"
+  active_tier: 1
+  allowed_operations: []
+  audit_freshness: 30
+  approval_expiry_window: 30
+  rescan_batch_ceiling: 2
+  max_diff_bytes: 524288
+  sync_latency_budget_ms: 30000
+  lock_wait_timeout: 30
+  operator_approval_timeout: 300
+  notification_mode: inline
+  glossary_enforcement: draft
+  briefing_ref: null
