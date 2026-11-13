@@ -8,11 +8,20 @@ records) and the checkpoint-before-truncation rule.
 
 Threat model (mvp-data-models §Purpose): the chain is a cheap corruption
 DETECTION aid, not an anti-tamper mechanism.
+
+NOTE: token_record data may carry additional keys beyond the five fields of
+mvp-data-models §1 (token_type, token_value, bound_to, consumed, consumed_at).
+This applies to approval_id tokens which carry diff_hash, proposer_id,
+decision, resolved_at, and resolved_by alongside the base fields. The schema
+is append-only additive; parse_line only validates envelope keys (VAL.001
+relaxed for token_record.data — extra keys are carried through).
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import re
+from datetime import datetime
 
 __all__ = [
     "RETENTION_MAX",
@@ -21,6 +30,8 @@ __all__ = [
     "TOKEN_RECORD",
     "CHECKPOINT_RECORD",
     "INTENT_RECORD",
+    "APPROVAL_ID",
+    "OPERATOR_ID_RE",
     "canonical_json",
     "record_hash",
     "make_envelope",
@@ -29,6 +40,7 @@ __all__ = [
     "segment_hash",
     "make_checkpoint_data",
     "plan_truncation",
+    "approval_is_expired",
 ]
 
 #: Maximum records retained in the registry (mvp-data-models §1 Retention).
@@ -38,6 +50,7 @@ AUDIT_RECORD = "audit_record"
 TOKEN_RECORD = "token_record"
 INTENT_RECORD = "intent_record"
 CHECKPOINT_RECORD = "checkpoint_record"
+APPROVAL_ID = "approval_id"  #: token_type value for approval tokens (mvp-data-models §1)
 
 #: Closed enum of envelope record_type values (mvp-data-models §1). intent_record
 #: is a reserved Tier 2+ schema: the type is recognized on READ (a foreign
@@ -48,6 +61,12 @@ RECORD_TYPES = (AUDIT_RECORD, TOKEN_RECORD, INTENT_RECORD, CHECKPOINT_RECORD)
 ENVELOPE_KEYS = frozenset({"record_type", "prev_hash", "data"})
 
 _HEX64 = "0123456789abcdef"
+
+#: Operator ID format (mvp-interfaces §5): ``^op-[a-z0-9][a-z0-9-]{2,63}$``
+OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
+
+#: SHA256 hash pattern (with prefix): ``sha256:<64-hex>``
+SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def canonical_json(record: dict) -> str:
@@ -194,3 +213,26 @@ def plan_truncation(records: list, count: int):
         raise ValueError(
             "trailing checkpoint_record does not match the records being truncated")
     return records[:count]
+
+
+def approval_is_expired(approval: dict, now_iso: str, expiry_min: int) -> bool:
+    """Return True when the approval's created_at is older than ``expiry_min``
+    minutes from ``now_iso``.
+
+    Parses ISO 8601 ``Z`` timestamps (mvp-interfaces §5).  Returns False when
+    ``created_at`` is absent or malformed (caller must treat such approvals
+    as expired).
+    """
+    created = approval.get("created_at") or approval.get("issued_at")
+    if not isinstance(created, str) or not created.endswith("Z"):
+        return True
+    try:
+        created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return True
+    try:
+        now_dt = datetime.fromisoformat(now_iso.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return True
+    delta = (now_dt - created_dt).total_seconds()
+    return delta >= expiry_min * 60

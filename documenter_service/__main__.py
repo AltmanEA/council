@@ -5,6 +5,10 @@ cannot diverge". This module's Service is the composition root the MCP adapter
 also reuses unchanged — CLI --audit / --status / --delegate-preview and
 MCP tools/call call the very core functions, no parallel logic.
 
+Tier 2+ write branch (preview=False): --delegate-write, --approve,
+--override-gate. Operator identity from environment (COUNCIL_OPERATOR_ID),
+never from client-supplied parameters (operator-surface §AuthN).
+
 Usage:
     python3 -m documenter_service --status [--json]
     python3 -m documenter_service --audit --target "*" [--severity-min low]
@@ -13,11 +17,24 @@ Usage:
                                   --change-type update --trust-level review
                                   --diff-base64 <b64> | --diff-file <path|->
                                   [--audit-id <audit_id>]
+    python3 -m documenter_service --delegate-write --target <id>
+                                  --change-type update --trust-level review
+                                  --diff-base64 <b64> | --diff-file <path|->
+                                  [--audit-id <audit_id>] [--approval-id <id>]
+    python3 -m documenter_service --approve --approval-id <id> [--json]
+    python3 -m documenter_service --override-gate --target <id>
+                                  --diff-hash <sha256:...> --reason <text>
+                                  [--audit-id <audit_id>] [--json]
     python3 -m documenter_service --mcp   # MCP stdio JSON-RPC mode
 
 Environment (mvp-data-models §5): DOCUMENTER_POLICY_PATH (default
 documenter_policy.yml), DOCUMENTER_DATA_DIR (default documenter/),
 DOCUMENTER_LOG_LEVEL.
+
+Tier 2+ ingress: COUNCIL_OPERATOR_ID (regex ^op-[a-z0-9][a-z0-9-]{2,63}$).
+The operator_id is resolved from os.environ at call time for every CLI
+invocation (fresh read each process) and from the MCP server's environment
+on each tools/call.
 
 Exit codes (fixed here and in README):
     0  success — the operation completed (findings do NOT change the exit
@@ -41,6 +58,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import traceback
 
@@ -51,15 +69,53 @@ from .adapters.stdout_events import StdoutEventSink
 from .adapters.worker_stub import InterlockedWorkerStub
 from .core.audit import audit, delegate_preview
 from .core.errors import StructuredError
+from .core.override import override_gate as _override_gate_core  # Tier 2+
 from .core.policy import PolicyError, load_policy
 from .core.status import status as status_core
+from .core import write as core_write  # W2: write branch
+from .core import patterns as core_patterns  # Tier 3 pattern auto-apply
 
-__all__ = ["Service", "main"]
+__all__ = ["Service", "main", "resolve_operator_id"]
 
-_HELP = ("Documenter Service MVP scaffold (Tier 0-1, read-only): audit(), "
-         "documenter.status(), delegate(preview: true). Exit codes: 0 success; "
-         "2 structured refusal; 3 internal error. Use --mcp for MCP stdio "
-          "JSON-RPC transport.")
+_HELP = ("Documenter Service MVP scaffold (Tier 0-1 read-only, Tier 2+ write): "
+         "audit(), status(), delegate(preview: true). "
+         "Tier 2+ write CLI flags: --delegate-write, --approve, "
+         "--override-gate (operator from COUNCIL_OPERATOR_ID env, not CLI param). "
+         "Exit codes: 0 success; 2 structured refusal; 3 internal error. "
+         "Use --mcp for MCP stdio JSON-RPC transport.")
+
+
+# ---------------------------------------------------------------------------
+# AuthN: resolve_operator_id
+# ---------------------------------------------------------------------------
+#: Regex for valid operator IDs (mvp-interfaces §5).
+_OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
+
+
+def resolve_operator_id(environ) -> str:
+    """Resolve the authenticated operator from process environment.
+
+    AuthN decision (mvp-contract §AuthN; operator-surface §Documenter
+    Integration): operator_id NEVER comes from client-supplied parameters.
+    The trusted ingress is the process environment variable COUNCIL_OPERATOR_ID,
+    validated against ``^op-[a-z0-9][a-z0-9-]{2,63}$``.
+
+    The operator_id is resolved from os.environ at call time for every CLI
+    invocation (fresh read each process) and from the MCP server's
+    environment on each tools/call.  Consequence: a single MCP process has
+    one operator identity — the self-approval guard in core/write.approve
+    forces approval from a DIFFERENT process/env (true out-of-band).
+
+    Returns the validated operator_id string or raises StructuredError.
+    """
+    oid = environ.get("COUNCIL_OPERATOR_ID")
+    if not oid or not _OPERATOR_ID_RE.match(oid):
+        raise StructuredError(
+            "unknown",
+            "authenticated operator ingress missing: set COUNCIL_OPERATOR_ID "
+            "(operator-surface §AuthN; expected "
+            r"^op-[a-z0-9][a-z0-9-]{2,63}$)")
+    return oid
 
 
 def _env_path(root: str, name: str, default_rel: str, env=None) -> str:
@@ -82,6 +138,7 @@ class Service:
         self._env = os.environ if env is None else env
         data_dir = _env_path(self.root, "DOCUMENTER_DATA_DIR",
                              os.path.join("documenter"), self._env)
+        self._data_dir = data_dir
         self.registry = registry or JsonlAuditRegistry(data_dir)
         self.manifest = manifest or FsManifestSource(self.root)
         self.events = events or StdoutEventSink()
@@ -125,46 +182,155 @@ class Service:
         return status_core(self.registry, policy, target_id=target_id)
 
     def delegate(self, *, target_id, change_type, trust_level, diff_input,
-                 preview, audit_id=None) -> dict:
-        """delegate(preview: true) only — no write branch exists.
+                 preview, audit_id=None, approval_id=None) -> dict:
+        """delegate(preview: true|false) — preview and write branch.
 
-        Order of refusals (structural interlock supersedes policy-level gates,
-        mvp-contract §MVP boundary): non-preview write intent → tier_interlock
-        /preview_denied WITHOUT consulting policy; corrupt registry →
-        gate_failure (mvp-interfaces §3: "On corrupt, delegate() returns
-        gate_failure"); then preview proceeds, exempt from policy state — a
-        broken policy only downgrades max_diff_bytes to the documented 512 KiB
-        default (stderr warning). The gate_failure mapping of PolicyError
-        (policy_structured_error) is kept for the Tier 2+ write branch and is
-        exercised by unit tests directly.
+        With preview=True: existing delegate_preview flow (unchanged).
+        With preview=False (write branch, Tier 2+):
+          policy, policy_err = load_policy_safe()  (NEVER silently proceed on None)
+          check_tier2_authorized → tier_interlock on None/low tier.
+          corrupt → gate_failure.
+          Then: propose_write → returns approval_required + approval_id + diff_hash.
+          If approval_id is supplied (re-invocation after approve), apply_write.
+
+        Order of refusals for preview=False:
+          (a) policy load → tier_interlock (policy None-safe via
+              check_tier2_authorized).
+          (b) corrupt registry → gate_failure.
+          Then proceed through propose_write guards (see core/write.py).
+
+        For preview=True: behavior is byte-identical to the pre-W2 build.
         """
-        if preview is not True:
-            raise StructuredError(
-                "tier_interlock",
-                "delegate() write intent is refused in the MVP build: the "
-                "write branch is structurally absent (mvp-contract §MVP "
-                "boundary). Invoke with preview: true.")
+        if preview is True:
+            # --- preview path (UNCHANGED parity) -------------------------------
+            if self.registry.status() == "corrupt":
+                raise StructuredError(
+                    "gate_failure",
+                    "audit registry is corrupt — delegate() denied (restore the "
+                    "registry from git; status() reports details). The MVP has "
+                    "no override path (override_gate is Tier 2+, structurally "
+                    "absent).")
+            policy, policy_err = self.load_policy_safe()
+            if policy_err is not None:
+                print(f"WARNING: policy unavailable for delegate(preview) — "
+                      f"using default max_diff_bytes: {policy_err.reason}",
+                      file=sys.stderr)
+            cap = int(policy.get("max_diff_bytes")) if policy else MAX_DIFF_BYTES_DEFAULT
+            freshness = (int(policy.get("audit_freshness")) if policy else 30)
+            return delegate_preview(self.root, self.manifest,
+                                    target_id=target_id, change_type=change_type,
+                                    trust_level=trust_level, diff_input=diff_input,
+                                    preview=preview, engine=self.engine,
+                                    max_diff_bytes=cap,
+                                    audit_id=audit_id, registry=self.registry,
+                                    audit_freshness_min=freshness)
+
+        # --- write branch (preview=False) ------------------------------------
+        policy, policy_err = self.load_policy_safe()
+        # NEVER silently proceed on None: pass policy through;
+        # check_tier2_authorized handles None → tier_interlock.
+
         if self.registry.status() == "corrupt":
             raise StructuredError(
                 "gate_failure",
                 "audit registry is corrupt — delegate() denied (restore the "
-                "registry from git; status() reports details). The MVP has "
-                "no override path (override_gate is Tier 2+, structurally "
-                "absent).")
-        policy, policy_err = self.load_policy_safe()
-        if policy_err is not None:
-            print(f"WARNING: policy unavailable for delegate(preview) — "
-                  f"using default max_diff_bytes: {policy_err.reason}",
-                  file=sys.stderr)
+                "registry from git; status() reports details).")
+
         cap = int(policy.get("max_diff_bytes")) if policy else MAX_DIFF_BYTES_DEFAULT
-        freshness = (int(policy.get("audit_freshness")) if policy else 30)
-        return delegate_preview(self.root, self.manifest,
-                                target_id=target_id, change_type=change_type,
-                                trust_level=trust_level, diff_input=diff_input,
-                                preview=preview, engine=self.engine,
-                                max_diff_bytes=cap,
-                                audit_id=audit_id, registry=self.registry,
-                                audit_freshness_min=freshness)
+
+        if approval_id:
+            # Re-invocation after approve: apply the write. operator_id comes
+            # from authenticated ingress ONLY (operator-surface §AuthN):
+            # COUNCIL_OPERATOR_ID in the environment. The target_id is NEVER
+            # a stand-in principal.
+            operator_id = self._env.get("COUNCIL_OPERATOR_ID")
+            if not operator_id:
+                raise StructuredError(
+                    "unknown",
+                    "apply requires authenticated operator ingress: set "
+                    "COUNCIL_OPERATOR_ID (operator-surface §AuthN); "
+                    "this is a deployment defect, not operator action")
+            return self.apply(approval_id, operator_id, diff_input,
+                              max_diff_bytes=cap)
+
+        # propose_write (full guard chain, see core/write.py)
+        operator_id = self._env.get("COUNCIL_OPERATOR_ID")
+        return core_write.propose_write(
+            self.root, self.manifest, self.registry, policy, self.events,
+            self.engine,
+            target_id=target_id, change_type=change_type,
+            trust_level=trust_level, diff_input=diff_input,
+            audit_id=audit_id,
+            proposer_id=operator_id,
+            max_diff_bytes=cap,
+        )
+
+    def approve(self, approval_id: str, operator_id: str) -> dict:
+        """Approve a pending write proposal (Tier 2+).
+
+        See core_write.approve for full step list.
+        """
+        policy, _ = self.load_policy_safe()
+        return core_write.approve(self.registry, policy, self.events,
+                                  approval_id=approval_id, operator_id=operator_id)
+
+    def apply(self, approval_id: str, operator_id: str, diff_input: str,
+              *, max_diff_bytes: int = 524288) -> dict:
+        """Apply an approved write (Tier 2+, called after approve).
+
+        Invokes apply_write with the same diff_input for hash verification.
+        """
+        policy, _ = self.load_policy_safe()
+        return core_write.apply_write(
+            self.root, self.manifest, self.registry, policy, self.events,
+            self.engine,
+            approval_id=approval_id, operator_id=operator_id,
+            diff_input=diff_input,
+            max_diff_bytes=max_diff_bytes,
+            data_dir=self._data_dir,
+        )
+
+    def override_gate(self, *, target_id, diff_hash, reason, operator_id,
+                      audit_id=None) -> dict:
+        """Override an audit-gate failure (mvp-contract §2.2.6, §4).
+
+        Bound to one (target_id, diff_hash); one consumption; emits event;
+        unavailable for critical findings.  next_action is "rerun_audit"
+        because after an override the caller must re-audit/re-propose.
+        """
+        policy, _ = self.load_policy_safe()
+        return _override_gate_core(
+            self.root, self._data_dir, self.registry, policy, self.events,
+            target_id=target_id, diff_hash=diff_hash, reason=reason,
+            operator_id=operator_id, audit_id=audit_id,
+        )
+
+    # -- Tier 3 pattern auto-apply (mvp-contract §4 row 4) --------------------
+
+    def pattern_auto_apply(
+        self, *, pattern_id, proposals, operator_id
+    ) -> dict:
+        """Auto-apply a batch of proposals under a Tier 3 pattern.
+
+        Thin wiring: load policy → delegate to core.patterns.apply_pattern_batch.
+        """
+        policy, _ = self.load_policy_safe()
+        return core_patterns.apply_pattern_batch(
+            self.root, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=pattern_id,
+            proposals=proposals,
+            operator_id=operator_id,
+        )
+
+    def record_approval_viewed(self, *, approval_id) -> dict:
+        """Mark an approval record as viewed (append-only).
+
+        Thin wiring: delegate to core.patterns.record_viewed.
+        """
+        return core_patterns.record_viewed(
+            self.registry, approval_id=approval_id
+        )
 
 
 def _print_json(obj) -> None:
@@ -212,6 +378,36 @@ def _print_delegate_human(resp: dict) -> None:
     sys.stdout.write(resp["diff_text"])
 
 
+def _print_delegate_write_human(resp: dict) -> None:
+    """Human output for --delegate-write (preview=False write branch).
+
+    Prints approval_id, diff_hash, and next_action.
+    """
+    print(f"diff_hash: {resp['diff_hash']}")
+    print(f"approval_id: {resp.get('approval_id', 'N/A')}")
+    print(f"derived_trust_level: {resp['derived_trust_level']}")
+    print(f"derived_trust_reason: {resp['derived_trust_reason']}")
+    print(f"next_action: {resp['next_action']}")
+    if resp.get("approval_required"):
+        print("approval_required: true — await approval before applying")
+
+
+def _print_approve_human(resp: dict) -> None:
+    """Human output for --approve."""
+    print(f"approval_id: {resp['approval_id']}")
+    print(f"decision: {resp['decision']}")
+    print(f"next_action: {resp['next_action']}")
+
+
+def _print_override_human(resp: dict) -> None:
+    """Human output for --override-gate."""
+    print(f"override_id: {resp['override_id']}")
+    print(f"target_id: {resp['target_id']}")
+    print(f"diff_hash: {resp['diff_hash']}")
+    print(f"reason: {resp['reason']}")
+    print(f"next_action: {resp['next_action']}")
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="documenter_service",
                                      description=_HELP)
@@ -224,6 +420,16 @@ def main(argv=None) -> int:
     mode.add_argument("--delegate-preview", action="store_true",
                       dest="delegate_preview",
                       help="delegate(preview: true): canonical diff preview")
+    mode.add_argument("--delegate-write", action="store_true",
+                      dest="delegate_write",
+                      help="delegate(preview: false): Tier 2+ write intent "
+                           "(requires --change-type, --trust-level, --diff-base64/-file, "
+                           "optional --audit-id and --approval-id)")
+    mode.add_argument("--approve", action="store_true",
+                      help="approve: approve a pending write (requires --approval-id)")
+    mode.add_argument("--override-gate", action="store_true",
+                      help="override_gate: override audit-gate failure "
+                           "(requires --target, --diff-hash, --reason)")
     mode.add_argument("--mcp", action="store_true",
                       help="MCP stdio JSON-RPC transport (stdout=RPC, "
                            "stderr=events)")
@@ -256,6 +462,13 @@ def main(argv=None) -> int:
                         help="path holding the base64 payload, or - for stdin")
     parser.add_argument("--audit-id", default=None, dest="audit_id",
                         help="audit_id for pre-audit gate on delegate preview")
+    parser.add_argument("--approval-id", default=None, dest="approval_id",
+                        help="approval_id for --delegate-write (apply branch) "
+                             "or --approve (approval decision)")
+    parser.add_argument("--diff-hash", default=None, dest="diff_hash",
+                        help="diff_hash for --override-gate")
+    parser.add_argument("--reason", default=None, dest="reason",
+                        help="reason for --override-gate")
 
     args = parser.parse_args(argv)
     service = Service(args.root)
@@ -286,10 +499,51 @@ def main(argv=None) -> int:
             else:
                 _print_audit_human(resp)
             return 0
-        # --delegate-preview
+        # --approve
+        if args.approve:
+            if not args.approval_id:
+                print("ERROR: --approve requires --approval-id",
+                      file=sys.stderr)
+                return 2
+            operator_id = resolve_operator_id(service._env)
+            resp = service.approve(args.approval_id, operator_id)
+            if args.json_mode:
+                _print_json(resp)
+            else:
+                _print_approve_human(resp)
+            return 0
+
+        # --override-gate
+        if args.override_gate:
+            if not all((args.target, args.diff_hash, args.reason)):
+                missing = []
+                if not args.target:
+                    missing.append("--target")
+                if not args.diff_hash:
+                    missing.append("--diff-hash")
+                if not args.reason:
+                    missing.append("--reason")
+                print(f"ERROR: --override-gate requires {', '.join(missing)}",
+                      file=sys.stderr)
+                return 2
+            operator_id = resolve_operator_id(service._env)
+            resp = service.override_gate(
+                target_id=args.target,
+                diff_hash=args.diff_hash,
+                reason=args.reason,
+                operator_id=operator_id,
+                audit_id=args.audit_id,
+            )
+            if args.json_mode:
+                _print_json(resp)
+            else:
+                _print_override_human(resp)
+            return 0
+
+        # --delegate-preview or --delegate-write
         if not args.change_type or not args.trust_level:
-            print("ERROR: --delegate-preview requires --change-type and "
-                  "--trust-level", file=sys.stderr)
+            print("ERROR: --delegate-preview/--delegate-write requires "
+                  "--change-type and --trust-level", file=sys.stderr)
             return 2
         if args.diff_base64 is not None:
             payload = args.diff_base64
@@ -297,18 +551,32 @@ def main(argv=None) -> int:
             payload = (sys.stdin.read() if args.diff_file == "-" else
                        open(args.diff_file, encoding="utf-8").read())
         else:
-            print("ERROR: --delegate-preview requires --diff-base64 or "
-                  "--diff-file", file=sys.stderr)
+            print("ERROR: --delegate-preview/--delegate-write requires "
+                  "--diff-base64 or --diff-file", file=sys.stderr)
             return 2
+        preview = True
+        if args.delegate_write:
+            preview = False
         resp = service.delegate(target_id=args.target,
                                 change_type=args.change_type,
                                 trust_level=args.trust_level,
-                                diff_input=payload.strip(), preview=True,
-                                audit_id=args.audit_id)
-        if args.json_mode:
-            _print_json(resp)
-        else:
-            _print_delegate_human(resp)
+                                diff_input=payload.strip(), preview=preview,
+                                audit_id=args.audit_id,
+                                approval_id=args.approval_id)
+        if args.delegate_write:
+            if args.json_mode:
+                _print_json(resp)
+            else:
+                _print_delegate_write_human(resp)
+        elif args.delegate_preview:
+            if args.json_mode:
+                _print_json(resp)
+            else:
+                _print_delegate_human(resp)
+        return 0
+
+        # Fallback (should not reach here given required=True on mode)
+        parser.print_help()
         return 0
     except StructuredError as exc:
         _print_json(exc.to_dict())

@@ -7,8 +7,15 @@ Runs as a newline-delimited JSON-RPC 2.0 server over stdio:
 
 Protocol methods:
     initialize           -> server capabilities
-    tools/list           -> {tools: [audit, status, delegate_preview]}
+    tools/list           -> {tools: [audit, status, delegate_preview,
+                                    approve, override_gate, delegate_write]}
     tools/call           -> invoke a tool, return text content
+
+Read-only trio: audit, status, delegate_preview (readOnlyHint: true)
+Tier 2+ trio: approve, override_gate, delegate_write (readOnlyHint: false)
+    Tier 2+ tools are gated by policy interlock at the Service layer.
+    Operator identity from environment (COUNCIL_OPERATOR_ID), not from
+    client-supplied parameters (operator-surface §AuthN).
 
 Design (mvp-contract §1 transport rationale): the MCP server constructs
 the Service composition root directly (no parallel wiring). CLI and MCP
@@ -22,10 +29,45 @@ Imports:
 from __future__ import annotations
 
 import json
+import os
+import re
 import sys
 import traceback
 
+from .core.errors import StructuredError
+
 __all__ = ["serve", "TOOLS_LIST"]
+
+
+# ---------------------------------------------------------------------------
+# AuthN: resolve_operator_id (local copy to avoid circular import with __main__)
+# ---------------------------------------------------------------------------
+#: Regex for valid operator IDs (mvp-interfaces §5).
+#: Duplication with __main__ is deliberate — prevents circular import.
+#: Both call policy.operator_id_valid in practice (this one in-line below).
+_OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
+
+
+def _resolve_operator_id(environ):
+    """Resolve the authenticated operator from process environment.
+
+    AuthN decision (mvp-contract §AuthN; operator-surface §Documenter
+    Integration): operator_id NEVER comes from client-supplied parameters.
+    The trusted ingress is the process environment variable COUNCIL_OPERATOR_ID.
+
+    Raises StructuredError("unknown", ...) when absent/malformed.
+    The error bubbles through the tool handler and is returned as
+    tool-level isError (category "unknown"), NOT a JSON-RPC error.
+    """
+    oid = environ.get("COUNCIL_OPERATOR_ID")
+    if not oid or not _OPERATOR_ID_RE.match(oid):
+        from .core.errors import StructuredError
+        raise StructuredError(
+            "unknown",
+            "authenticated operator ingress missing: set COUNCIL_OPERATOR_ID "
+            "(operator-surface §AuthN; expected "
+            r"^op-[a-z0-9][a-z0-9-]{2,63}$)")
+    return oid
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +198,115 @@ TOOLS_LIST = {
             },
             "annotations": {"readOnlyHint": True},
         },
+        {
+            "name": "approve",
+            "description": (
+                "approve: approve a pending write proposal (Tier 2+). "
+                "Operator identity from environment (COUNCIL_OPERATOR_ID), "
+                "not from client parameters (operator-surface §AuthN)."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "approval_id": {
+                        "type": "string",
+                        "description": "Approval ID to approve",
+                    },
+                },
+                "required": ["approval_id"],
+                "additionalProperties": False,
+            },
+            "annotations": {"readOnlyHint": False},
+        },
+        {
+            "name": "override_gate",
+            "description": (
+                "override_gate: override an audit-gate failure (Tier 2+). "
+                "Binds to (target_id, diff_hash); one consumption; "
+                "next_action is \"rerun_audit\"."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target_id": {
+                        "type": "string",
+                        "description": "Document ID from manifest",
+                    },
+                    "diff_hash": {
+                        "type": "string",
+                        "description": "SHA-256 diff hash (sha256:<64hex>)",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Reason for the override (≤500 chars)",
+                    },
+                    "audit_id": {
+                        "type": ["string", "null"],
+                        "description": "audit_id for governing audit record",
+                        "default": None,
+                    },
+                },
+                "required": ["target_id", "diff_hash", "reason"],
+                "additionalProperties": False,
+            },
+            "annotations": {"readOnlyHint": False},
+        },
+        {
+            "name": "delegate_write",
+            "description": (
+                "delegate(preview: false): Tier 2+ write intent. "
+                "Same parameters as delegate_preview but without the "
+                "\"preview\" property (server always passes preview=False). "
+                "Optional \"approval_id\" to apply an already-approved write."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target_id": {
+                        "type": "string",
+                        "description": "Document ID from manifest",
+                    },
+                    "change_type": {
+                        "type": "string",
+                        "enum": ["update", "split", "create_ru", "custom"],
+                        "description": "Change type",
+                    },
+                    "trust_level": {
+                        "type": "string",
+                        "enum": ["safe", "review"],
+                        "description": "Caller trust level",
+                    },
+                    "diff_input": {
+                        "type": "string",
+                        "description": (
+                            "Base64-encoded UTF-8 machine-readable diff"
+                        ),
+                    },
+                    "audit_id": {
+                        "type": ["string", "null"],
+                        "description": (
+                            "audit_id for pre-audit gate on delegate write"
+                        ),
+                        "default": None,
+                    },
+                    "approval_id": {
+                        "type": ["string", "null"],
+                        "description": (
+                            "approval_id to apply (re-invocation after approve)"
+                        ),
+                        "default": None,
+                    },
+                },
+                "required": [
+                    "target_id",
+                    "change_type",
+                    "trust_level",
+                    "diff_input",
+                ],
+                "additionalProperties": False,
+            },
+            "annotations": {"readOnlyHint": False},
+        },
     ]
 }
 
@@ -231,11 +382,35 @@ _DELEGATE_PREVIEW_SCHEMA = {
     "audit_id": {"type": ["string", "null"], "default": None},
 }
 
+_APPROVE_SCHEMA = {
+    "approval_id": {"type": "string"},
+}
+
+_OVERRIDE_GATE_SCHEMA = {
+    "target_id": {"type": "string"},
+    "diff_hash": {"type": "string"},
+    "reason": {"type": "string"},
+    "audit_id": {"type": ["string", "null"], "default": None},
+}
+
+_DELEGATE_WRITE_SCHEMA = {
+    "target_id": {"type": "string"},
+    "change_type": {"type": "string"},
+    "trust_level": {"type": "string"},
+    "diff_input": {"type": "string"},
+    "audit_id": {"type": ["string", "null"], "default": None},
+    "approval_id": {"type": ["string", "null"], "default": None},
+}
+
 # Required keys per tool (from inputSchema.required).
 _DELEGATE_PREVIEW_REQUIRED = [
     "target_id", "change_type", "trust_level", "diff_input",
 ]
-
+_APPROVE_REQUIRED = ["approval_id"]
+_OVERRIDE_GATE_REQUIRED = ["target_id", "diff_hash", "reason"]
+_DELEGATE_WRITE_REQUIRED = [
+    "target_id", "change_type", "trust_level", "diff_input",
+]
 
 # Mapping: tool name -> (Service method name, schema, required_keys, pre_fn).
 # pre_fn(args) -> None (raises ValueError on bad enum) or returns None.
@@ -246,6 +421,21 @@ TOOL_HANDLERS = {
         "delegate", _DELEGATE_PREVIEW_SCHEMA,
         _DELEGATE_PREVIEW_REQUIRED,
         lambda args: None,  # enum checked by Service.delegate itself
+    ),
+    "approve": (
+        "approve", _APPROVE_SCHEMA,
+        _APPROVE_REQUIRED,
+        None,  # env ingress + operator_id from _resolve_operator_id
+    ),
+    "override_gate": (
+        "override_gate", _OVERRIDE_GATE_SCHEMA,
+        _OVERRIDE_GATE_REQUIRED,
+        None,
+    ),
+    "delegate_write": (
+        "delegate", _DELEGATE_WRITE_SCHEMA,
+        _DELEGATE_WRITE_REQUIRED,
+        None,  # server always passes preview=False
     ),
 }
 
@@ -283,11 +473,35 @@ def _handle_tools_call(service, request_id, params):
             kwargs[key] = bool(val) if val is not None else True
         else:
             kwargs[key] = val
+
+    # --- Tool-specific: resolve operator from env (authN) ----------
+    if method_name in ("approve", "override_gate"):
+        # AuthN: operator from env, NOT from args (operator-surface §AuthN).
+        # Extra args like "operator_id" are silently ignored (additionalProperties
+        # false in schema, but be defensive).
+        try:
+            kwargs["operator_id"] = _resolve_operator_id(
+                service._env if hasattr(service, "_env") else os.environ)
+        except StructuredError as exc:
+            # Tool-level error: returned as isError, NOT JSON-RPC error.
+            return _make_response(
+                request_id,
+                result={
+                    "content": [{"type": "text",
+                                  "text": json.dumps(exc.to_dict())}],
+                    "isError": True,
+                })
+
+    # --- Tool-specific: delegate(preview=False) for delegate_write ---
     if method_name == "delegate" and "preview" not in kwargs:
         # preview absent → reject tier_interlock per mvp-interfaces §2
         # ("MUST be true. false or absent → reject"): pass False and let
         # Service.delegate refuse; defaulting to true here would turn an
         # explicit write-intent probe into a silent preview.
+        kwargs["preview"] = False
+    elif method_name == "delegate" and name == "delegate_write":
+        # delegate_write: server always passes preview=False (schema has no
+        # preview property). Strip any client-supplied preview param.
         kwargs["preview"] = False
 
     # --- Call service method ----------------------------------------

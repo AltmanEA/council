@@ -270,7 +270,8 @@ class TestTierInterlock(unittest.TestCase):
             "unknown"})
         self.assertEqual(set(NEXT_ACTIONS), {
             "preview_only", "await_approval", "rerun_audit", "resolve_finding",
-            "rescan_to_completion", "preview_denied", "escalate"})
+            "rescan_to_completion", "preview_denied", "escalate",
+            "write_applied"})  # write_applied added by W2
 
     def test_structured_error_rejects_unknown_category(self):
         with self.assertRaises(ValueError):

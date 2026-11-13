@@ -28,7 +28,7 @@ ERROR_CATEGORIES = (
     "unknown",
 )
 
-#: Closed next_action enum (mvp-interfaces §4).
+#: Closed next_action enum (mvp-interfaces §4; write_applied added by W2).
 NEXT_ACTIONS = (
     "preview_only",
     "await_approval",
@@ -37,6 +37,7 @@ NEXT_ACTIONS = (
     "rescan_to_completion",
     "preview_denied",
     "escalate",
+    "write_applied",
 )
 
 #: Default next_action per error category (canonical pairing table,

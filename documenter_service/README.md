@@ -1,4 +1,4 @@
-# documenter_service — Documenter Service MVP scaffold (Tier 0–1, read-only)
+# documenter_service — Documenter Service MVP (Tier 0–1 operational; Tier 2+ implemented, policy-gated)
 
 Stage 4 scaffold (plan `sess-doc-reliability-algo`, session
 `sess-doc-reliability-algo`). Contract documents (normative, under `docs/`):
@@ -27,15 +27,34 @@ covered because audit() invokes the tools checker. **Rules 3 (glossary terms)
 and 5 (abstraction consistency) are skill/AI-reserved and not implemented
 here** — this package never claims "rules 1–6" coverage (AGENTS.md §8).
 
-## Reserved stub (structural absence IS the interlock)
+## Tier 2+ (implemented; the policy interlock IS the gate)
 
-- **WorkerPort** — `adapters/worker_stub.py`: any call →
-  `tier_interlock` / `preview_denied`. No Layer 1 adapter exists.
-- **Write branch of `delegate()`** — absent: no `documenter.approve`, no
-  `override_gate`, no Multi-file Commit Protocol, no staging paths, not even
-  commented out. `preview=false`/absent → `tier_interlock`.
-- **intent_record** — schema reserved as a constant (`ports.INTENT_RECORD_TYPE`,
-  `core/registry.py`); recognized on read, never written by this build.
+- **Write branch** — `--delegate-write` / MCP `delegate_write`: full guard
+  chain (tier authorization → registry health → `audit_id` gate rules 1–5 →
+  scope → `allowed_operations` → trust invariant), single-use `approval_id`
+  bound to `(target_id, diff_hash, proposer_id)`, apply under the
+  mvp-contract §2.2 sequence (`core/write.py`, `adapters/lock.py`,
+  `adapters/applier.py`): fcntl advisory lock, stage+fsync in the target dir,
+  durable intent file, apply-time sha256 verification (C2), atomic rename,
+  `fsync(dir)`, `intent_record` lifecycle, cold-start `reconcile()`.
+- **Approval** — `--approve` / MCP `approve`: out-of-band, approver ≠
+  proposer, single-use (consumed on apply; second apply → `token_replay`),
+  expiry per `approval_expiry_window`. `operator_id` comes from
+  `COUNCIL_OPERATOR_ID` only — never a CLI/MCP parameter.
+- **Override gate** — `--override-gate` / MCP `override_gate`: one-shot per
+  `(target_id, diff_hash)` within the window, emits the canonical event,
+  unavailable for `critical` findings (§4 wins over §2.2.6; the
+  post-mortem writer in `core/override.py` stays as the durable mechanism).
+- **Tier 3** — `core/patterns.py`: policy-enumerated `type: pattern`
+  entries, viewed-diffs metric (≥90%), quarantine (first N per-item
+  approval), application limit/expiry, batch digest; every path requires
+  `active_tier >= 3`.
+- **Still absent (deferred):** Multi-file Commit Protocol (one document per
+  invocation), Layer 1 `WorkerPort` adapter (`worker_stub` → interlock),
+  Layer 2 surface. With `documenter_policy.yml` at Tier 0–1 and
+  `briefing_ref: null`, every non-preview call fails closed
+  (`tier_interlock`) — activation is the operator's explicit edit per
+  policy-reference §Authorization Workflow and `briefings/tier2-delegation.md`.
 
 ## MCP stdio transport
 
@@ -45,9 +64,12 @@ The MVP includes an MCP stdio JSON-RPC 2.0 server. Run it with:
 python3 -m documenter_service --mcp --root <repo-root>
 ```
 
-The server exposes three tools: `audit`, `status`, and `delegate_preview`.
-Stdout carries ONLY JSON-RPC messages (one per line); the Service's event
-sink writes to stderr so events and logs never interleave with RPC output.
+The server exposes six tools: read-only `audit`, `status`,
+`delegate_preview` plus Tier 2+ `delegate_write`, `approve`,
+`override_gate` (policy-gated; operator identity from `COUNCIL_OPERATOR_ID`
+only). Stdout carries ONLY JSON-RPC messages (one per line); the Service's
+event sink writes to stderr so events and logs never interleave with RPC
+output.
 
 **Not registered in workspace config.** Per AGENTS.md §7.5 (prohibition),
 the Documenter is NOT registered as an MCP server in the workspace
@@ -64,8 +86,6 @@ enum keeps `critical` but nothing emits it. This absence is intentional
 change that activates blocking + post-mortem semantics belonging to the
 write path. Do not fabricate example critical findings in tests or fixtures.
 
-## Reserved stub
-
 ## Running
 
 ```bash
@@ -75,6 +95,13 @@ python3 -m documenter_service --audit --target <id> --severity-min medium
 python3 -m documenter_service --audit --target "*" --scan-cursor <token>  # resume
 python3 -m documenter_service --delegate-preview --target <id> \
     --change-type update --trust-level review --diff-file -                # b64 on stdin
+python3 -m documenter_service --delegate-write --target <id> --change-type update \
+    --trust-level review --diff-file - --audit-id <id>                     # propose
+python3 -m documenter_service --approve --approval-id <id>                 # op: COUNCIL_OPERATOR_ID
+python3 -m documenter_service --delegate-write --target <id> --change-type update \
+    --trust-level review --diff-file - --audit-id <id> --approval-id <id>  # apply
+python3 -m documenter_service --override-gate --target <id> \
+    --diff-hash sha256:<hex> --reason "..."                                 # gated
 ```
 
 Exit codes (also in the `__main__` docstring):
@@ -88,14 +115,18 @@ Configuration (ENV, mvp-data-models §5): `DOCUMENTER_POLICY_PATH` (default
 `DOCUMENTER_LOG_LEVEL`. The policy loader is fail-closed (7 rules of
 mvp-data-models §2); a broken policy never blocks audit()/status() and never
 blocks `preview: true` (preview exemption) — it only downgrades
-`max_diff_bytes` to the documented 512 KiB default with a stderr warning, and
-delegates non-preview calls the `gate_failure` structured error.
+`max_diff_bytes` to the documented 512 KiB default with a stderr warning. A
+missing/unreadable policy at Tier 2+ fails closed: every non-preview call
+returns `tier_interlock` (via `check_tier2_authorized`).
 
 ## Safety
 
-The service never runs git and never mutates the corpus: the ONLY writes are
-appends to `documenter/audit_registry.jsonl` (plus creation of the `documenter/`
-state directory). The checkpoint-governed `truncate()` compaction path is
+The service never runs git. Corpus mutation happens ONLY through the
+policy-gated write branch (§2.2 durability sequence, one document per
+invocation, every step recorded in the registry); every applied change is a
+plain unstaged working-tree edit reversible by `git restore`. Read-only
+operations touch nothing outside `documenter/audit_registry.jsonl` appends
+(plus creation of the `documenter/` state directory). The checkpoint-governed `truncate()` compaction path is
 explicit and never runs implicitly. Imports are stdlib + PyYAML (via
 `tools/docmeta` / `yaml.safe_load`); no subprocess, no LLM clients, no
 network libraries.

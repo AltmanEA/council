@@ -12,14 +12,18 @@ yaml.unsafe_load is prohibited: policies are parsed with yaml.safe_load.
 """
 from __future__ import annotations
 
+import fnmatch
 import os
+import re
 
 import yaml
 
 from .errors import StructuredError
 from .trust import STATIC_FLOORS
 
-__all__ = ["PolicyError", "Policy", "load_policy", "validate_policy"]
+__all__ = ["PolicyError", "Policy", "load_policy", "validate_policy",
+           "operator_id_valid", "check_tier2_authorized", "check_tier3_authorized",
+           "match_operation", "match_pattern", "policy_structured_error"]
 
 #: Only policy schema version recognized at MVP (mvp-data-models §2 rule 1).
 POLICY_VERSION = "0.2.0"
@@ -73,6 +77,13 @@ ENUM_FIELDS = {
 
 _ENV_PATH = "DOCUMENTER_POLICY_PATH"
 _DEFAULT_FILENAME = "documenter_policy.yml"
+
+#: Kebab-case pattern ID (policy-reference §Per-Operation Entries).
+_KEBAB_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+#: Glob character validation: allowed set is [A-Za-z0-9._*/?-].
+_GLOB_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._*/?-")
 
 
 class PolicyError(Exception):
@@ -161,11 +172,63 @@ def validate_policy(raw, manifest_ids=None) -> Policy:
             "(mvp-contract §4: advancement requires a policy file with "
             "allowed_operations)")
 
-    # Rule 4: no entry with trust_level below the static floor for its
-    # change_type (authority rule); covers type: pattern entries too.
+    # Per-entry validation loop (rules 4, 5, and per-entry schema).
+    # Extract type-specific fields first, then validate rules.
+    _seen_pattern_ids = set()
     for i, entry in enumerate(ops):
         if not isinstance(entry, dict):
             raise PolicyError(f"allowed_operations[{i}] is not a mapping")
+
+        # Extract type (operation is default).
+        etype = entry.get("type", "operation")
+        if etype not in ("operation", "pattern"):
+            raise PolicyError(
+                f"allowed_operations[{i}] type must be 'operation' or 'pattern', "
+                f"got {etype!r}")
+
+        # Type-specific field validation (before rule 4 so pattern schema
+        # errors are reported first).
+        if etype == "operation":
+            if "requires_diff_preview" in entry and entry["requires_diff_preview"] is not True:
+                raise PolicyError(
+                    f"allowed_operations[{i}] requires_diff_preview must be true "
+                    f"at Tier 2+ (got {entry['requires_diff_preview']!r})")
+        if etype == "pattern":
+            pid = entry.get("pattern_id")
+            if not isinstance(pid, str) or not _KEBAB_RE.match(pid):
+                raise PolicyError(
+                    f"allowed_operations[{i}] pattern_id must be a non-empty "
+                    f"kebab-case string (^[a-z0-9]+(-[a-z0-9]+)*$)")
+            if pid is not None and manifest_ids is not None and pid in _seen_pattern_ids:
+                raise PolicyError(
+                    f"allowed_operations[{i}] duplicate pattern_id {pid!r}")
+            if manifest_ids is not None:
+                _seen_pattern_ids.add(pid)
+            pdesc = entry.get("pattern_description")
+            if not isinstance(pdesc, str) or not pdesc:
+                raise PolicyError(
+                    f"allowed_operations[{i}] pattern_description required "
+                    f"non-empty string, got {pdesc!r}")
+            mc = entry.get("match_criteria")
+            if not isinstance(mc, dict):
+                raise PolicyError(
+                    f"allowed_operations[{i}] match_criteria must be a mapping")
+            if "change_type" not in mc:
+                raise PolicyError(
+                    f"allowed_operations[{i}] match_criteria must contain "
+                    f"change_type")
+            fp = mc.get("file_pattern", "")
+            if isinstance(fp, str):
+                for ch in fp:
+                    if ch not in ("*", "?") and ch not in _GLOB_CHARS:
+                        raise PolicyError(
+                            f"allowed_operations[{i}] file_pattern contains "
+                            f"invalid glob character {ch!r}")
+            elif fp is not None:
+                raise PolicyError(
+                    f"allowed_operations[{i}] file_pattern must be a string or absent")
+
+        # Rule 4: trust floor — extract change_type and trust_level.
         ctype = entry.get("change_type") or (entry.get("match_criteria") or {}).get("change_type")
         trust = entry.get("trust_level")
         if ctype is None or trust is None:
@@ -247,3 +310,123 @@ def load_policy(root: str, env=None, manifest_ids=None) -> Policy:
 def policy_structured_error(exc: PolicyError) -> StructuredError:
     """Map a fail-closed policy failure to the closed enum (gate_failure)."""
     return StructuredError("gate_failure", f"policy load failed: {exc.reason}")
+
+
+# ---- Tier 2+ authorization and matching (pure, no I/O except path check) ---
+
+#: Operator ID regex (mvp-interfaces §5).
+_OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
+
+
+def operator_id_valid(operator_id: str) -> bool:
+    """Return True when ``operator_id`` matches ``^op-[a-z0-9][a-z0-9-]{2,63}$``."""
+    return bool(_OPERATOR_ID_RE.match(operator_id))
+
+
+def check_tier2_authorized(policy, root) -> None:
+    """Raise StructuredError("tier_interlock", reason, next_action="preview_denied")
+    when tier 2+ conditions are not met.
+
+    Requires: policy non-None, active_tier >= 2, briefing_ref non-null,
+    and briefing file exists at ``resolve(root, briefing_ref)`` (relative paths
+    are joined to root; absolute paths are kept as-is).
+    """
+    if policy is None:
+        raise StructuredError(
+            "tier_interlock",
+            "policy is None — cannot authorise Tier 2+ operations",
+            next_action="preview_denied")
+    tier = policy.get("active_tier")
+    if tier is None or tier < 2:
+        raise StructuredError(
+            "tier_interlock",
+            f"active_tier={tier} < 2 — Tier 2+ operations require active_tier >= 2",
+            next_action="preview_denied")
+    briefing_ref = policy.get("briefing_ref")
+    if not briefing_ref:
+        raise StructuredError(
+            "tier_interlock",
+            "briefing_ref is null — required for Tier 2+ authorization",
+            next_action="preview_denied")
+    path = os.path.join(root, briefing_ref) if not os.path.isabs(briefing_ref) else briefing_ref
+    if not os.path.isfile(path):
+        raise StructuredError(
+            "tier_interlock",
+            f"briefing file not found at {path} — Tier 2+ requires an archived briefing",
+            next_action="preview_denied")
+
+
+def check_tier3_authorized(policy, root) -> None:
+    """Same as check_tier2_authorized but requires active_tier >= 3."""
+    check_tier2_authorized(policy, root)
+    tier = policy.get("active_tier")
+    if tier is None or tier < 3:
+        raise StructuredError(
+            "tier_interlock",
+            f"active_tier={tier} < 3 — Tier 3 operations require active_tier >= 3",
+            next_action="preview_denied")
+
+
+def match_operation(policy, *, change_type, target_id, path=None) -> dict | None:
+    """Return the first matching operation-type entry or None.
+
+    An operation matches when:
+    - type is "operation" (or absent),
+    - change_type matches the entry's change_type,
+    - targets is empty (match any) or target_id is in targets,
+    - trust_level satisfies the static floor (already guaranteed by validation).
+
+    The ``path`` parameter is accepted for future use but not evaluated here.
+    """
+    if not policy:
+        return None
+    for entry in (policy.get("allowed_operations") or []):
+        etype = entry.get("type", "operation")
+        if etype != "operation":
+            continue
+        if entry.get("change_type") != change_type:
+            continue
+        targets = entry.get("targets") or []
+        if targets and target_id not in targets:
+            continue
+        return entry
+    return None
+
+
+def _pattern_matches(rel_path: str, file_pattern: str) -> bool:
+    """Match rel_path against a file_pattern, supporting ** (recursive)."""
+    if "**" in file_pattern:
+        # Convert glob with ** to regex: ** matches any chars including /
+        # Handle **/ prefix FIRST so the * is consumed before remaining **
+        regex = file_pattern
+        regex = re.escape(regex)
+        regex = regex.replace(r"\*\*/", "(?:.*/)?")  # **/ → optional dir prefix
+        regex = regex.replace(r"\*\*", ".*")          # remaining ** → match anything
+        regex = regex.replace(r"\*", "[^/]*")         # * → match anything but /
+        regex = regex.replace(r"\?", "[^/]")          # ? → single char but /
+        return bool(re.fullmatch(regex, rel_path))
+    return fnmatch.fnmatchcase(rel_path, file_pattern)
+
+
+def match_pattern(policy, *, change_type, rel_path) -> dict | None:
+    """Return the first matching pattern-type entry or None.
+
+    A pattern matches when:
+    - type is "pattern",
+    - change_type matches the entry's match_criteria.change_type,
+    - file_pattern (empty matches any) matches rel_path via fnmatch.
+    """
+    if not policy:
+        return None
+    for entry in (policy.get("allowed_operations") or []):
+        etype = entry.get("type", "operation")
+        if etype != "pattern":
+            continue
+        mc = entry.get("match_criteria") or {}
+        if mc.get("change_type") != change_type:
+            continue
+        fp = mc.get("file_pattern", "")
+        if fp and not _pattern_matches(rel_path, fp):
+            continue
+        return entry
+    return None

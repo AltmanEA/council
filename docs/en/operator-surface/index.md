@@ -1,7 +1,7 @@
 # Operator Surface & Escalation
 
 id: operator-surface
-Version: 0.1.5
+Version: 0.1.6
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-surface/index-RU.md
@@ -58,7 +58,7 @@ Error codes for auth failures:
 | `council.override_precheck` | allow + reason | deny | deny |
 | `documenter.audit` | allow | allow (read-only) | allow (read-only) |
 | `documenter.delegate` | allow (Tier 0–1 preview) | deny | deny |
-| `documenter.approve` | allow (Tier 2+, deferred) | deny | deny |
+| `documenter.approve` | allow (Tier 2+, implemented; policy-gated) | deny | deny |
 | `documenter.override_gate` | allow + reason | deny | deny |
 
 ## Operator Verbs
@@ -77,7 +77,7 @@ Error codes for auth failures:
 | `council.override_precheck` | Record an authenticated `pre_check` override with a reason |
 | `documenter.audit` | Run a read-only compliance scan; `pre_check=true` returns a gate verdict |
 | `documenter.delegate` | Validate a change and return a diff preview; no writes at Tier 0–1 |
-| `documenter.approve` | Out-of-band approval for Tier 2+ (deferred; see §Documenter Integration) |
+| `documenter.approve` | Out-of-band approval for Tier 2+ (implemented; policy-gated — see §Documenter Integration) |
 | `documenter.override_gate` | Override a pre-check or audit-gate failure with a recorded reason and authenticated `operator_id`; emits `documenter.override_gate` event in the canonical envelope |
 
 ## `pre_check` Gate
@@ -182,7 +182,7 @@ Notices map to the following event types in the canonical envelope: `notice.simp
 Documenter is a Supporting service invoked through this surface. Its `audit()` and `delegate()` are MCP tools; events and verdicts return synchronously.
 
 - Tier 0–1 ships at MVP: read-only audit and diff preview. `documenter.delegate` validates `change_type`, `diff`, and `audit_id`, then returns a preview without writing.
-- Tier 2+ is interlocked until this specification is implemented. When enabled, `documenter.delegate` returns `approval_required` with an `approval_id` and the diff hash; no write proceeds until approval.
+- Tier 2+ is policy-gated (interlock until the operator advances `active_tier` with a valid `briefing_ref`). When enabled, `documenter.delegate` returns `approval_required` with an `approval_id` and the diff hash; no write proceeds until approval.
 - Approval is **out-of-band**: the operator invokes `documenter.approve(approval_id, operator_id)` as a separate MCP tool call from the proposing `delegate()` invocation. The approving `operator_id` MUST differ from the `actor.id` of the proposing call to prevent self-approval.
 - `approval_id` is a UUID-v4 returned by `delegate()`. It binds the specific diff hash; changed diffs invalidate pending approvals. The approval expires after `approval_expiry_window` minutes (default 30) — see policy-reference.md §Field Reference for the field definition.
 - `documenter.approve` emits a `documenter.approval` event in the canonical envelope with `decision: approved` or `rejected`.

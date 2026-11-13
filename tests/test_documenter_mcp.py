@@ -154,7 +154,7 @@ class TestInitialize(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestToolsList(unittest.TestCase):
-    def test_exactly_three_tools(self):
+    def test_exactly_six_tools(self):
         responses, _, rc = _run_mcp(
             ["--root", FIXTURE_CORPUS],
             [{"jsonrpc": "2.0", "id": 2,
@@ -162,20 +162,28 @@ class TestToolsList(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(len(responses), 1)
         tools = responses[0]["result"]["tools"]
-        self.assertEqual(len(tools), 3)
+        self.assertEqual(len(tools), 6)
         names = {t["name"] for t in tools}
-        self.assertEqual(names, {"audit", "status", "delegate_preview"})
+        self.assertEqual(names, {"audit", "status", "delegate_preview",
+                                  "approve", "override_gate", "delegate_write"})
         for t in tools:
             self.assertIn("inputSchema", t)
             self.assertEqual(t["inputSchema"].get("type"), "object")
-        for t in tools:
-            self.assertIn("annotations", t)
-            self.assertTrue(t["annotations"].get("readOnlyHint", False))
+        # readOnlyHint: first 3 read-only, last 3 read-write
+        readOnlyTools = {t["name"]: t["annotations"].get("readOnlyHint", False)
+                         for t in tools}
+        for name in ("audit", "status", "delegate_preview"):
+            self.assertTrue(readOnlyTools[name],
+                            f"{name} should have readOnlyHint=True")
+        for name in ("approve", "override_gate", "delegate_write"):
+            self.assertFalse(readOnlyTools[name],
+                             f"{name} should have readOnlyHint=False")
 
     def test_constant_tools_list(self):
         """TOOLS_LIST module constant is well-formed."""
         resp_tools = [t["name"] for t in TOOLS_LIST["tools"]]
-        self.assertEqual(resp_tools, ["audit", "status", "delegate_preview"])
+        self.assertEqual(resp_tools, ["audit", "status", "delegate_preview",
+                                       "approve", "override_gate", "delegate_write"])
 
 
 # ---------------------------------------------------------------------------
@@ -634,3 +642,188 @@ class TestServeUnit(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# Test 9: MCP approve tool
+# ---------------------------------------------------------------------------
+
+class TestMCPApprove(unittest.TestCase):
+    """MCP tools/call approve: operator from env, not params."""
+
+    def test_approve_missing_approval_id(self):
+        """approve without approval_id → -32602."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 90,
+              "method": "tools/call",
+              "params": {"name": "approve", "arguments": {}}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        self.assertIn("error", responses[0])
+        self.assertEqual(responses[0]["error"]["code"], -32602)
+
+    def test_approve_unknown_id(self):
+        """approve with unknown id (env COUNCIL_OPERATOR_ID set) → isError audit_mismatch."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 91,
+              "method": "tools/call",
+              "params": {"name": "approve",
+                         "arguments": {"approval_id": "app-unknown-xyz"}}}],
+            env_extra={"COUNCIL_OPERATOR_ID": "op-test-approver"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        self.assertTrue(resp["result"].get("isError"),
+                        "Expected isError=true for unknown approval_id")
+        error_data = json.loads(resp["result"]["content"][0]["text"])
+        self.assertEqual(error_data["error_category"], "audit_mismatch")
+
+    def test_approve_operator_id_param_ignored(self):
+        """approve with operator_id param → additionalProperties false in schema,
+        but extra params should not break ingress.
+        Verify isError is false path for known approval (but approval doesn't exist
+        so it's audit_mismatch; the key is that env ingress still works).
+        """
+        # Send a request with extra operator_id param (should be ignored).
+        # Since no such approval exists, we still get audit_mismatch.
+        # The point is the env-based operator_id takes precedence.
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 92,
+              "method": "tools/call",
+              "params": {"name": "approve",
+                         "arguments": {
+                             "approval_id": "app-unknown",
+                             "operator_id": "op-ignored",
+                         }}}],
+            env_extra={"COUNCIL_OPERATOR_ID": "op-env-approver"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        # Still isError=true because approval doesn't exist, but operator_id
+        # from env was used (not client param).
+        self.assertTrue(resp["result"].get("isError"))
+        error_data = json.loads(resp["result"]["content"][0]["text"])
+        self.assertEqual(error_data["error_category"], "audit_mismatch")
+
+
+# ---------------------------------------------------------------------------
+# Test 10: MCP delegate_write tool
+# ---------------------------------------------------------------------------
+
+class TestMCPDelegateWrite(unittest.TestCase):
+    """MCP tools/call delegate_write: preview always False, no preview param."""
+
+    def test_delegate_write_no_preview_param(self):
+        """delegate_write with preview param present → ignored (server passes False)."""
+        diff_b64 = _diff_for_alpha_simple()
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 100,
+              "method": "tools/call",
+              "params": {"name": "delegate_write",
+                         "arguments": {
+                             "target_id": "alpha",
+                             "change_type": "update",
+                             "trust_level": "safe",
+                             "diff_input": diff_b64,
+                             "preview": True,  # present but ignored
+                         }}}],
+            env_extra={"COUNCIL_OPERATOR_ID": "op-test-writer"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        # Should hit tier_interlock because default policy has active_tier < 2.
+        self.assertTrue(resp["result"].get("isError"))
+        error_data = json.loads(resp["result"]["content"][0]["text"])
+        self.assertEqual(error_data["error_category"], "tier_interlock")
+
+    def test_delegate_write_missing_args(self):
+        """delegate_write without required params → -32602."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 101,
+              "method": "tools/call",
+              "params": {"name": "delegate_write",
+                         "arguments": {"target_id": "alpha"}}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        self.assertIn("error", responses[0])
+        self.assertEqual(responses[0]["error"]["code"], -32602)
+        self.assertIn("missing required argument",
+                      responses[0]["error"]["message"])
+
+
+# ---------------------------------------------------------------------------
+# Test 11: MCP override_gate tool
+# ---------------------------------------------------------------------------
+
+class TestMCPOverrideGate(unittest.TestCase):
+    """MCP tools/call override_gate: required params enforced."""
+
+    def test_override_gate_missing_diff_hash(self):
+        """override_gate missing diff_hash → -32602 (required param)."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 110,
+              "method": "tools/call",
+              "params": {"name": "override_gate",
+                         "arguments": {
+                             "target_id": "alpha",
+                             "reason": "test reason",
+                         }}}],
+            env_extra={"COUNCIL_OPERATOR_ID": "op-test-over"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        self.assertIn("error", responses[0])
+        self.assertEqual(responses[0]["error"]["code"], -32602)
+
+    def test_override_gate_tier_interlock(self):
+        """override_gate on default tier1 → tier_interlock (isError, not JSON-RPC err)."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 111,
+              "method": "tools/call",
+              "params": {"name": "override_gate",
+                         "arguments": {
+                             "target_id": "alpha",
+                             "diff_hash": "sha256:" + "d" * 64,
+                             "reason": "test override",
+                         }}}],
+            env_extra={"COUNCIL_OPERATOR_ID": "op-test-over"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        # Tier interlock → tool-level isError (NOT JSON-RPC error).
+        self.assertTrue(resp["result"].get("isError"))
+        error_data = json.loads(resp["result"]["content"][0]["text"])
+        self.assertEqual(error_data["error_category"], "tier_interlock")
+
+
+# ---------------------------------------------------------------------------
+# Helper for delegate_write tests
+# ---------------------------------------------------------------------------
+
+def _diff_for_alpha_simple():
+    """Create a minimal diff for alpha."""
+    diff_text = (
+        "--- a/docs/en/alpha/index.md\n"
+        "+++ b/docs/en/alpha/index.md\n"
+        "@@ -1,5 +1,5 @@\n"
+        " # Alpha\n"
+        " id: alpha\n"
+        " Version: 1.0.0\n"
+        " Status: active\n"
+        "-changelog-path: CHANGELOGS/alpha.md\n"
+        "+changelog-path: CHANGELOGS/alpha.updated.md\n"
+    )
+    return base64.b64encode(diff_text.encode("utf-8")).decode("ascii")

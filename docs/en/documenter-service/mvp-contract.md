@@ -1,7 +1,7 @@
 # Documenter Service — MVP Contract
 
 id: documenter-service-mvp-contract
-Version: 0.4.0-draft
+Version: 0.5.0-draft
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
@@ -14,7 +14,7 @@ changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
 
 Implementation contract for the Documenter Service MVP (Tier 0–1, read-only): technology stack, safety protocol, Tier 2+ reserved interfaces, and testing strategy. Interface schemas: `documenter-service/mvp-interfaces.md`. Data models and configuration: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
 
-**MVP boundary:** the build exposes `audit()`, `delegate(preview: true)`, `documenter.status()`. The write branch of `delegate()`, the approval flow, `override_gate`, and the Multi-file Commit Protocol are specified here (§4) but **structurally absent from the MVP build** — the code does not exist, so no runtime check can misconfigure it open. This structural interlock supersedes any policy-level gate during MVP.
+**MVP boundary:** the build exposes `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface (`delegate(preview: false)`, the approval flow, `override_gate`, the durability sequence, and Tier 3 pattern auto-apply) is specified here (§2.2, §4) and **implemented in the build, gated by the policy interlock**: activation requires `active_tier >= 2`, a non-null `briefing_ref` whose file exists, matching `allowed_operations` entries, and authenticated operator ingress (`COUNCIL_OPERATOR_ID` only; never a client parameter). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`. The **Multi-file Commit Protocol** (ordered renames across documents in one commit set) remains deferred — the write branch commits one document per invocation.
 
 ---
 
@@ -66,7 +66,7 @@ The core is deterministic pure functions (trust classifier, severity rules, pre-
 3. **Apply-time verification (contract norm, conflict C2):** before rename, recompute `sha256` of the source (compare against `intent_record.per_file_sha256`) and `sha256` of the Worker output (compare against the approved `diff_hash`). Any mismatch → `hash_mismatch`, write denied. This closes the gap between "approved hash" and "written bytes".
 4. **Durability sequence (normative):** `stage in target dir → fsync(file) → intent record (temp+rename+fsync) → rename → fsync(dir)`. Staging in `/tmp` is prohibited: `rename(2)` is atomic only within one filesystem.
 5. **Multi-file commit:** stage all → intent record with per-file `sha256` → ordered renames → clear intent. Crash mid-sequence leaves a **detectable** partial state; cold-start reconciles automatically only when every source hash still matches, otherwise structured error + explicit re-invocation.
-6. **Post-mortem capture:** a `critical`-finding override writes a post-mortem record (`documenter/post_mortems/`) with audit_id, findings, reason, operator, timestamp.
+6. **Post-mortem capture:** a post-mortem record writer (`documenter/post_mortems/`: audit_id, findings, reason, operator, timestamp) is implemented as the durable mechanism. **Contract resolution (operator decision 2026-11-14):** §4 makes `override_gate` unavailable for `critical` findings, so the critical-override trigger in this clause is unreachable — §4 wins; the writer stands ready for future critical flows and nothing fabricates critical findings to exercise it.
 
 ---
 
@@ -102,9 +102,9 @@ Crash-injection via `kill -9` after **every** boundary of the durability sequenc
 
 ---
 
-## 4. Tier 2+ Reserved Interfaces
+## 4. Tier 2+ Interfaces (implemented; policy-gated)
 
-Written into the contract now; absent from the MVP build. Advancement requires **all** of: policy file with `allowed_operations`, non-null `briefing_ref` to an archived operator briefing, and an Operator Surface spec defining an authenticated out-of-band approval channel. Single-operator deployment is **not** a valid Tier 2+ configuration — `approver ≠ proposer` cannot be satisfied by one person with two IDs.
+Implemented per the conditions above; reachable only when **all** of: policy file with non-empty `allowed_operations`, non-null `briefing_ref` to an archived operator briefing whose file exists, and authenticated out-of-band operator ingress (`COUNCIL_OPERATOR_ID` from the environment; the Operator Surface remains the intended front). The Operator Surface spec (`operator-surface/index.md` §Documenter Integration) exists as specification; single-operator deployment is **not** a valid Tier 2+ configuration — `approver ≠ proposer` cannot be satisfied by one person with two IDs.
 
 | Interface | Key constraints |
 |-----------|----------------|

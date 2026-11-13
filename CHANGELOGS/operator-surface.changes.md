@@ -1,3 +1,4 @@
+<!-- CHANGES v0.1.6: documenter.approve marked implemented (policy-gated) in the tool-matrix and Documenter Integration rows; Tier 2+ interlock reworded as policy-gated (activation = operator edit of active_tier + briefing_ref). -->
 # Changelog — Operator Surface & Escalation
 <!-- CHANGES v0.1.5 (index.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->
 <!-- CHANGES v0.1.4: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged. -->

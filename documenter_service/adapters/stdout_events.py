@@ -29,12 +29,12 @@ DESCRIPTION_MAX_LEN = 500
 #: Event Channel table). Tier 2+ rows (documenter.approval, override_gate,
 #: precheck.overridden, notice.*) stay reserved but their schemas are declared
 #: here so a future adapter cannot widen MVP payloads ad hoc; the MVP emitter
-#: only ever emits the three read-only types below.
+#: only ever emits the read-only types plus documenter.approval (W2).
 EVENT_SCHEMAS = {
     "documenter.issue": frozenset(
         {"audit_id", "subject_id", "severity", "description"}),
     "documenter.approval": frozenset(
-        {"approval_id", "operator_id", "target_id", "diff_hash"}),
+        {"approval_id", "operator_id", "target_id", "diff_hash", "decision"}),
     "documenter.override_gate": frozenset(
         {"reason", "operator_id", "target_id"}),
     "precheck.passed": frozenset({"audit_id", "target_id"}),
@@ -45,9 +45,11 @@ EVENT_SCHEMAS = {
         {"requested_tier", "reason"}),
 }
 
-#: Event types the MVP build may emit.
+#: Event types the MVP build may emit.  W2 added documenter.approval;
+#: Tier 2+ override_gate unblocked (mvp-contract §4).
 MVP_EVENT_TYPES = ("documenter.issue", "precheck.passed", "precheck.failed",
-                   "notice.documenter_tier2_interlock")
+                   "notice.documenter_tier2_interlock",
+                   "documenter.approval", "documenter.override_gate")
 
 _SEVERITIES = ("low", "medium", "high", "critical")
 
@@ -91,6 +93,11 @@ class StdoutEventSink(EventSink):
                     "unknown", f"invalid severity in event payload: "
                                f"{payload['severity']!r}")
             self._check_description(payload["description"])
+        elif event_type == "documenter.approval":
+            if payload["decision"] not in ("approved", "rejected"):
+                raise StructuredError(
+                    "unknown", f"invalid decision in event payload: "
+                               f"{payload['decision']!r}")
         elif event_type == "precheck.failed":
             sevs = payload["blocking_severities"]
             if not isinstance(sevs, list) or any(

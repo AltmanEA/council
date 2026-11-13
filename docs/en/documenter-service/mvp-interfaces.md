@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.5.0-draft
+Version: 0.6.0-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -12,7 +12,7 @@ changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
 
 ## Purpose
 
-Machine-readable interface schemas for the Documenter Service MVP (Tier 0–1, read-only). Three operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. Write-branch `delegate()`, approval flow, and `override_gate` are reserved in `documenter-service/mvp-contract.md` (§4, Tier 2+ Reserved Interfaces) and structurally absent from the MVP build — the absence of code is the interlock, not a runtime check.
+Machine-readable interface schemas for the Documenter Service MVP. Core operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface — write-branch `delegate(preview: false)`, `documenter.approve`, `documenter.override_gate` — is specified in `documenter-service/mvp-contract.md` §4 and IMPLEMENTED in the build; it is gated at runtime by the policy interlock (`active_tier >= 2` + non-null `briefing_ref` + archived briefing file + authenticated operator ingress). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`.
 
 Data models behind these interfaces: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
 
@@ -117,6 +117,23 @@ The operator approves **`diff_text` as rendered by Documenter**, not the base64 
 
 Effective level is assigned by Documenter. On the scale `safe < review`, the invariant is `requested >= derived`; a lower request is rejected with `trust_mismatch` before any approval stage. Uncertain classification → `review`. Policy may raise the floor, never lower it.
 
+### Write branch (Tier 2+, policy-gated)
+
+`delegate(preview: false)` implements mvp-contract §4: guards run in order — tier authorization, registry health, `audit_id` required (gate rules 1–5), scope, `allowed_operations` match, trust invariant — then it issues a single-use `approval_id` (UUIDv4) bound to `(target_id, diff_hash, proposer_id)` and returns:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| approval_required | boolean | `true` — no file written at proposal time |
+| approval_id | string | UUIDv4; apply requires out-of-band `documenter.approve` |
+| diff_hash | string | `sha256:<hex>` over normalized diff bytes |
+| derived_trust_level / reason | enum/string | As preview response |
+| expires_in_min | integer | `approval_expiry_window` from policy |
+| next_action | enum | `await_approval` |
+
+Re-invocation with `approval_id` (after approval) applies the write under the mvp-contract §2.2 sequence and returns `{applied: true, target_id, diff_hash, approval_id, next_action: write_applied}`; the approval is consumed on apply. Changed `diff_input` → `approval_invalidated`; stale/expired → `approval_expired`; replay → `token_replay`; lock timeout → `lock_conflict`; hash mismatch → `hash_mismatch`.
+
+`documenter.approve(approval_id, operator_id)` — separate invocation; `operator_id` comes from authenticated ingress only (never a client parameter); approver ≠ proposer; single-use; expiry per policy. `documenter.override_gate(reason, operator_id, target_id, diff_hash, audit_id?)` — bound to one `(target_id, diff_hash)`, one-shot within the window, emits `documenter.override_gate`, returns `next_action: rerun_audit`; unavailable for `critical` findings (`blocking_finding` + `resolve_finding`).
+
 ---
 
 ## 3. `documenter.status()` — Operational status
@@ -154,6 +171,7 @@ Closed enum in every response, so the operator always knows the next step:
 | Value | Meaning | Returned when |
 |-------|---------|---------------|
 | `preview_only` | Preview; no write will occur | MVP `delegate(preview: true)` |
+| `write_applied` | Write applied and approval consumed | Tier 2+ apply under §2.2 |
 | `await_approval` | Write pending operator approval | Tier 2+ `delegate()` accepted |
 | `rerun_audit` | Audit ID stale, missing, or out of scope | `audit_mismatch` |
 | `resolve_finding` | High/critical finding blocks write | `blocking_finding` |

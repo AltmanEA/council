@@ -126,6 +126,153 @@ class JsonlAuditRegistry(AuditRegistry):
                 return rec["data"]
         return None
 
+    # -- approval lifecycle (mvp-data-models §1 token_type=approval_id) --------
+
+    def issue_approval(self, *, approval_id: str, target_ids: list,
+                       diff_hash: str, proposer_id: str | None,
+                       audit_id: str | None) -> dict:
+        """Persist an approval token_record (consumed=False).
+
+        Returns the envelope data dict (same as ``consume_token`` return).
+
+        Raises StructuredError("unknown", ...) when ``approval_id`` is not a
+        non-empty string or ``diff_hash`` does not match ``sha256:<64-hex>``.
+
+        bound_to is contract-compatible: target_id is the single target when
+        len(target_ids)==1, else a comma-joined string.  Extra keys (target_ids,
+        diff_hash, proposer_id, created_at, decision=None,
+        resolved_at=None) ride alongside the base token_record fields.
+        """
+        if not isinstance(approval_id, str) or not approval_id:
+            raise StructuredError(
+                "unknown", f"approval_id must be a non-empty string, got {approval_id!r}")
+        if not isinstance(diff_hash, str) or not reg.SHA256_RE.match(diff_hash):
+            raise StructuredError(
+                "unknown", f"diff_hash must match sha256:<64-hex>, got {diff_hash!r}")
+        if target_ids:
+            target_id = target_ids[0] if len(target_ids) == 1 else ",".join(target_ids)
+        else:
+            target_id = ""
+        now = self.now()
+        bound_to = {"audit_id": audit_id, "target_id": target_id}
+        data = {
+            "token_type": reg.APPROVAL_ID,
+            "token_value": approval_id,
+            "bound_to": bound_to,
+            "consumed": False,
+            "consumed_at": None,
+            "target_ids": list(target_ids),
+            "diff_hash": diff_hash,
+            "proposer_id": proposer_id,
+            "created_at": now,
+            "decision": None,
+            "resolved_at": None,
+        }
+        return self.append(reg.TOKEN_RECORD, data)["data"]
+
+    def find_approval(self, approval_id: str):
+        """Latest token_record data for ``approval_id``, or None."""
+        records, _ = self.read_all()
+        found = None
+        for rec in records:
+            if (rec["record_type"] == reg.TOKEN_RECORD
+                    and rec["data"].get("token_value") == approval_id
+                    and rec["data"].get("token_type") == reg.APPROVAL_ID):
+                found = rec["data"]
+        return found
+
+    def resolve_approval(self, approval_id: str, *, decision: str,
+                         operator_id: str) -> dict:
+        """Resolve an approval by appending a new token_record with the decision.
+
+        Raises StructuredError("audit_mismatch", ...) when ``approval_id`` was
+        not issued by this registry.  Raises
+        StructuredError("token_replay", ...) when already resolved.
+        Raises StructuredError("unknown", ...) when ``decision`` is not
+        approved/rejected or ``operator_id`` does not match the expected format.
+
+        Returns the newly appended token_record data dict.
+        """
+        if decision not in ("approved", "rejected"):
+            raise StructuredError(
+                "unknown", f"decision must be 'approved' or 'rejected', got {decision!r}")
+        if not reg.OPERATOR_ID_RE.match(operator_id):
+            raise StructuredError(
+                "unknown", f"malformed operator_id {operator_id!r} "
+                           f"(expected ^op-[a-z0-9][a-z0-9-]{{2,63}}$)")
+        approval = self.find_approval(approval_id)
+        if approval is None:
+            raise StructuredError(
+                "audit_mismatch",
+                f"approval_id {approval_id!r} was not issued by this registry")
+        if approval.get("decision") is not None:
+            raise StructuredError(
+                "token_replay",
+                f"approval_id {approval_id!r} already resolved (decision={approval['decision']!r}) "
+                "— approvals are single-use; request a new approval")
+        resolved = dict(approval)
+        resolved["decision"] = decision
+        resolved["resolved_by"] = operator_id
+        resolved["resolved_at"] = self.now()
+        return self.append(reg.TOKEN_RECORD, resolved)["data"]
+
+    # -- intent helpers (Tier 2+ read; W2 writes via generic append()) ---------
+
+    def find_intent(self, target_id: str):
+        """Latest unresolved intent_record whose target_ids contain ``target_id``,
+        or None."""
+        records, _ = self.read_all()
+        found = None
+        for rec in records:
+            if rec["record_type"] == reg.INTENT_RECORD:
+                data = rec["data"]
+                if data.get("resolved", False):
+                    continue
+                tids = data.get("target_ids", [])
+                if isinstance(tids, list) and target_id in tids:
+                    found = data
+        return found
+
+    def unresolved_intents(self) -> list:
+        """All unresolved intent_record data dicts (latest first)."""
+        records, _ = self.read_all()
+        result = []
+        for rec in reversed(records):
+            if rec["record_type"] == reg.INTENT_RECORD:
+                data = rec["data"]
+                if not data.get("resolved", False):
+                    result.append(data)
+        return result
+
+    # -- metrics (mvp-interfaces §3 — do NOT change status() shape) -------------
+
+    def registry_metrics(self) -> dict:
+        """Return counts useful for monitoring (mvp-interfaces §3).
+
+        Counts latest state per approval_id (not all records).
+        """
+        pending = 0
+        intents = 0
+        records, _ = self.read_all()
+        # Track latest token_type=approval_id per token_value
+        latest_approval = {}
+        for rec in records:
+            data = rec["data"]
+            if (rec["record_type"] == reg.TOKEN_RECORD
+                    and data.get("token_type") == reg.APPROVAL_ID):
+                val = data.get("token_value")
+                latest_approval[val] = data
+        # Count only latest state
+        for data in latest_approval.values():
+            if data.get("decision") is None:
+                pending += 1
+        for rec in records:
+            if rec["record_type"] == reg.INTENT_RECORD:
+                data = rec["data"]
+                if not data.get("resolved", False):
+                    intents += 1
+        return {"pending_approvals": pending, "unresolved_intents": intents}
+
     # -- token lifecycle (mvp-data-models §1 Token model) ---------------------
 
     def issue_token(self, token_type: str, token_value: str,

@@ -32,7 +32,7 @@ documents:
   - id: documenter-service-mvp-contract
     path: docs/en/documenter-service/mvp-contract.md
     title: Documenter Service — MVP Contract
-    version: 0.4.0-draft
+    version: 0.5.0-draft
     status: draft
     abstraction: protocol
     references:
@@ -54,7 +54,7 @@ documents:
   - id: documenter-service-mvp-interfaces
     path: docs/en/documenter-service/mvp-interfaces.md
     title: Documenter Service — MVP Interfaces
-    version: 0.5.0-draft
+    version: 0.6.0-draft
     status: draft
     abstraction: format
     references:
@@ -92,7 +92,7 @@ documents:
   - id: operator-surface
     path: docs/en/operator-surface/index.md
     title: Operator Surface & Escalation
-    version: 0.1.5
+    version: 0.1.6
     status: draft
     abstraction: protocol
     has_translation: docs/ru/operator-surface/index-RU.md
