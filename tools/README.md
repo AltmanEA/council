@@ -2,7 +2,7 @@
 
 Operational scripts for the Council documentation pipeline (implementation
 files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
-+ B + D of plan `sess-doc-reliability-algo`.
++ B + C + D of plan `sess-doc-reliability-algo`.
 
 ## Tools
 
@@ -12,6 +12,7 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | `gen_manifest.py` | Generate `docs-manifest.yaml` from document frontmatter (`--write` / `--check`, byte-exact, atomic). Sole writer of the manifest. | operational (Stage A) |
 | `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Exit codes: 0 clean, 1 findings, 2 internal error. | operational (Stage B) |
 | `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (AGENTS.md §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) |
+| `classify_bump.py` | Read-only diff→bump classifier ("AI proposes — algorithm records"): proposes `patch`/`minor`/`major` for a full candidate document; never writes documents, changelogs, or the manifest — only its JSONL decision log `tools/state/classify_log.jsonl`. Reuses the `check_all.py` §-reference resolver and `gen_manifest.build_entries` path resolution; ambiguous → minor with a §7.5 warning; escalations printed in AGENTS.md §6 format; `--report` gate: escalation rate > 20% → `classifier requires redesign`, exit 3. Exit codes: 0 classification/identical/report-within-gate, 2 usage/refusal, 3 gate exceeded. | operational (Stage C) |
 | `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only (soak) by default, blocking once the marker file exists. | operational, soak mode (Stage B) |
 | `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational |
