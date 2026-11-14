@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.12.1
+Version: 0.14.0
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -163,6 +163,18 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Effective Trust Level** (Фактический уровень доверия) The trust level actually applied to a `delegate()` invocation. Equal to the caller's requested level when that request is at or above the derived floor; never a silently upgraded value.
 
 **Trust Tier** (Ступень доверия) One of four progressively broader deployment-level write-capability levels governing Documenter's `delegate()` operations: Tier 0 (audit only), Tier 1 (diff preview), Tier 2 (confirm-per-change), Tier 3 (pattern-based batch approve). Each advancement requires an explicit operator command. A tier governs what a deployment may do at all; it is distinct from trust *level* (`safe`/`review`), which scopes a single operation's autonomy (see Effective Trust Level). Defined in `documenter-service/index.md`, §Trust Tiers.
+
+**Write-Gate** (Гейт записи) A mandatory verification gate that blocks automatic writing of a derived artifact until all checks pass; used in Russian translation synchronization (translation completeness with zero failures, line parity, EN-identity scan, glossary compliance). Defined in the Documentation Worker skill, Phase 4, per ADR-012.
+
+**Post-Approve Auto-Dispatch** (Автозапуск после утверждения) An execution mode in which a mechanical follow-up action (e.g., RU synchronization) runs automatically only after the human operator's approval (step (5) of the documentation workflow) of the parent changeset, inheriting approval for the changeset but not for skipping verification gates. Per ADR-012.
+
+**Translation Opt-Out Flag** (Флаг отказа от перевода) A document frontmatter field (`no_auto_translation: true`) excluding a document from automatic Russian synchronization; opted-out documents are handled in report-only drift-audit mode. Per ADR-012.
+
+**Drift Checker** (Инструмент проверки расхождений) A deterministic tool (`tools/check_drift.py`) comparing English source and Russian candidate on structural invariants only — headings hierarchy, table rows, code fences, list markers, inline-code span set, separators, metadata fingerprint, and Cyrillic-ratio English leakage. Deliberately excludes line parity (a Phase 4 write-gate) and glossary/abstraction checks (AI-reserved per `AGENTS.md` §8).
+
+**Structural Fingerprint** (Структурный отпечаток) The set of invariant structural properties of a Markdown document (heading hierarchy, table and fence counts, list markers, inline-code spans, separators, metadata keys) used by the drift checker to verify translation candidates without semantic comparison.
+
+**Mock Regression** (Мок-регрессия) A deterministic offline test layer in which the translation model is replaced by canned responses (`TRANSLATE_BACKEND=mock`), verifying structural invariants of the pipeline; necessary but not sufficient — a separate live-e2e layer validates against the real model. Test layers are marked `mock` vs `live` in all reports.
 
 ---
 

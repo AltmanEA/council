@@ -1,7 +1,7 @@
 # Decisions Index
 
 id: planned-architecture-decisions
-Version: 0.6.0
+Version: 0.7.0
 Status: draft
 Abstraction: reference
 changelog-path: CHANGELOGS/planned-architecture.changes.md
@@ -16,7 +16,7 @@ This is the central registry of binding architectural decisions. ADR identifiers
 
 ADR-001–005 originate from a multi-role consilium, accepted by consensus of three roles: Architect, Reliability & Security Specialist, Human-Centric Designer. The standalone ADR document referenced by earlier versions is no longer part of the documentation set.
 
-ADR-006–009 originate from `sess-documenter-contract` (2026-11-12); their normative content lives in `../../documenter-service/mvp-contract.md` §5. ADR-010 originates from `sess-doc-reliability-algo` (2026-11-12); its normative content lives in `documenter-service/configuration-guide.md` §Hash Store. ADR-011 originates from `sess-doc-reliability-algo` (2026-11-12), operator decision; its normative context lives in `AGENTS.md` §1.5.
+ADR-006–009 originate from `sess-documenter-contract` (2026-11-12); their normative content lives in `../../documenter-service/mvp-contract.md` §5. ADR-010 originates from `sess-doc-reliability-algo` (2026-11-12); its normative content lives in `documenter-service/configuration-guide.md` §Hash Store. ADR-011 originates from `sess-doc-reliability-algo` (2026-11-12), operator decision; its normative context lives in `AGENTS.md` §1.5. ADR-012 originates from `sess-translate-automation` (2026-11-14), operator decisions; its normative content lives in `AGENTS.md` §3.3 and the Documentation Worker skill.
 
 | ID | Decision | Where applied |
 |----|----------|---------------|
@@ -31,5 +31,6 @@ ADR-006–009 originate from `sess-documenter-contract` (2026-11-12); their norm
 | ADR-009 | Documenter MVP architecture: Ports & Adapters, pure core, five ports | `documenter-service/mvp-contract.md` |
 | ADR-010 | `documenter/hashes.json` as rebuildable cache; git history as primary audit trail; `tools/` exempt from hash-store updates | `documenter-service/configuration-guide.md` |
 | ADR-011 | Start of Documenter MVP (Tier 0–1) and tools/ implementation; fallback remains session mode | `AGENTS.md` §1.5 |
+| ADR-012 | Post-Approve automatic RU synchronization: conditional lift of §3.3 suspension; write only via Documentation Worker after Phase 4 write-gates; per-document opt-out; per-run cloud consent | `AGENTS.md` §3.3, `/.agents/skills/documentation/SKILL.md` |
 
 D3 (Documenter as a Supporting service) is recorded in `../index.md` and `../../documenter-service/index.md`.

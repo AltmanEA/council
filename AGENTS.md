@@ -1,7 +1,7 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.13.0
+Version: 0.15.0
 Status: active
-Last Modified: 2026-11-13
+Last Modified: 2026-11-14
 changelog-path: CHANGELOGS/agents.changes.md
 
 This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `docs/project-concept/index.md`, which describes Council.
@@ -51,6 +51,8 @@ Tools are divided into two categories:
 Prohibition: Do not invoke any `council.*`, `documenter.*`, or equivalent MCP tools while these services are under development. Enforcement point: the OpenCode workspace configuration (`.opencode/opencode.jsonc`) currently registers no MCP servers for Council or Documenter tools — their absence is the effective guard. Violating this rule without explicit operator approval is a protocol error.
 
 Relationship between the two: the Documentation Worker skill is the executor; Documenter Service (when operational) will act as an intermediary that calls the Documentation Worker on behalf of its caller. A single document update may involve both: Documenter evaluates trust and policy, then invokes the Documentation Worker to perform the mechanical file operations. Both must be referenced separately to avoid confusion.
+
+**Prose-contract synchronization.** Behavioral contracts for tools (documented in prose, e.g. the Documentation Worker skill's wrapper contract and `tools/README.md`) are binding: whenever a tool's behavior changes, its prose contracts MUST be reviewed and updated in the same changeset. A prose contract diverging from implementation is a documentation defect (root cause: heading-translation contract breach, sess-translate-automation 2026-11-14; norm ratified sess-prevention-measures 2026-11-14).
 
 ---
 
@@ -106,7 +108,7 @@ When modifying an English document: apply the change to `docs/en/<id>/index.md` 
 
 Translation does not apply to code, configuration, or non-document artifacts.
 
-**Current phase exception — RU synchronization suspended.** Russian translation synchronization is suspended. Do not create or update `index-RU.md` files unless the human operator explicitly requests it. Existing Russian files are convenience copies and may lag behind the English source; they are not a correctness gate for this phase.
+**Current phase exception — RU synchronization conditionally lifted (ADR-012).** Automatic Russian synchronization is permitted only as a **post-Approve action**: after step (5) Approve of §5.2 confirms a changeset covering the English edit, the Documentation Worker may translate and write `index-RU.md` at the manifest `has_translation` path automatically, provided every Phase 4 write-gate passes (translation completeness, line parity, EN-identity scan, glossary compliance). Any gate failure blocks the write and escalates to operator review of the full translation. A document may opt out via `no_auto_translation: true` in its frontmatter; opted-out documents fall back to report-only drift audit. When the local translation backend is unavailable, cloud fallback requires the operator's per-run explicit consent (ADR-012). This rule replaces the previous full suspension of 2026-11-12.
 
 ---
 

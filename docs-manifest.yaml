@@ -84,7 +84,7 @@ documents:
   - id: glossary
     path: docs/en/glossary/index.md
     title: Glossary
-    version: 0.12.1
+    version: 0.14.0
     status: draft
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md
@@ -117,7 +117,7 @@ documents:
   - id: planned-architecture-decisions
     path: docs/en/planned-architecture/decisions/index.md
     title: Decisions Index
-    version: 0.6.0
+    version: 0.7.0
     status: draft
     abstraction: reference
 

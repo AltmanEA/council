@@ -1,3 +1,5 @@
+<!-- CHANGES v0.15.0: Add prose-contract synchronization norm to §1.7 (tools behavior changes require same-changeset review of prose contracts). -->
+<!-- CHANGES v0.14.0: Conditional lift of RU synchronization suspension per ADR-012: post-Approve auto-dispatch, Phase 4 write-gates, per-document opt-out, per-run cloud consent. -->
 <!-- CHANGES v0.13.0: Added §5.4 subagent delegation budget — estimate task size before launch; tasks projected over 40k tokens must be split into smaller subtasks (operator request, sess-doc-reliability-algo). -->
 <!-- CHANGES v0.12.0: Project Stage updated to MVP implementation start (ADR-011); §2.2 points to normative Manifest Field Provenance table in configuration-guide (sess-doc-reliability-algo Stage A). -->
 <!-- CHANGES v0.11.0: Manifest redefined as generated index (frontmatter is source of truth, regenerate-and-diff parity); §7.2 frontmatter field schema defined, Last Modified dropped; post-Approve dispatch and write-order rules for tools/ write-scripts added to §5.1; tools/check_all + rules 3/5 reservation added to §8 (sess-doc-reliability-algo). -->

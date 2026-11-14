@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "0.6.0"
+  version: "0.8.0"
 ---
 
 # Documentation Worker
@@ -59,7 +59,7 @@ Produce a detailed change plan (see Response Contract), present it to the primar
 - Content modifications to `index.md` bodies
 - Any manifest (`docs-manifest.yaml`) updates
 - Cross-reference additions or modifications beyond typo fixes
-- Russian translation alignment (`index-RU.md` creation/modification per `AGENTS.md` §3.3, resolved via manifest `has_translation` path)
+- Russian translation alignment (`index-RU.md` creation/modification per `AGENTS.md` §3.3 and ADR-012, resolved via manifest `has_translation` path). A post-Approve `auto_sync` dispatch does not lower this classification: it inherits approval for the changeset, not for skipping Phase 4 write-gates.
 - Version minor/major bumps (X.Y.Z → X.(Y+1).Z or (X+1).Y.Z)
 - Changelog entry creation (new files or new documents)
 - Glossary term additions or updates
@@ -116,7 +116,7 @@ When `change_type: update`:
 3. Read the target's changelog file referenced by `changelog-path:`.
 4. Check `docs/en/glossary/index.md` for any domain terms used but not defined.
 5. Apply changes to `index.md` body as described in the request.
-6. If an RU translation is recorded (`has_translation` in the manifest): **synchronization is suspended** per `AGENTS.md` §3.3 — resolve the RU path from the manifest field (not from filesystem co-location), check structural drift (section counts, heading structures, paragraph positions), and REPORT it. Do not update `index-RU.md` unless the operator explicitly requested the translation. See §Create or Update Russian Translation.
+6. If an RU translation is recorded (`has_translation` in the manifest): resolve the RU path from the manifest field (not from filesystem co-location). Automatic synchronization is permitted per `AGENTS.md` §3.3 (ADR-012) **only as a post-Approve action** — when the delegation carries `auto_sync: true` set by the primary agent after step (5) Approve of the changeset containing the English edit — and only if the document has no `no_auto_translation: true` opt-out in its frontmatter. Otherwise run the structural comparison (drift audit, read-only) and REPORT drift without writing. See §Create or Update Russian Translation.
 7. Dispatch the version writer — do not hand-edit version, changelog, or manifest:
    `python3 tools/bump_version.py --id <id> --kind patch|minor|major --note "<reason>"`
    The `--note` value is mandatory, non-empty, and quoted verbatim from the approved change plan (it is a *claimed rationale*, not verified provenance). Kind selection follows `AGENTS.md` §7.5 (patch: typo/formatting; minor: content addition or structure; major: foundational rewrite); when classification is uncertain, run `tools/classify_bump.py` read-only for a proposal and escalate per `AGENTS.md` §6 rather than guessing.
@@ -135,7 +135,7 @@ When `change_type: split`:
 
 When `change_type: create_ru`:
 
-> **Current phase — synchronization suspended (`AGENTS.md` §3.3).** Execute this capability ONLY when the human operator explicitly requests a translation. Otherwise operate in drift-audit mode: run the structural comparison (Phases 1–2 logic, read-only), report the drift, and do not write `index-RU.md`. Existing RU files are convenience copies and are not a correctness gate.
+> **Current phase — conditional lift (`AGENTS.md` §3.3, ADR-012).** Three invocation modes: (a) **explicit translation** — operator requested a translation; execute normally. (b) **post-Approve auto-dispatch** — delegation carries `auto_sync: true` (set by the primary agent only after `AGENTS.md` §5.2 step (5) Approve) and the target has no `no_auto_translation: true` frontmatter opt-out; execute Phases 1–4 and write only if all Phase 4 write-gates pass. (c) **drift audit** — neither condition holds; run Phases 1–2 logic read-only, report drift, do not write. Reuse `change_type: create_ru` with `use_project_translation`; no separate change type exists.
 
 #### Phase 1 — Parse English source
 
@@ -168,6 +168,15 @@ After writing the file, perform a verification pass:
 4. **Glossary compliance:** cross-reference all glossary terms against `docs/en/glossary/index.md`; flag terms absent from glossary.
 5. **No drift:** confirm no sections were added, removed, or re-ordered relative to the source.
 
+**Write-gates (mandatory for autonomous write, ADR-012):** an `auto_sync` write proceeds without operator preview ONLY if all of the following hold; any failure blocks the write and the full candidate translation is presented to the operator for review instead:
+
+1. **Fail count zero:** the wrapper summary reports `fail == 0` (`--summary-json`; wrapper exit code 4 means blocked).
+2. **Line parity:** every non-metadata content line maps 1:1 to its EN counterpart (per §Phase 3 line-number parity).
+3. **EN-identity scan:** the candidate RU file is not byte-identical (nor line-for-line identical outside metadata/skip blocks) to the EN source — silent copy-through is rejected.
+4. **Glossary compliance:** all domain terms present in RU match `docs/en/glossary/index.md` equivalents (rule 3 remains skill/AI-reserved).
+
+Include in the report: backend/model used, `prompt_version`, ok/skip/fail counts, and the `[gloss-apply]` summary.
+
 For each failed check: if the failure is mechanically correctable (line shift due to missing separator, stray English word, minor whitespace), fix it immediately. For structural deviations (reordered sections, missing content, wrong section count) or semantic concerns, do NOT auto-fix — present them in the report so the primary agent can decide corrective action. Log the final verification result alongside the translation action.
 
 ---
@@ -195,7 +204,7 @@ When the delegation context includes `use_project_translation: true` (alias `use
 **Fallback chain (in priority order):**
 
 1. **Local NVFP4** (`127.0.0.1:8000`, default) — first choice; independence from external networks.
-2. **Cloud NeuralDeep** (`https://api.neuraldeep.ru/v1`, model `qwen3.6-35b-a3b-noreason`) — only when the operator explicitly sets `NEURALDEEP_BASE_URL` to the cloud URL (wrapper exit code 3 on local unreachable with no override).
+2. **Cloud NeuralDeep** (`https://api.neuraldeep.ru/v1`, model `qwen3.6-35b-a3b-noreason`) — NEVER automatic: when the local server is unreachable, STOP and ask the operator for per-run consent (ADR-012 privacy gate). Only proceed with the cloud call after explicit approval for that run; wrapper exit code 3 signals the stop condition.
 3. **Native skill translation** — last resort; log a warning in the report.
 
 **Wrapper usage:**
@@ -214,7 +223,7 @@ For files exceeding 200 lines, paragraph-based chunking is the default. Splittin
 **Contract that Phase 4 self-verify may rely on:**
 
 - **Line-parity is invariant:** every output line corresponds to exactly one input line (blank lines and structural lines pass through untranslated). Line-count fallback within the wrapper ensures this — if a model response has a different line count, it is re-queried line-by-line.
-- **Metadata, headings, `---`, and code-fences are intact:** these are recognised structural elements and are copied verbatim.
+- **Metadata lines, `---` separators, table separator rows, and code fences are copied verbatim** (skipped by `needs_skip`); **headings are translated**, with the `#` prefix structurally restored by `restore_heading_prefix()`; inline-code spans and identifiers are protected (`enforce_glossary` skips `[A-Za-z0-9_]`-adjacent matches, `restore_paths` repairs homoglyph mangling).
 - **Glossary terms are canonicalised:** if a model leaves an English term untranslated, `enforce_glossary()` replaces it with the Russian equivalent; each such correction is logged as `[gloss-apply] <EN> -> <RU> xN` on stderr.
 - **`[FAIL] L<n>` on stderr means the line on line N was NOT translated** (remained identical to source). Every `[FAIL]` line must be reported in the language-leakage section of the verification report and **blocks `safe` trust level** — the operation must be escalated to `review`.
 
@@ -223,6 +232,8 @@ For files exceeding 200 lines, paragraph-based chunking is the default. Splittin
 `TRANSLATE_BACKEND`, `CLOUD_MODEL`, `CLOUD_CHAT_KWARGS`, `TRANSLATE_TEMP`, `TRANSLATE_TOP_P`, `TRANSLATE_HINT_STYLE`, `TRANSLATE_METADATA`, `TRANSLATE_PROMPT`, `TRANSLATE_FORCE_SECTION`, `REQUEST_TIMEOUT`, `MAX_RETRIES`.
 
 See `tools/EXPERIMENTS.md` (E-001…E-008) for full experiment history and rationale for each default.
+
+**Deterministic drift check.** In drift-audit mode (c), the skill invokes `python3 tools/check_drift.py <en> <ru>` as a deterministic structural component (strictly structural: headings, tables, fences, list markers, inline-code set, separators, metadata fingerprint, Cyrillic-ratio EN-leakage). The tool deliberately excludes line-parity (a Phase 4 write-gate) and glossary/abstraction checks (AI-reserved per `AGENTS.md` §8) — no-rule-fork is preserved. When `PROMPT_VERSION` changes (or no live run is recorded in `TRANSLATE_RUN_LOG`), the runner emits a reminder; upon detecting such a reminder, the skill MUST offer the operator a run of `tools/tests/e2e_live.sh`.
 
 Fallback: if the configured server is unreachable and no explicit cloud override is set, the wrapper exits with code 3 and a diagnostic message on stderr. If the Python translator encounters a key error or network failure, fall back to native skill translation and log a warning in the report.
 
@@ -252,6 +263,8 @@ Mechanical documentation operations are owned by the deterministic suites under 
 | Version bump + changelog + manifest | `python3 tools/bump_version.py --id <id> --kind <patch\|minor\|major> --note "<reason>"` | Enforced write order: document content → changelog → manifest (last); atomic per-file temp+rename with rollback; exit 2 = refusal/rolled back |
 | Diff→bump classification proposal | `python3 tools/classify_bump.py` | Read-only; ambiguous → `minor` with a §7.5 warning; `--report` gate: escalation rate > 20% → redesign |
 | Translation | `tools/local-translate.sh` | Optional path, §Translation via project translator |
+| Structural drift comparison EN↔RU | `python3 tools/check_drift.py <en> <ru>` | structural-only; excludes line-parity (Phase 4) and AI-reserved rules 3/5 |
+| Translation regression runner | `tools/tests/run_translate_tests.sh [quick|full]` | quick: unit <5s; full: + mock corpus; live: `tools/tests/e2e_live.sh` on operator request |
 
 Rules of engagement:
 
@@ -275,6 +288,7 @@ Escalate back to the primary agent (do NOT proceed with the change) when ANY of 
 6. **Compliance check FAIL**: any post-change verification step in `AGENTS.md` §8 fails and cannot be mechanically corrected.
 7. **Concurrent write conflict**: another process has modified a file since the last read (TOCTOU detection).
 8. **Missing manifest entry**: the requested `target_id` is not found in `docs-manifest.yaml`.
+9. **Consilium finding → gate obligation.** Every high/critical finding produced by a Council session must yield a corresponding test or gate action item reproducing the named failure mode. The primary agent verifies presence of such items when composing a task brief; the Documentation Worker flags delegations whose findings lack a verification item. (Norm established by sess-prevention-measures, 2026-11-14; operator decision: no ADR.)
 
 Each escalation must include: the reason (matching one of the categories above), the affected document(s), and a recommended action.
 
@@ -310,8 +324,8 @@ Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skil
 - [ ] Split decision (if size exceeded) escalated to the operator with 2–3 candidate points (§7.3)
 - [ ] Changelog `--note` reason string is operator-supplied or quoted verbatim from the approved plan
 - [ ] Trust levels aligned with the Documenter classifier and shipped `tools/` behavior (§Trust Levels, `AGENTS.md` §1.7)
-- [ ] Russian drift recorded per `AGENTS.md` §3.3 — **report-only while the suspension is in effect**; no `index-RU.md` update unless the operator explicitly requested it
-  - [ ] When an explicit translation was requested: line number parity verified with the English source
+- [ ] Russian synchronization per `AGENTS.md` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
+  - [ ] For explicit or `auto_sync` writes: line number parity verified; all four Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance)
 
 Fix failures mechanically where a `tools/` script owns the fix; escalate if unfixable or if the fix requires semantic judgment.
 

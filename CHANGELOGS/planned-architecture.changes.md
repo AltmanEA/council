@@ -1,3 +1,4 @@
+<!-- CHANGES v0.7.0: Register ADR-012: post-Approve automatic RU synchronization (conditional lift of AGENTS.md §3.3 suspension) -->
 <!-- CHANGES v0.2.4 (layer-0.md): Removed stray Source: line from body (compliance fix, AGENTS.md §7.2; precedent per earlier stray-metadata fixes) (sess-doc-reliability-algo Stage A). -->
 <!-- CHANGES v0.2.4 (layer-1.md): Removed stray Source: line from body (compliance fix, AGENTS.md §7.2) (sess-doc-reliability-algo Stage A). -->
 <!-- CHANGES v0.4.4 (layer-2.md): Removed stray Source: line from body (compliance fix, AGENTS.md §7.2) (sess-doc-reliability-algo Stage A). -->
