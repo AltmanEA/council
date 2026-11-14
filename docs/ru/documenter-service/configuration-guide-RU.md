@@ -1,7 +1,7 @@
 # Руководство по настройке Документатора
 
 id: documenter-service-configuration-guide
-Version: 0.15.1-draft
+Version: 0.16.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -28,6 +28,7 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 | `status` | frontmatter `Status` |
 | `abstraction` | frontmatter `Abstraction` |
 | `has_translation` | frontmatter `has_translation` |
+| `changelog-path` | frontmatter `changelog-path` |
 | `references` | frontmatter `references` (исключение, редактируемое автором) |
 | `allow_non_index_paths` | frontmatter `allow_non_index_paths` |
 

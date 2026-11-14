@@ -6,6 +6,8 @@
 # has_translation field uses relative path from manifest location to the RU file.
 # Schema change v0.2: has_translation changed from bare filename to relative path
 # to support separated language directories (ru-restructure consensus, 2026-11-10).
+# Schema change v0.3: entries carry changelog-path when the frontmatter
+# declares it (fix plan sess-documenter-fixes, 2026-11-14, decision A).
 
 # GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see AGENTS.md §2.2)
 documents:
@@ -16,6 +18,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/documenter-service/index-RU.md
+    changelog-path: CHANGELOGS/documenter-service.changes.md
     references:
       - documenter-service-configuration-guide
       - documenter-service-policy-reference
@@ -24,10 +27,11 @@ documents:
   - id: documenter-service-configuration-guide
     path: docs/en/documenter-service/configuration-guide.md
     title: Documenter Configuration Guide
-    version: 0.15.1-draft
+    version: 0.16.0-draft
     status: draft
     abstraction: reference
     has_translation: docs/ru/documenter-service/configuration-guide-RU.md
+    changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
   - id: documenter-service-mvp-contract
     path: docs/en/documenter-service/mvp-contract.md
@@ -35,6 +39,7 @@ documents:
     version: 0.6.0-draft
     status: draft
     abstraction: protocol
+    changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
     references:
       - documenter-service-mvp-interfaces
       - documenter-service-mvp-data-models
@@ -46,6 +51,7 @@ documents:
     version: 0.3.2-draft
     status: draft
     abstraction: reference
+    changelog-path: CHANGELOGS/documenter-service-mvp-data-models.changes.md
     references:
       - documenter-service-mvp-interfaces
       - service-contract
@@ -57,6 +63,7 @@ documents:
     version: 0.7.0-draft
     status: draft
     abstraction: format
+    changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
     references:
       - documenter-service-mvp-data-models
     allow_non_index_paths: true
@@ -68,6 +75,7 @@ documents:
     status: draft
     abstraction: reference
     has_translation: docs/ru/documenter-service/policy-reference-RU.md
+    changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
     allow_non_index_paths: true
 
   - id: execution-runtime
@@ -77,6 +85,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/execution-runtime/index-RU.md
+    changelog-path: CHANGELOGS/execution-runtime.changes.md
     references:
       - service-contract
       - operator-surface
@@ -88,6 +97,7 @@ documents:
     status: draft
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md
+    changelog-path: CHANGELOGS/glossary.changes.md
 
   - id: operator-surface
     path: docs/en/operator-surface/index.md
@@ -96,6 +106,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/operator-surface/index-RU.md
+    changelog-path: CHANGELOGS/operator-surface.changes.md
     references:
       - service-contract
       - execution-runtime
@@ -107,6 +118,7 @@ documents:
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/planned-architecture/index-RU.md
+    changelog-path: CHANGELOGS/planned-architecture.changes.md
     references:
       - planned-architecture-layer-0
       - planned-architecture-layer-1
@@ -120,6 +132,7 @@ documents:
     version: 0.8.0
     status: draft
     abstraction: reference
+    changelog-path: CHANGELOGS/planned-architecture.changes.md
 
   - id: planned-architecture-layer-0
     path: docs/en/planned-architecture/layer-0.md
@@ -128,6 +141,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/planned-architecture/layer-0-RU.md
+    changelog-path: CHANGELOGS/planned-architecture.changes.md
     allow_non_index_paths: true
 
   - id: planned-architecture-layer-1
@@ -137,6 +151,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/planned-architecture/layer-1-RU.md
+    changelog-path: CHANGELOGS/planned-architecture.changes.md
     allow_non_index_paths: true
 
   - id: planned-architecture-layer-2
@@ -146,6 +161,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/planned-architecture/layer-2-RU.md
+    changelog-path: CHANGELOGS/planned-architecture.changes.md
     references:
       - documenter-service
     allow_non_index_paths: true
@@ -157,6 +173,7 @@ documents:
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/project-concept/index-RU.md
+    changelog-path: CHANGELOGS/project-concept.changes.md
 
   - id: project-reference
     path: docs/en/project-reference/index.md
@@ -165,6 +182,7 @@ documents:
     status: draft
     abstraction: reference
     has_translation: docs/ru/project-reference/index-RU.md
+    changelog-path: CHANGELOGS/project-reference.changes.md
 
   - id: protocol-core
     path: docs/en/protocol-core/index.md
@@ -173,6 +191,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/protocol-core/index-RU.md
+    changelog-path: CHANGELOGS/protocol-core.changes.md
 
   - id: scenario
     path: docs/en/scenario/index.md
@@ -181,6 +200,7 @@ documents:
     status: draft
     abstraction: protocol
     has_translation: docs/ru/scenario/index-RU.md
+    changelog-path: CHANGELOGS/scenario.changes.md
 
   - id: service-contract
     path: docs/en/service-contract/index.md
@@ -189,6 +209,7 @@ documents:
     status: draft
     abstraction: format
     has_translation: docs/ru/service-contract/index-RU.md
+    changelog-path: CHANGELOGS/service-contract.changes.md
     references:
       - service-contract-error-management
     allow_non_index_paths: true
@@ -200,4 +221,5 @@ documents:
     status: draft
     abstraction: format
     has_translation: docs/ru/service-contract/error-management-RU.md
+    changelog-path: CHANGELOGS/service-contract.changes.md
     allow_non_index_paths: true

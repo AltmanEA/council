@@ -1,7 +1,7 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.15.1-draft
+Version: 0.16.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -28,6 +28,7 @@ This document defines runtime data structures and their integrity rules: hash st
 | `status` | frontmatter `Status` |
 | `abstraction` | frontmatter `Abstraction` |
 | `has_translation` | frontmatter `has_translation` |
+| `changelog-path` | frontmatter `changelog-path` |
 | `references` | frontmatter `references` (author-editable exception) |
 | `allow_non_index_paths` | frontmatter `allow_non_index_paths` |
 

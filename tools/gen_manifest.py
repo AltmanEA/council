@@ -41,6 +41,8 @@ GEN_PREAMBLE = (
     "# has_translation field uses relative path from manifest location to the RU file.\n"
     "# Schema change v0.2: has_translation changed from bare filename to relative path\n"
     "# to support separated language directories (ru-restructure consensus, 2026-11-10).\n"
+    "# Schema change v0.3: entries carry changelog-path when the frontmatter\n"
+    "# declares it (fix plan sess-documenter-fixes, 2026-11-14, decision A).\n"
     "\n"
 )
 
@@ -98,6 +100,8 @@ def build_entries(root: str) -> tuple:
         }
         if f.get("has_translation"):
             entry["has_translation"] = str(f["has_translation"])
+        if f.get("changelog-path"):
+            entry["changelog-path"] = str(f["changelog-path"])
         if f.get("references"):
             entry["references"] = list(f["references"])
         if f.get("allow_non_index_paths") is True:
