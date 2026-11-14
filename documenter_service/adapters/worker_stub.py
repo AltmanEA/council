@@ -23,10 +23,12 @@ from ..ports import WorkerPort
 __all__ = ["InterlockedWorkerStub"]
 
 _INTERLOCK_REASON = (
-    "Tier 2+ is locked in the MVP scaffold: the write branch of delegate(), "
-    "documenter.approve, override_gate and the Multi-file Commit Protocol "
-    "are structurally absent (mvp-contract §MVP boundary, ADR-007). "
-    "delegate(preview: true) is the only preview surface available.")
+    "Tier 2+ is dormant behind the dual interlock: the write branch of "
+    "delegate(), documenter.approve, override_gate and the Multi-file Commit "
+    "Protocol are implemented but policy-gated (Tier 0/1 active) and the "
+    "Operator Surface is unbuilt (mvp-contract §MVP boundary, ADR-007, "
+    "ADR-013). delegate(preview: true) is the only preview surface "
+    "available.")
 
 
 class InterlockedWorkerStub(WorkerPort):

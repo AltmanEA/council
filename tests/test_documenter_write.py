@@ -1179,23 +1179,46 @@ class TestApplyWrite(unittest.TestCase):
         self.assertEqual(ctx.exception.error_category, "gate_failure")
 
     def test_apply_write_hash_mismatch(self):
-        result, diff_input = self._full_cycle()
-        # Tamper with the approval hash
+        """Approved diff_hash tampered in the registry → apply refuses with
+        'approval_invalidated'.  The category assertion is checked OUTSIDE
+        the assertRaises context — inside the with-block it never executes
+        when the exception is raised (false-green bug fixed per fix plan p.29).
+        The approval is NOT consumed before apply here (no prior successful
+        apply), so the refusal comes from the diff-hash check, not token_replay.
+        """
+        manifest = _make_manifest()
         registry = _make_registry(self.tmpdir)
         policy = _make_tier2_policy(_make_briefing(self.tmpdir))
-        manifest = _make_manifest()
-        engine = StdDiffEngine()
         events = StdoutEventSink()
-        approval = registry.find_approval(result["approval_id"])
-        if approval:
-            approval["diff_hash"] = "sha256:" + "z" * 64
-            registry.append("token_record", dict(approval))
-            with self.assertRaises(StructuredError) as ctx:
-                core_write.apply_write(
-                    self.corpus, manifest, registry, policy, events, engine,
-                    approval_id=result["approval_id"], operator_id="op-user1",
-                    diff_input=diff_input)
-                self.assertEqual(ctx.exception.error_category, "approval_invalidated")
+        engine = StdDiffEngine()
+
+        record = _make_audit_record("aid-1")
+        registry.append("audit_record", record)
+        diff_text = _make_diff()
+        encoded = _encode_diff(diff_text)
+
+        prop_result = core_write.propose_write(
+            self.corpus, manifest, registry, policy, events, engine,
+            target_id="alpha", change_type="update", trust_level="safe",
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1",
+        )
+        approval_id = prop_result["approval_id"]
+        core_write.approve(registry, policy, events, root=self.corpus,
+                           approval_id=approval_id, operator_id="op-user1")
+
+        # Tamper with the approval's diff_hash in the registry.
+        approval = registry.find_approval(approval_id)
+        self.assertIsNotNone(approval, "approval must exist before tampering")
+        approval["diff_hash"] = "sha256:" + "z" * 64
+        registry.append("token_record", dict(approval))
+
+        with self.assertRaises(StructuredError) as ctx:
+            core_write.apply_write(
+                self.corpus, manifest, registry, policy, events, engine,
+                approval_id=approval_id, operator_id="op-user1",
+                diff_input=encoded)
+        self.assertEqual(ctx.exception.error_category, "approval_invalidated")
 
     def test_apply_write_expired_approval(self):
         manifest = _make_manifest()

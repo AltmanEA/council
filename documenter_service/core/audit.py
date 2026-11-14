@@ -534,8 +534,9 @@ def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
     if preview is not True:
         raise StructuredError(
             "tier_interlock",
-            "delegate() write intent is refused in the MVP build: the write "
-            "branch is structurally absent (mvp-contract §MVP boundary). "
+            "delegate() write intent is refused: the write branch is "
+            "dormant behind the dual interlock (policy gate + Operator "
+            "Surface unbuilt, mvp-contract §MVP boundary, ADR-013). "
             "Invoke with preview: true.")
     _check_budget(deadline, sync_latency_budget_ms)
 

@@ -14,8 +14,10 @@ fail-closed behavior are unit-testable without a filesystem.
 | EventSink       | Emit       | Structured JSON to stdout                        |
 
 MVP note: WorkerPort has NO functioning adapter (worker_stub raises the tier
-interlock); intent_record persistence is reserved (mvp-data-models §1) and is
-declared here as a constant only, never written.
+interlock — the Layer 1 worker is unbuilt); intent_record persistence lives in
+the dormant Tier 2+ write branch (mvp-data-models §1): records are appended by
+apply/reconcile only when the branch is policy-activated (ADR-013), while the
+Tier 0/1 read-only surface never writes them.
 """
 from __future__ import annotations
 
