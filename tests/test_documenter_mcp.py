@@ -666,21 +666,42 @@ class TestMCPApprove(unittest.TestCase):
 
     def test_approve_unknown_id(self):
         """approve with unknown id (env COUNCIL_OPERATOR_ID set) → isError audit_mismatch."""
-        responses, _, rc = _run_mcp(
-            ["--root", FIXTURE_CORPUS],
-            [{"jsonrpc": "2.0", "id": 91,
-              "method": "tools/call",
-              "params": {"name": "approve",
-                         "arguments": {"approval_id": "app-unknown-xyz"}}}],
-            env_extra={"COUNCIL_OPERATOR_ID": "op-test-approver"},
-        )
-        self.assertEqual(rc, 0)
-        self.assertEqual(len(responses), 1)
-        resp = responses[0]
-        self.assertTrue(resp["result"].get("isError"),
-                        "Expected isError=true for unknown approval_id")
-        error_data = json.loads(resp["result"]["content"][0]["text"])
-        self.assertEqual(error_data["error_category"], "audit_mismatch")
+        setup = _setup_approve_mcp_test()
+        try:
+            responses, _, rc = _run_mcp(
+                ["--root", FIXTURE_CORPUS],
+                [{"jsonrpc": "2.0", "id": 91,
+                  "method": "tools/call",
+                  "params": {"name": "approve",
+                             "arguments": {"approval_id": "app-unknown-xyz"}}}],
+                env_extra={"COUNCIL_OPERATOR_ID": "op-test-approver",
+                           "DOCUMENTER_POLICY_PATH": setup["policy_path"],
+                           "DOCUMENTER_DATA_DIR": setup["data_dir"]},
+            )
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(responses), 1)
+            resp = responses[0]
+            self.assertTrue(resp["result"].get("isError"),
+                            "Expected isError=true for unknown approval_id")
+            error_data = json.loads(resp["result"]["content"][0]["text"])
+            self.assertEqual(error_data["error_category"], "audit_mismatch")
+        finally:
+            # Clean up temporary policy and data dirs (shutil-safe).
+            for d in [os.path.dirname(setup["policy_path"]),
+                      os.path.dirname(setup["data_dir"])]:
+                shutil.rmtree(d, ignore_errors=True)
+            # Remove briefing and sentinel created in the shared fixture.
+            for p in setup["created_paths"]:
+                try:
+                    os.remove(p)
+                except FileNotFoundError:
+                    pass
+            # Remove the documenter directory if it's now empty.
+            sentinel_dir = os.path.join(FIXTURE_CORPUS, "documenter")
+            try:
+                os.rmdir(sentinel_dir)
+            except OSError:
+                pass  # not empty or already gone
 
     def test_approve_operator_id_param_ignored(self):
         """approve with operator_id param → additionalProperties false in schema,
@@ -688,28 +709,46 @@ class TestMCPApprove(unittest.TestCase):
         Verify isError is false path for known approval (but approval doesn't exist
         so it's audit_mismatch; the key is that env ingress still works).
         """
-        # Send a request with extra operator_id param (should be ignored).
-        # Since no such approval exists, we still get audit_mismatch.
-        # The point is the env-based operator_id takes precedence.
-        responses, _, rc = _run_mcp(
-            ["--root", FIXTURE_CORPUS],
-            [{"jsonrpc": "2.0", "id": 92,
-              "method": "tools/call",
-              "params": {"name": "approve",
-                         "arguments": {
-                             "approval_id": "app-unknown",
-                             "operator_id": "op-ignored",
-                         }}}],
-            env_extra={"COUNCIL_OPERATOR_ID": "op-env-approver"},
-        )
-        self.assertEqual(rc, 0)
-        self.assertEqual(len(responses), 1)
-        resp = responses[0]
-        # Still isError=true because approval doesn't exist, but operator_id
-        # from env was used (not client param).
-        self.assertTrue(resp["result"].get("isError"))
-        error_data = json.loads(resp["result"]["content"][0]["text"])
-        self.assertEqual(error_data["error_category"], "audit_mismatch")
+        setup = _setup_approve_mcp_test()
+        try:
+            responses, _, rc = _run_mcp(
+                ["--root", FIXTURE_CORPUS],
+                [{"jsonrpc": "2.0", "id": 92,
+                  "method": "tools/call",
+                  "params": {"name": "approve",
+                             "arguments": {
+                                 "approval_id": "app-unknown",
+                                 "operator_id": "op-ignored",
+                             }}}],
+                env_extra={"COUNCIL_OPERATOR_ID": "op-env-approver",
+                           "DOCUMENTER_POLICY_PATH": setup["policy_path"],
+                           "DOCUMENTER_DATA_DIR": setup["data_dir"]},
+            )
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(responses), 1)
+            resp = responses[0]
+            # Still isError=true because approval doesn't exist, but operator_id
+            # from env was used (not client param).
+            self.assertTrue(resp["result"].get("isError"))
+            error_data = json.loads(resp["result"]["content"][0]["text"])
+            self.assertEqual(error_data["error_category"], "audit_mismatch")
+        finally:
+            # Clean up temporary policy and data dirs (shutil-safe).
+            for d in [os.path.dirname(setup["policy_path"]),
+                      os.path.dirname(setup["data_dir"])]:
+                shutil.rmtree(d, ignore_errors=True)
+            # Remove briefing and sentinel created in the shared fixture.
+            for p in setup["created_paths"]:
+                try:
+                    os.remove(p)
+                except FileNotFoundError:
+                    pass
+            # Remove the documenter directory if it's now empty.
+            sentinel_dir = os.path.join(FIXTURE_CORPUS, "documenter")
+            try:
+                os.rmdir(sentinel_dir)
+            except OSError:
+                pass  # not empty or already gone
 
 
 # ---------------------------------------------------------------------------
@@ -807,6 +846,67 @@ class TestMCPOverrideGate(unittest.TestCase):
         self.assertTrue(resp["result"].get("isError"))
         error_data = json.loads(resp["result"]["content"][0]["text"])
         self.assertEqual(error_data["error_category"], "tier_interlock")
+
+
+# ---------------------------------------------------------------------------
+# MCP approve helper: creates a Tier 2 policy for tests that need to bypass
+# the default policy (which has no policy → tier_interlock).
+# ---------------------------------------------------------------------------
+
+_TIER2_POLICY_FIELDS = {
+    "version": "0.2.0",
+    "active_tier": 2,
+    "allowed_operations": [
+        {"change_type": "update", "targets": [], "trust_level": "safe"},
+        {"change_type": "update", "targets": [], "trust_level": "review"},
+    ],
+    "briefing_ref": "_briefing_for_approve_test.md",
+    "audit_freshness": 30,
+    "approval_expiry_window": 30,
+    "rescan_batch_ceiling": 50,
+    "max_diff_bytes": 524288,
+    "sync_latency_budget_ms": 30000,
+    "lock_wait_timeout": 30,
+    "operator_approval_timeout": 300,
+    "notification_mode": "inline",
+    "glossary_enforcement": "draft",
+    "glossary_staleness_days": 30,
+}
+
+
+def _setup_approve_mcp_test():
+    """Create a Tier 2 policy + briefing + sentinel under FIXTURE_CORPUS.
+
+    Returns a dict with:
+        policy_path    — absolute path to the policy file (in temp dir)
+        data_dir       — absolute path to a new temp data dir (in temp dir)
+        created_paths  — list of absolute paths created under FIXTURE_CORPUS
+                         (briefing file, sentinel file); the caller MUST
+                         delete these in a finally block so the shared
+                         fixture remains clean after every test.
+    """
+    import yaml
+    policy_dir = tempfile.mkdtemp()
+    policy_path = os.path.join(policy_dir, "pol.yml")
+    with open(policy_path, "w") as f:
+        yaml.safe_dump({"documenter_policy": _TIER2_POLICY_FIELDS}, f)
+
+    briefing_path = os.path.join(FIXTURE_CORPUS,
+                                 _TIER2_POLICY_FIELDS["briefing_ref"])
+    with open(briefing_path, "w") as f:
+        f.write("# Briefing for approve tests\n\nAuthorised operational context.\n")
+
+    sentinel_dir = os.path.join(FIXTURE_CORPUS, "documenter")
+    os.makedirs(sentinel_dir, exist_ok=True)
+    sentinel_path = os.path.join(sentinel_dir, ".operator_surface_ready")
+    with open(sentinel_path, "w"):
+        pass
+
+    data_dir = os.path.join(tempfile.mkdtemp(), "state")
+
+    return {"policy_path": policy_path,
+            "data_dir": data_dir,
+            "created_paths": [briefing_path, sentinel_path]}
 
 
 # ---------------------------------------------------------------------------

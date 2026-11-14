@@ -816,6 +816,9 @@ class TestApprove(unittest.TestCase):
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
+        self.root = os.path.join(self.tmpdir, "corpus")
+        os.makedirs(self.root, exist_ok=True)
+        _enable_operator_surface(self.root)
         self.registry = _make_registry(self.tmpdir)
         self.policy = _make_tier2_policy(_make_briefing(self.tmpdir))
         self.events = StdoutEventSink()
@@ -839,6 +842,7 @@ class TestApprove(unittest.TestCase):
         self._issue_approval(approval_id, proposer_id="op-other")
         result = core_write.approve(
             self.registry, self.policy, self.events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         self.assertEqual(result["decision"], "approved")
         self.assertEqual(result["next_action"], "await_approval")
@@ -850,6 +854,7 @@ class TestApprove(unittest.TestCase):
         with self.assertRaises(StructuredError) as ctx:
             core_write.approve(
                 self.registry, self.policy, self.events,
+                root=self.root,
                 approval_id=approval_id, operator_id="op-user1")
         self.assertEqual(ctx.exception.error_category, "gate_failure")
         self.assertIn("self-approval denied", ctx.exception.message)
@@ -858,6 +863,7 @@ class TestApprove(unittest.TestCase):
         with self.assertRaises(StructuredError) as ctx:
             core_write.approve(
                 self.registry, self.policy, self.events,
+                root=self.root,
                 approval_id="nonexistent", operator_id="op-user1")
         self.assertEqual(ctx.exception.error_category, "audit_mismatch")
 
@@ -867,6 +873,7 @@ class TestApprove(unittest.TestCase):
         with self.assertRaises(StructuredError) as ctx:
             core_write.approve(
                 self.registry, self.policy, self.events,
+                root=self.root,
                 approval_id=approval_id, operator_id="invalid")
         self.assertEqual(ctx.exception.error_category, "unknown")
 
@@ -875,10 +882,12 @@ class TestApprove(unittest.TestCase):
         self._issue_approval(approval_id, proposer_id="op-other")
         core_write.approve(
             self.registry, self.policy, self.events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         with self.assertRaises(StructuredError) as ctx:
             core_write.approve(
                 self.registry, self.policy, self.events,
+                root=self.root,
                 approval_id=approval_id, operator_id="op-user2")
         self.assertEqual(ctx.exception.error_category, "token_replay")
 
@@ -889,6 +898,7 @@ class TestApprove(unittest.TestCase):
         events = StdoutEventSink(stream)
         core_write.approve(
             self.registry, self.policy, events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         stream.seek(0)
         event_line = stream.readline().strip()
@@ -902,6 +912,7 @@ class TestApprove(unittest.TestCase):
         self._issue_approval(approval_id, proposer_id=None)
         result = core_write.approve(
             self.registry, self.policy, self.events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         self.assertEqual(result["decision"], "approved")
 
@@ -915,6 +926,7 @@ class TestApprove(unittest.TestCase):
         with self.assertRaises(StructuredError) as ctx:
             core_write.approve(
                 self.registry, self.policy, self.events,
+                root=self.root,
                 approval_id=approval_id, operator_id="op-user1")
         self.assertEqual(ctx.exception.error_category, "approval_expired")
 
@@ -929,6 +941,7 @@ class TestApprove(unittest.TestCase):
         with self.assertRaises(StructuredError) as ctx:
             core_write.approve(
                 self.registry, policy, self.events,
+                root=self.root,
                 approval_id=approval_id, operator_id="op-user1")
         self.assertEqual(ctx.exception.error_category, "approval_expired")
 
@@ -937,6 +950,7 @@ class TestApprove(unittest.TestCase):
         self._issue_approval(approval_id, proposer_id="op-other")
         core_write.approve(
             self.registry, self.policy, self.events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         approval = self.registry.find_approval(approval_id)
         self.assertEqual(approval["decision"], "approved")
@@ -956,6 +970,7 @@ class TestApprove(unittest.TestCase):
         self._issue_approval(approval_id, proposer_id="op-other")
         result = core_write.approve(
             self.registry, self.policy, self.events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         self.assertEqual(result["next_action"], "await_approval")
 
@@ -967,6 +982,7 @@ class TestApprove(unittest.TestCase):
         events = StdoutEventSink(stream)
         core_write.approve(
             self.registry, self.policy, events,
+            root=self.root,
             approval_id=approval_id, operator_id="op-user1")
         stream.seek(0)
         event = json.loads(stream.readline().strip())
@@ -1026,6 +1042,7 @@ class TestApplyWrite(unittest.TestCase):
         # approve
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         # apply_write
@@ -1148,6 +1165,7 @@ class TestApplyWrite(unittest.TestCase):
 
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         # Use after_intent seam to tamper with staged file before hash check
@@ -1202,6 +1220,7 @@ class TestApplyWrite(unittest.TestCase):
             diff_input=encoded, audit_id="aid-1")
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         core_write.apply_write(
@@ -1231,6 +1250,7 @@ class TestApplyWrite(unittest.TestCase):
             diff_input=encoded, audit_id="aid-1")
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         hit = []
@@ -1259,6 +1279,7 @@ class TestApplyWrite(unittest.TestCase):
             diff_input=encoded, audit_id="aid-1")
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         hit = []
@@ -1287,6 +1308,7 @@ class TestApplyWrite(unittest.TestCase):
             diff_input=encoded, audit_id="aid-1")
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         hit = []

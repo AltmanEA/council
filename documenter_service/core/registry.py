@@ -31,6 +31,7 @@ __all__ = [
     "CHECKPOINT_RECORD",
     "INTENT_RECORD",
     "APPROVAL_ID",
+    "SCAN_CURSOR",
     "OPERATOR_ID_RE",
     "canonical_json",
     "record_hash",
@@ -51,6 +52,7 @@ TOKEN_RECORD = "token_record"
 INTENT_RECORD = "intent_record"
 CHECKPOINT_RECORD = "checkpoint_record"
 APPROVAL_ID = "approval_id"  #: token_type value for approval tokens (mvp-data-models §1)
+SCAN_CURSOR = "scan_cursor"  #: token_type value for scan cursors (mvp-data-models §1)
 
 #: Closed enum of envelope record_type values (mvp-data-models §1). intent_record
 #: is a reserved Tier 2+ schema: the type is recognized on READ (a foreign

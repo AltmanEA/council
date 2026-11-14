@@ -321,6 +321,7 @@ class Service:
         """
         policy, _ = self.load_policy_safe()
         return core_write.approve(self.registry, policy, self.events,
+                                  root=self.root,
                                   approval_id=approval_id, operator_id=operator_id)
 
     def apply(self, approval_id: str, operator_id: str, diff_input: str,

@@ -304,6 +304,19 @@ class JsonlAuditRegistry(AuditRegistry):
                 found = rec["data"]
         return found
 
+    def _latest_token_typed(self, token_value: str, token_type: str):
+        """Latest token_record data for token_value, only when its token_type
+        matches token_type (defence: approval ids can never be consumed as
+        scan cursors and vice versa)."""
+        records, _ = self.read_all()
+        found = None
+        for rec in records:
+            if rec["record_type"] == reg.TOKEN_RECORD and \
+                    rec["data"].get("token_value") == token_value and \
+                    rec["data"].get("token_type") == token_type:
+                found = rec["data"]
+        return found
+
     def consume_token(self, token_value: str, target_id: str,
                       audit_id: str | None = None) -> dict:
         """Validate + single-use consume a scan_cursor; returns the token data.
@@ -318,8 +331,17 @@ class JsonlAuditRegistry(AuditRegistry):
         1-3 semantics). Consumed replay → token_replay. Consumption is
         recorded as a NEW token_record (append-only: records are never
         rewritten in place).
+
+        A token_value that exists with a different token_type (e.g. an approval
+        id) is rejected as audit_mismatch: tokens are type-checked on
+        consumption.
         """
-        token = self._latest_token(token_value)
+        token = self._latest_token_typed(token_value, reg.SCAN_CURSOR)
+        if token is None and self._latest_token(token_value) is not None:
+            raise StructuredError(
+                "audit_mismatch",
+                f"token {token_value!r} exists but is not a scan_cursor — "
+                "approval ids cannot resume scans")
         if token is None:
             raise StructuredError(
                 "audit_mismatch",

@@ -327,6 +327,7 @@ def approve(
     policy,
     events: EventSink,
     *,
+    root,
     approval_id: str,
     operator_id: str,
 ) -> dict:
@@ -334,17 +335,18 @@ def approve(
 
     Steps (per mvp-contract §4 / operator-surface §Documenter Integration):
       1. operator_id_valid → else StructuredError("unknown").
-      2. find_approval → None → StructuredError("audit_mismatch").
-      3. expired → StructuredError("approval_expired", next_action="preview_denied").
+      2. check_tier2_authorized(policy, root) → tier_interlock (ADR-013).
+      3. find_approval → None → StructuredError("audit_mismatch").
+      4. expired → StructuredError("approval_expired", next_action="preview_denied").
          (Approval expiry ≠ audit staleness; "preview_denied" tells the operator
          to re-propose.  "rerun_audit" is reserved for audit-level staleness.)
-      4. self-approval check: if proposer_id == operator_id →
+      5. self-approval check: if proposer_id == operator_id →
          StructuredError("gate_failure", "self-approval denied").
          (proposer_id is None → allowed: unattributed proposal.)
-      5. resolve_approval(approval_id, "approved", operator_id) → raises
+      6. resolve_approval(approval_id, "approved", operator_id) → raises
          token_replay if already resolved.
-      6. emit event documenter.approval.
-      7. Return {approval_id, decision, next_action="await_approval"}.
+      7. emit event documenter.approval.
+      8. Return {approval_id, decision, next_action="await_approval"}.
          (Write is still pending application; the operator re-invokes
          delegate(preview=False, approval_id=...) to apply.)
     """
@@ -355,14 +357,19 @@ def approve(
             f"malformed operator_id {operator_id!r} — "
             "expected format ^op-[a-z0-9][a-z0-9-]{{2,63}}$")
 
-    # 2. Find approval
+    # 2. Tier 2+ authorization (ADR-013 dual interlock) — before any
+    # registry lookup, so Tier 0 yields tier_interlock without touching
+    # approval state.
+    check_tier2_authorized(policy, root)
+
+    # 3. Find approval
     approval = registry.find_approval(approval_id)
     if approval is None:
         raise StructuredError(
             "audit_mismatch",
             f"approval_id {approval_id!r} was not issued by this registry")
 
-    # 3. Expired check (MUST come before resolve_approval)
+    # 4. Expired check (MUST come before resolve_approval)
     expiry_min = (int(policy.get("approval_expiry_window")) if policy else 30)
     from ..core.registry import approval_is_expired
     if approval_is_expired(approval, registry.now(), expiry_min):
@@ -372,7 +379,7 @@ def approve(
             f"(window {expiry_min} min) — re-propose with delegate(preview=False)",
             next_action="preview_denied")
 
-    # 4. Self-approval check
+    # 5. Self-approval check
     proposer = approval.get("proposer_id")
     if proposer is not None and proposer == operator_id:
         raise StructuredError(
@@ -381,11 +388,11 @@ def approve(
             "actor (operator-surface §Documenter Integration)")
     # proposer_id is None → allowed: unattributed proposal
 
-    # 5. Resolve approval (single-use — raises token_replay if already resolved)
+    # 6. Resolve approval (single-use — raises token_replay if already resolved)
     resolved = registry.resolve_approval(approval_id, decision="approved",
                                          operator_id=operator_id)
 
-    # 6. Emit event
+    # 7. Emit event
     diff_hash = approval.get("diff_hash", "")
     target_id = approval.get("bound_to", {}).get("target_id", "")
     events.emit("documenter.approval", {
@@ -396,7 +403,7 @@ def approve(
         "decision": "approved",
     })
 
-    # 7. Return — write still pending application
+    # 8. Return — write still pending application
     return {
         "approval_id": approval_id,
         "decision": "approved",
@@ -425,6 +432,9 @@ def apply_write(
     changeset: list[dict] | None = None,
 ) -> dict:
     """Apply an approved write to the target file (mvp-contract §2.2).
+
+    The first check is check_tier2_authorized(policy, root) -> tier_interlock
+    (ADR-013); it precedes the sync-latency budget check.
 
     When *changeset* is None or empty the legacy single-file path is used
     (intent_<approval_id>.json, per_file_sha256, etc.).  When *changeset* is
@@ -456,6 +466,11 @@ def apply_write(
     dict with keys: applied, target_id, diff_hash, approval_id, next_action.
     For changeset path additionally includes ``changeset_paths``.
     """
+    # 00. Tier 2+ authorization (ADR-013 dual interlock) — MUST run before
+    # every other check so Tier 0 always yields tier_interlock, never
+    # gate_failure from the budget check.
+    check_tier2_authorized(policy, root)
+
     # 0. sync_latency_budget_ms check (mvp-interfaces §5)
     _check_budget(sync_latency_budget_ms)
 

@@ -251,7 +251,7 @@ class TestCLIFullLifecycle(unittest.TestCase):
 
             # Step 3: approve with different operator
             resp, rc = _run_cli([
-                "--approve",
+                "--approve", "--root", corpus,
                 "--approval-id", approval_id,
                 "--json"],
                 env_extra={
@@ -333,7 +333,7 @@ class TestCLISelfApproval(unittest.TestCase):
 
             # approve with same operator → gate_failure self-approval
             resp, rc = _run_cli([
-                "--approve", "--approval-id", approval_id,
+                "--approve", "--root", corpus, "--approval-id", approval_id,
                 "--json"],
                 env_extra={
                     "DOCUMENTER_POLICY_PATH": policy_path,

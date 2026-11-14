@@ -233,6 +233,7 @@ class TestChangesetWrite(unittest.TestCase):
 
         # Approve
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         # Apply with the SAME changeset
@@ -332,6 +333,7 @@ class TestChangesetWrite(unittest.TestCase):
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         # Tamper: modify the changelog file on disk
@@ -388,6 +390,7 @@ class TestChangesetWrite(unittest.TestCase):
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         # Apply with ALTERED content (different base64 → different hash)
@@ -460,6 +463,7 @@ class TestChangesetWrite(unittest.TestCase):
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         # Apply WITHOUT changeset
@@ -508,6 +512,7 @@ class TestChangesetWrite(unittest.TestCase):
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         crash_hit = []
@@ -583,6 +588,7 @@ class TestChangesetWrite(unittest.TestCase):
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
+                           root=self.corpus,
                            approval_id=approval_id, operator_id="op-user1")
 
         result = core_write.apply_write(

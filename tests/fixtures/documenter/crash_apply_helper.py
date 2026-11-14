@@ -190,6 +190,7 @@ def main():
     # approve
     core_write.approve(
         registry, policy, events,
+        root=corpus,
         approval_id=approval_id, operator_id="op-approver",
     )
 
