@@ -4,19 +4,25 @@ File: ``<data_dir>/hashes.json`` (default ``documenter/hashes.json``).
 Managed exclusively by Documenter; hidden from operator.
 
 Provides optimistic concurrency control via per-file SHA-256 snapshot
-tokens.  History entries form an append-only audit trail.
+tokens.  History entries form an append-only audit trail that accumulates
+indefinitely — each time a file's hash changes, the previous hash (with
+timestamp) is appended; this never truncates.
 
 Self-healing (chosen combination: atomic write + .bak rotation):
   1. Before writing, copy the existing hashes.json → hashes.json.bak
   2. Write to a temp file, fsync, then os.rename → hashes.json (atomic)
   3. fsync the directory to ensure the rename is durable
 
+Load fallback: if hashes.json is missing, has invalid JSON, or fails
+structural validation, hashes.json.bak is tried next.  If both fail,
+an empty structure is returned (cache miss).
+
 Cold-start integrity: on any parse/structure error the store is treated as a
 cache miss — rebuilt from scratch (ADR-010: rebuildable cache).
 
 AGENTS.md §8: tool-prose contract must match implementation; this module's
-behaviour (atomic write + .bak + rebuild-on-corruption) is the canonical
-specification.
+behaviour (atomic write + .bak + rebuild-on-corruption + append-only
+history) is the canonical specification.
 """
 from __future__ import annotations
 
@@ -117,20 +123,33 @@ class HashStore:
         os.makedirs(self.data_dir, exist_ok=True)
 
     def load(self) -> dict:
-        """Read and validate ``hashes.json``.
+        """Read and validate ``hashes.json`` with .bak fallback.
 
-        Returns a fresh empty structure on any error: missing file,
-        unparsable JSON, structural mismatch, or corrupted entries.
+        Primary: read ``hashes.json`` and validate it.
+        Fallback: when the primary file is missing, has unparsable JSON,
+        or fails structural validation, but ``hashes.json.bak`` exists
+        and is valid → return the backup data.
+        Fail-safe: both files broken → return empty structure.
         """
-        if not os.path.isfile(self._path):
-            return {"version": 1, "entries": {}}
-        try:
-            with open(self._path, encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (json.JSONDecodeError, OSError):
-            return {"version": 1, "entries": {}}
-        if _validate_entry(data):
-            return data
+        if os.path.isfile(self._path):
+            try:
+                with open(self._path, encoding="utf-8") as fh:
+                    data = json.load(fh)
+                if _validate_entry(data):
+                    return data
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        # Primary failed: try .bak fallback
+        if os.path.isfile(self._bak_path):
+            try:
+                with open(self._bak_path, encoding="utf-8") as fh:
+                    bak_data = json.load(fh)
+                if _validate_entry(bak_data):
+                    return bak_data
+            except (json.JSONDecodeError, OSError):
+                pass
+
         return {"version": 1, "entries": {}}
 
     def save(self, data: dict) -> None:
@@ -197,8 +216,9 @@ class HashStore:
             and changelog (if it exists on disk).
           - The entry's path key is the primary file's ``path``.
           - ``last_hash`` is the hash of the primary file.
-          - ``history`` is built from previous entries: old last_hash is
-            preserved (when hash changed) or set to empty (new path).
+          - ``history`` is built from previous entries: the old entry's
+            existing history is preserved (append-only, indefinite), then
+            the old last_hash is appended.
 
         Calls ``save()`` before returning.
 
@@ -221,15 +241,21 @@ class HashStore:
             main_path = entry["path"]
             history: list = []
 
-            # Check if we have a previous entry for this path
+            # Check if we have a previous entry for this path; preserve
+            # existing history (append-only, indefinite accumulation) and
+            # append the old last_hash.
             if main_path in old_entries:
-                old_last_hash = old_entries[main_path].get("last_hash")
+                old_entry = old_entries[main_path]
+                # Inherit existing history (if any — may come from a
+                # .bak fallback where load() returned stale data).
+                existing_history: list = list(old_entry.get("history") or [])
+                old_last_hash = old_entry.get("last_hash")
                 if old_last_hash:
-                    history.append({
+                    history = existing_history + [{
                         "hash": old_last_hash,
-                        "timestamp": old_entries[main_path].get(
+                        "timestamp": old_entry.get(
                             "last_modified", _utc_now()),
-                    })
+                    }]
 
             now = self._clock()
 
@@ -257,8 +283,13 @@ class HashStore:
         For each target_id (looked up in manifest):
           - Compute current hash for the primary file (and RU / changelog).
           - If the hash hasn't changed since the last recorded snapshot → skip.
-          - If hash changed (or entry is new) → append old last_hash to
-            history, update last_hash and last_modified.
+          - If hash changed (or entry is new) → preserve existing history
+            (append-only, indefinite), append old last_hash, update
+            last_hash and last_modified.
+
+        History is append-only and accumulates indefinitely: every time a
+        file's hash changes, the previous hash (with its timestamp) is
+        appended to the history list. This never truncates.
 
         Parameters
         ----------
@@ -287,13 +318,16 @@ class HashStore:
                 # No change — do NOT update last_modified or append to history
                 continue
 
-            # Hash changed or entry is new:
-            history: list = []
-            if old_entry is not None and old_entry.get("last_hash"):
-                history.append({
+            # Hash changed or entry is new: preserve existing history
+            # (append-only, indefinite accumulation), then add the old hash.
+            existing_history: list = list(old_entry.get("history") or []) if old_entry else []
+            if old_entry is not None:
+                history = existing_history + [{
                     "hash": old_entry["last_hash"],
                     "timestamp": old_entry.get("last_modified", _utc_now()),
-                })
+                }]
+            else:
+                history = existing_history  # new entry — no prior hash to record
 
             data["entries"][main_path] = {
                 "last_hash": current_hash,

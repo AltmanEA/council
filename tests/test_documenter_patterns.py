@@ -187,6 +187,41 @@ def _encode_diff(diff_text):
     return base64.b64encode(diff_text.encode("utf-8")).decode("ascii")
 
 
+def _approve_pattern_diff(registry, diff_hash, pattern_id,
+                          proposer_id="op-user1", resolved_by="op-user2",
+                          source_sha256=None, target_ids=None):
+    """Issue and resolve an out-of-band approval token for a pattern.
+
+    The token_value is a UUID (not the diff_hash) so that
+    _find_approved_token accepts it (token_value != diff_hash).
+    proposer_id != resolved_by so the module does NOT self-approve.
+    source_sha256 (optional) is the SHA-256 of the target file before
+    applying the diff — required for apply_write's OCC check.
+    target_ids (optional) overrides the default ["alpha"].
+    """
+    import uuid as _uuid
+    approval_id = str(_uuid.uuid4())
+    registry.issue_approval(
+        approval_id=approval_id,
+        target_ids=target_ids or ["alpha"],
+        diff_hash=diff_hash,
+        proposer_id=proposer_id,
+        audit_id="aid-1",
+    )
+    registry.resolve_approval(
+        approval_id=approval_id,
+        decision="approved",
+        operator_id=resolved_by,
+    )
+    # Set the pattern_id and source_sha256 on the approval.
+    approval = registry.find_approval(approval_id)
+    approval["pattern_id"] = pattern_id
+    if source_sha256 is not None:
+        approval["source_sha256"] = source_sha256
+    registry.append(reg.TOKEN_RECORD, dict(approval))
+    return approval
+
+
 class TestPatternMetric(unittest.TestCase):
     """Tests for pattern_metric — promotion metric over viewed diffs."""
 
@@ -497,7 +532,7 @@ class TestApplyPatternBatch(unittest.TestCase):
         return [{
             "target_id": target_id,
             "change_type": "update",
-            "trust_level": "safe",
+            "trust_level": "review",
             "diff_input": encoded,
             "audit_id": audit_id,
         }]
@@ -689,9 +724,13 @@ class TestApplyPatternBatch(unittest.TestCase):
         self.assertEqual(ctx.exception.error_category, "unknown")
 
     def test_happy_path_tier3_two_items_applied(self):
-        """2 items applied, digest applied_count==2, pattern_usage records appended."""
-        # Pre-seed 3 pattern_usage records so quarantine is exited (quarantine_n=3).
+        """2 items applied, digest applied_count==2, pattern_usage records appended.
+
+        Uses out-of-band approval tokens (not self-approval).
+        """
         from documenter_service.core.registry import TOKEN_RECORD
+
+        # Pre-seed 3 pattern_usage records so quarantine is exited (quarantine_n=3).
         for i in range(3):
             self.registry.append(TOKEN_RECORD, {
                 "token_type": "pattern_usage",
@@ -708,6 +747,30 @@ class TestApplyPatternBatch(unittest.TestCase):
             self.doc_template.format(name="Alpha", id="alpha"))
         beta_diff = _make_simple_diff(
             self.doc_template.format(name="Beta", id="beta"))
+
+        # Compute diff_hashes so we can issue out-of-band approval tokens.
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        beta_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(beta_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        beta_diff_hash = self.engine.diff_hash(beta_normalized)
+
+        # Compute source_sha256 for OCC verification in apply_write.
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as _f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(_f.read()).hexdigest()
+        with open(self.beta_path, "rb") as _f:
+            beta_source_sha = "sha256:" + _hashlib.sha256(_f.read()).hexdigest()
+
+        # Issue and resolve out-of-band approval tokens (proposer != resolver).
+        _approve_pattern_diff(self.registry, alpha_diff_hash, self.pattern_id,
+                              source_sha256=alpha_source_sha,
+                              target_ids=["alpha"])
+        _approve_pattern_diff(self.registry, beta_diff_hash, self.pattern_id,
+                              source_sha256=beta_source_sha,
+                              target_ids=["beta"])
 
         # The file_pattern "docs/en/*/index.md" covers both targets
         policy = self._make_tier3_policy_with_path()
@@ -769,6 +832,8 @@ class TestApplyPatternBatch(unittest.TestCase):
     def test_quarantine_first_n_require_approval(self):
         """Pre-seed 3 pattern_usage → quarantine exits immediately.
         Subsequent items apply directly (auto: True).
+
+        Uses out-of-band approval tokens instead of self-approval.
         """
         policy = Policy({
             "version": "0.2.0",
@@ -806,19 +871,30 @@ class TestApplyPatternBatch(unittest.TestCase):
                 "auto": True,
             })
 
-        # Helper that creates a diff based on CURRENT file content.
-        def make_versioned_proposal():
-            """Read current file, bump version, create proposal."""
-            with open(self.alpha_path) as f:
-                current = f.read()
+        # Helper that creates a diff based on CURRENT file content and
+        # issues an out-of-band approval token before calling apply.
+        import hashlib as _hashlib
+        def make_versioned_proposal_with_approval():
+            """Read current file, bump version, issue approval, create proposal."""
+            with open(self.alpha_path, "rb") as _f:
+                src_bytes = _f.read()
+            source_sha = "sha256:" + _hashlib.sha256(src_bytes).hexdigest()
+            current = src_bytes.decode("utf-8")
             diff_text = _make_simple_diff(current)
+            from documenter_service.adapters.diff_engine import decode_diff_input
+            normalized = self.engine.normalize(
+                decode_diff_input(_encode_diff(diff_text), 524288))
+            diff_hash = self.engine.diff_hash(normalized)
+            _approve_pattern_diff(self.registry, diff_hash, self.pattern_id,
+                                  source_sha256=source_sha,
+                                  target_ids=["alpha"])
             encoded = _encode_diff(diff_text)
             return [{"target_id": "alpha", "change_type": "update",
-                     "trust_level": "safe", "diff_input": encoded,
+                     "trust_level": "review", "diff_input": encoded,
                      "audit_id": "aid-1"}]
 
-        # Item 1: quarantine already exited → auto-apply.
-        proposals = make_versioned_proposal()
+        # Item 1: quarantine already exited → approve and auto-apply.
+        proposals = make_versioned_proposal_with_approval()
         result = apply_pattern_batch(
             self.corpus, self.manifest, self.registry, policy,
             self.events, self.engine,
@@ -834,8 +910,8 @@ class TestApplyPatternBatch(unittest.TestCase):
         with open(self.alpha_path) as f:
             self.assertIn("Version: 1.0.1", f.read())
 
-        # Item 2: still out of quarantine → apply.
-        proposals = make_versioned_proposal()
+        # Item 2: still out of quarantine → approve and apply.
+        proposals = make_versioned_proposal_with_approval()
         result = apply_pattern_batch(
             self.corpus, self.manifest, self.registry, policy,
             self.events, self.engine,
@@ -846,8 +922,8 @@ class TestApplyPatternBatch(unittest.TestCase):
         self.assertEqual(result["results"][0]["status"], "applied")
         self.assertFalse(result["quarantine_active"])
 
-        # Item 3: still out of quarantine → apply.
-        proposals = make_versioned_proposal()
+        # Item 3: still out of quarantine → approve and apply.
+        proposals = make_versioned_proposal_with_approval()
         result = apply_pattern_batch(
             self.corpus, self.manifest, self.registry, policy,
             self.events, self.engine,
@@ -861,8 +937,8 @@ class TestApplyPatternBatch(unittest.TestCase):
         self.assertFalse(
             check_quarantine(self.registry, self.pattern_id, quarantine_n=3))
 
-        # Item 4: still out of quarantine → apply.
-        proposals = make_versioned_proposal()
+        # Item 4: still out of quarantine → approve and apply.
+        proposals = make_versioned_proposal_with_approval()
         result = apply_pattern_batch(
             self.corpus, self.manifest, self.registry, policy,
             self.events, self.engine,
@@ -873,9 +949,13 @@ class TestApplyPatternBatch(unittest.TestCase):
         self.assertFalse(result["quarantine_active"])
 
     def test_per_item_failure_second_item(self):
-        """bad diff_input on second item → status failed, unknown; first still applied."""
-        # Pre-seed 3 pattern_usage records so quarantine is already exited.
+        """bad diff_input on second item → status failed, unknown; first still applied.
+
+        Uses out-of-band approval token for the first (valid) item.
+        """
         from documenter_service.core.registry import TOKEN_RECORD
+
+        # Pre-seed 3 pattern_usage records so quarantine is already exited.
         for i in range(3):
             self.registry.append(TOKEN_RECORD, {
                 "token_type": "pattern_usage",
@@ -887,19 +967,32 @@ class TestApplyPatternBatch(unittest.TestCase):
                 "auto": True,
             })
 
-        policy = self._make_tier3_policy_with_path()
-
         alpha_diff = _make_simple_diff(
             self.doc_template.format(name="Alpha", id="alpha"))
         beta_diff = _make_simple_diff(
             self.doc_template.format(name="Beta", id="beta"))
+
+        # Compute diff_hash for alpha so we can issue an approval token.
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as _f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(_f.read()).hexdigest()
+        _approve_pattern_diff(self.registry, alpha_diff_hash, self.pattern_id,
+                              source_sha256=alpha_source_sha,
+                              target_ids=["alpha"])
+
+        policy = self._make_tier3_policy_with_path()
 
         # Corrupt the second diff
         proposals = self._make_proposals(self.alpha_path, alpha_diff, "alpha")
         proposals.append({
             "target_id": "beta",
             "change_type": "update",
-            "trust_level": "safe",
+            "trust_level": "review",
             "diff_input": "!!NOT_BASE64!!",
             "audit_id": "aid-1",
         })
@@ -1069,3 +1162,378 @@ class TestServicePattern(unittest.TestCase):
         # Verify the approval record now has viewed=True
         approval = svc.registry.find_approval(approval_id)
         self.assertTrue(approval.get("viewed"))
+
+
+class TestNoSelfApprovalRegression(unittest.TestCase):
+    """Regression tests for п.14: Tier 3 pattern self-approval prevention.
+
+    Verifies:
+      (1) No approved token → await_approval
+      (2) Proposer == resolved_by → reject (self-approval blocked)
+      (3) Legitimate out-of-band token → applied
+      (4) Trust mismatch → failed
+      (5) Blocking high finding → failed
+      (6) batch_digest present when applied
+      (7) Replay with different token_value works (different approval → different token_value)
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.corpus = os.path.join(self.tmpdir, "corpus")
+        os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
+        _enable_operator_surface(self.corpus)
+        self.alpha_path = os.path.join(
+            self.corpus, "docs", "en", "alpha", "index.md")
+        self.doc_template = (
+            "# {name}\nid: {id}\nVersion: 1.0.0\nStatus: active\n"
+            "changelog-path: CHANGELOGS/{id}.changes.md\n"
+        )
+        with open(self.alpha_path, "w") as f:
+            f.write(self.doc_template.format(name="Alpha", id="alpha"))
+        _init_git_repo(self.corpus)
+        self.briefing_path = _make_briefing(self.tmpdir)
+        self.manifest = _make_manifest()
+        self.registry = _make_registry(self.tmpdir)
+        self.events = StdoutEventSink()
+        self.engine = StdDiffEngine()
+        self.pattern_id = "auto-bump-version"
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def _make_tier3_policy_with_path(self):
+        return Policy({
+            "version": "0.2.0",
+            "active_tier": 3,
+            "allowed_operations": [
+                {
+                    "type": "pattern",
+                    "pattern_id": self.pattern_id,
+                    "pattern_description": "Auto-bump version metadata",
+                    "match_criteria": {
+                        "change_type": "update",
+                        "file_pattern": "docs/en/*/index.md",
+                    },
+                    "trust_level": "review",
+                },
+            ],
+            "briefing_ref": self.briefing_path,
+            "audit_freshness": 30,
+            "approval_expiry_window": 30,
+            "max_diff_bytes": 524288,
+            "lock_wait_timeout": 30,
+        })
+
+    def _make_proposal(self, diff_text, target_id="alpha", trust_level="review"):
+        encoded = _encode_diff(diff_text)
+        return [{
+            "target_id": target_id,
+            "change_type": "update",
+            "trust_level": trust_level,
+            "diff_input": encoded,
+            "audit_id": "aid-1",
+        }]
+
+    def _issue_and_resolve(self, diff_hash, pattern_id, target_id,
+                           proposer_id, resolved_by, source_sha=None):
+        """Helper: issue an approval and resolve it with given props."""
+        import uuid as _uuid
+        approval_id = str(_uuid.uuid4())
+        self.registry.issue_approval(
+            approval_id=approval_id,
+            target_ids=[target_id],
+            diff_hash=diff_hash,
+            proposer_id=proposer_id,
+            audit_id="aid-1",
+        )
+        self.registry.resolve_approval(
+            approval_id=approval_id,
+            decision="approved",
+            operator_id=resolved_by,
+        )
+        approval = self.registry.find_approval(approval_id)
+        approval["pattern_id"] = pattern_id
+        if source_sha:
+            approval["source_sha256"] = source_sha
+        self.registry.append(reg.TOKEN_RECORD, dict(approval))
+        return approval
+
+    # -- Test (1): No approved token → await_approval -----------------------
+
+    def test_no_token_yields_await_approval(self):
+        """No out-of-band approval → status 'await_approval'."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+        proposals = self._make_proposal(alpha_diff)
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        self.assertEqual(result["results"][0]["status"], "await_approval")
+        self.assertEqual(result["applied_count"], 0)
+        self.assertIsNone(result["batch_digest"])
+
+    # -- Test (2): Proposer == resolver → reject (self-approval blocked) ----
+
+    def test_self_approval_rejected(self):
+        """proposer_id == resolved_by → token ignored → await_approval."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(f.read()).hexdigest()
+
+        # Self-approval: proposer == resolver
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user1", resolved_by="op-user1",
+            source_sha=alpha_source_sha)
+
+        proposals = self._make_proposal(alpha_diff)
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        self.assertEqual(result["results"][0]["status"], "await_approval")
+        self.assertEqual(result["applied_count"], 0)
+
+    # -- Test (3): Legitimate out-of-band token → applied -------------------
+
+    def test_legitimate_token_applies(self):
+        """proposer != resolver, token_value is UUID → applied."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(f.read()).hexdigest()
+
+        # Legitimate: different proposer and resolver
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user1", resolved_by="op-user2",
+            source_sha=alpha_source_sha)
+
+        proposals = self._make_proposal(alpha_diff)
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        self.assertEqual(result["results"][0]["status"], "applied")
+        self.assertEqual(result["applied_count"], 1)
+        self.assertIsNotNone(result["batch_digest"])
+        self.assertTrue(result["batch_digest"].startswith("sha256:"))
+
+        # Verify file changed on disk
+        with open(self.alpha_path) as f:
+            self.assertIn("Version: 1.0.1", f.read())
+
+    # -- Test (4): Trust mismatch → failed ----------------------------------
+
+    def test_trust_mismatch_fails(self):
+        """trust_level 'safe' below derived 'review' → status 'failed'."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(f.read()).hexdigest()
+
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user1", resolved_by="op-user2",
+            source_sha=alpha_source_sha)
+
+        # Use 'safe' trust_level (below derived 'review' for normative change)
+        proposals = self._make_proposal(alpha_diff, trust_level="safe")
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        self.assertEqual(result["results"][0]["status"], "failed")
+        self.assertEqual(result["results"][0]["error_category"], "trust_mismatch")
+
+    # -- Test (5): Blocking high finding → failed ---------------------------
+
+    def test_blocking_high_finding(self):
+        """High severity finding on target → status 'failed', 'blocking_finding'."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+
+        # Add a high-severity finding to the audit
+        self.registry.append(reg.AUDIT_RECORD, {
+            "audit_id": "aid-1",
+            "findings": [
+                {
+                    "subject_id": "alpha",
+                    "severity": "high",
+                    "message": "Blocking finding on alpha",
+                },
+            ],
+        })
+
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(f.read()).hexdigest()
+
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user1", resolved_by="op-user2",
+            source_sha=alpha_source_sha)
+
+        proposals = self._make_proposal(alpha_diff)
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        self.assertEqual(result["results"][0]["status"], "failed")
+        self.assertEqual(
+            result["results"][0]["error_category"], "blocking_finding")
+
+    # -- Test (6): batch_digest present when applied ------------------------
+
+    def test_batch_digest_present(self):
+        """When applied_count > 0, result contains batch_digest sha256:..."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(f.read()).hexdigest()
+
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user1", resolved_by="op-user2",
+            source_sha=alpha_source_sha)
+
+        proposals = self._make_proposal(alpha_diff)
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        self.assertIsNotNone(result["batch_digest"])
+        self.assertTrue(result["batch_digest"].startswith("sha256:"))
+        self.assertEqual(result["applied_count"], 1)
+
+    # -- Test (7): Replay with different token_value works ------------------
+
+    def test_replay_different_token_value(self):
+        """Two approvals with same diff_hash but different UUIDs → latest is used."""
+        policy = self._make_tier3_policy_with_path()
+        alpha_diff = _make_simple_diff(
+            self.doc_template.format(name="Alpha", id="alpha"))
+        from documenter_service.adapters.diff_engine import decode_diff_input
+        alpha_normalized = self.engine.normalize(
+            decode_diff_input(_encode_diff(alpha_diff), 524288))
+        alpha_diff_hash = self.engine.diff_hash(alpha_normalized)
+        import hashlib as _hashlib
+        with open(self.alpha_path, "rb") as f:
+            alpha_source_sha = "sha256:" + _hashlib.sha256(f.read()).hexdigest()
+
+        # Issue two different approvals with the SAME diff_hash
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user1", resolved_by="op-user2",
+            source_sha=alpha_source_sha)
+        # Issue second with different proposer/resolver
+        self._issue_and_resolve(
+            alpha_diff_hash, self.pattern_id, "alpha",
+            proposer_id="op-user3", resolved_by="op-user4",
+            source_sha=alpha_source_sha)
+
+        # Verify we have two distinct approvals by checking the registry
+        records, _ = self.registry.read_all()
+        approved_tokens = []
+        for rec in records:
+            if (rec["record_type"] == reg.TOKEN_RECORD
+                    and rec["data"].get("token_type") == reg.APPROVAL_ID
+                    and rec["data"].get("decision") == "approved"
+                    and rec["data"].get("diff_hash") == alpha_diff_hash):
+                approved_tokens.append(rec["data"]["token_value"])
+        self.assertGreaterEqual(len(approved_tokens), 2,
+                                "must have at least 2 distinct approvals")
+
+        proposals = self._make_proposal(alpha_diff)
+
+        result = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=proposals,
+            operator_id="op-user1",
+        )
+
+        # The first item should apply (an approved token is used)
+        self.assertEqual(result["results"][0]["status"], "applied")
+        self.assertEqual(result["applied_count"], 1)
+        # Restore the file so the SAME diff (same diff_hash, same source
+        # hash) is applicable again — the second run must consume the
+        # SECOND token (different token_value), not hit a permanent
+        # token_replay on the consumed first one.
+        with open(self.alpha_path, "w") as f:
+            f.write(self.doc_template.format(name="Alpha", id="alpha"))
+        result2 = apply_pattern_batch(
+            self.corpus, self.manifest, self.registry, policy,
+            self.events, self.engine,
+            pattern_id=self.pattern_id,
+            proposals=self._make_proposal(alpha_diff),
+            operator_id="op-user1",
+        )
+        # After the first apply, one approval was consumed but the second
+        # one remains available — so it applies again.
+        self.assertEqual(result2["results"][0]["status"], "applied")
+        self.assertEqual(result["applied_count"] + result2["applied_count"], 2)
+

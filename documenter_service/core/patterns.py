@@ -14,14 +14,21 @@ with StructuredError.
 
 Persisted via token_record with token_type == "pattern_usage":
   {token_type, token_value, bound_to, pattern_id, applied_at, approved_by}
+
+IMPORTANT: The module NEVER self-approves. An item is applied ONLY when the
+registry already holds an approved out-of-band token with matching diff_hash,
+pattern_id, and proposer_id != resolved_by. See mvp-contract §4 and
+operator-surface §Documenter Integration.
 """
 from __future__ import annotations
 
 import base64
 import fnmatch
 import hashlib
+import json
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 
 from .errors import StructuredError
@@ -32,6 +39,14 @@ __all__ = [
     "check_quarantine",
     "apply_pattern_batch",
 ]
+
+# MVP event types (subset of stdout_events MVP_EVENT_TYPES) — checked
+# before emitting; event emission is best-effort (digest stays in result
+# regardless).
+_MVP_EVENT_TYPES = ("documenter.issue", "precheck.passed", "precheck.failed",
+                    "notice.documenter_tier2_interlock",
+                    "documenter.approval", "documenter.override_gate",
+                    "documenter.apply")
 
 # -- Window constants --------------------------------------------------------
 
@@ -217,7 +232,8 @@ def apply_pattern_batch(
     Returns
     -------
     dict with keys: pattern_id, results (list), applied_count,
-    quarantine_active, next_action.
+    quarantine_active, next_action, batch_digest (sha256:... string when
+    applied_count > 0, else None).
 
     Batch-level guards (abort ALL with StructuredError):
       1. check_tier3_authorized(policy, root) → tier_interlock
@@ -227,7 +243,17 @@ def apply_pattern_batch(
       4. expires_at in the past → gate_failure
       5. invalid canonical_diff_template regex → StructuredError("unknown")
 
-    Per-item: StructuredError → results entry, file unchanged.
+    Per-item outcomes (no self-approval — the module NEVER writes its own
+    approvals):
+      - "applied" — an out-of-band approved token exists (issuer != resolver,
+        token_value is UUID, not diff_hash); write succeeds.
+      - "await_approval" — no approved token found; file unchanged.
+      - "failed" — trust_mismatch or blocking high/critical finding.
+
+    batch_digest: deterministic sha256:... over the set of applied
+    (target_id, diff_hash) pairs, computed after the loop. Emits
+    "documenter.apply" event if the schema permits (digest present in
+    result regardless).
     """
     from ..core.policy import check_tier3_authorized, match_pattern, PolicyError
     from ..adapters.lock import DelegateLock
@@ -307,13 +333,46 @@ def apply_pattern_batch(
     quarantine_active = check_quarantine(registry, pattern_id)
     next_action = "preview_only" if quarantine_active else "write_applied"
 
-    return {
+    # Batch digest: deterministic identifier for the set of applied items.
+    batch_digest = None
+    if applied_count > 0:
+        # Collect (target_id, diff_hash) for applied items.
+        # Build a map from proposal index → diff_hash for correlation.
+        diff_map = {}
+        for i, proposal in enumerate(proposals):
+            if i < len(results) and results[i]["status"] == "applied":
+                diff_map[i] = _get_proposal_diff_hash(proposal, engine)
+        pairs = sorted(
+            (results[i]["target_id"], diff_map[i])
+            for i in diff_map
+        )
+        _json_str = json.dumps(pairs, sort_keys=True)
+        _digest = hashlib.sha256(_json_str.encode("utf-8")).hexdigest()
+        batch_digest = "sha256:" + _digest
+
+    result = {
         "pattern_id": pattern_id,
         "results": results,
         "applied_count": applied_count,
         "quarantine_active": quarantine_active,
         "next_action": next_action,
+        "batch_digest": batch_digest,
     }
+
+    # Emit documenter.apply event if batch was applied (mvp-contract §4).
+    if batch_digest and "documenter.apply" in _MVP_EVENT_TYPES:
+        try:
+            events.emit("documenter.apply", {
+                "pattern_id": pattern_id,
+                "applied_count": applied_count,
+                "batch_digest": batch_digest,
+            })
+        except StructuredError:
+            # MVP EVENT_SCHEMAS may not accept documenter.apply yet —
+            # digest is still present in the result dict.
+            pass
+
+    return result
 
 
 # -- Internal helpers -------------------------------------------------------
@@ -328,6 +387,46 @@ def _find_pattern_entry(policy, pattern_id: str):
                 entry.get("pattern_id") == pattern_id:
             return entry
     return None
+
+
+def _check_blocking_findings(registry, target_id: str, audit_id: str | None):
+    """Raise when the governing audit has high/critical findings for target.
+
+    Checks the latest audit (when audit_id is None) or the specific audit
+    record (when audit_id is given). If any finding with severity "high" or
+    "critical" has subject_id == target_id, or is a corpus-level subject
+    covering the target → StructuredError("blocking_finding", ...).
+    """
+    audit = registry.find_audit(audit_id) if audit_id else registry.last_audit()
+    if audit is None:
+        return
+    findings = audit.get("findings", [])
+    for f in findings:
+        if f.get("severity") not in ("high", "critical"):
+            continue
+        subject = f.get("subject_id", "")
+        if subject == target_id:
+            raise StructuredError(
+                "blocking_finding",
+                f"blocking {f.get('severity', '')} finding on {target_id!r} "
+                "in governing audit",
+                next_action="resolve_finding")
+        # Corpus-level: subject is a file path covering the target.
+        if _is_corpus_level(subject, target_id):
+            raise StructuredError(
+                "blocking_finding",
+                f"blocking {f.get('severity', '')} corpus-level finding "
+                f"{subject!r} covers {target_id!r} in governing audit",
+                next_action="resolve_finding")
+
+
+def _is_corpus_level(subject_id, target_id):
+    """Return True when subject is a corpus-level path covering target."""
+    if "/" not in subject_id:
+        return False
+    if "/" not in target_id:
+        return True
+    return False
 
 
 def _check_expiry(entry, now_iso: str) -> None:
@@ -412,6 +511,19 @@ def _parse_canonical_template(entry):
     return None, None
 
 
+def _get_proposal_diff_hash(proposal, engine):
+    """Return the diff_hash for a proposal without modifying state."""
+    diff_input = proposal.get("diff_input", "")
+    diff_hash = proposal.get("diff_hash")
+    if diff_hash:
+        return diff_hash
+    # Compute from diff_input (same path as _apply_pattern_item).
+    from ..adapters.diff_engine import decode_diff_input
+    text = decode_diff_input(diff_input, 524288)
+    normalized = engine.normalize(text)
+    return engine.diff_hash(normalized)
+
+
 def _compute_diff_hash(engine, diff_input: str, max_diff_bytes: int = 524288):
     """Decode, normalize, hash — returns diff_hash string."""
     from ..adapters.diff_engine import decode_diff_input
@@ -438,11 +550,21 @@ def _apply_pattern_item(
         match_criteria.file_pattern covers the target path and change_type
         matches.
 
-    Successful apply appends pattern_usage {approved_by: operator_id, auto: False}
-    or {approved_by: None, auto: True} (auto from quarantine bypass).
+    Successful apply appends pattern_usage {approved_by: operator_id, auto: False}.
+
+    Per-item outcomes:
+      - "applied" — write succeeded (approved_by set to operator_id).
+      - "await_approval" — no out-of-band approved token found; file unchanged.
+      - "failed" — trust mismatch or blocking high/critical finding.
+
+    IMPORTANT: The module NEVER self-approves. An item is applied ONLY when
+    the registry already holds an approved token with matching diff_hash,
+    pattern_id, and proposer_id != resolved_by (i.e., issued by an operator,
+    not by the module itself). See mvp-contract §4 and operator-surface
+    §Documenter Integration.
     """
     from ..core.write import apply_write as _apply_write
-    from ..core.registry import TOKEN_RECORD
+    from ..core.registry import TOKEN_RECORD, APPROVAL_ID
 
     target_id = proposal["target_id"]
     change_type = proposal["change_type"]
@@ -461,6 +583,21 @@ def _apply_pattern_item(
 
     # Compute diff_hash from the diff_input.
     diff_hash, normalized = _compute_diff_hash(engine, diff_input)
+
+    # --- Trust level invariant check (mvp-contract §4) --------------------
+    try:
+        from ..core.trust import check_invariant as _check_invariant
+        _check_invariant(change_type, trust_level,
+                         diff_text=normalized.decode("utf-8"))
+    except StructuredError as exc:
+        if exc.error_category == "trust_mismatch":
+            return {
+                "target_id": target_id,
+                "status": "failed",
+                "error_category": "trust_mismatch",
+                "detail": exc.message,
+            }
+        raise
 
     # --- Canonical template check (content-bound: never class-only) -------
     if canonical_template[0] is not None:
@@ -492,66 +629,29 @@ def _apply_pattern_item(
                 next_action="preview_denied",
             )
 
-    # --- Quarantine: per-item approval check ----------------------------
-    if in_quarantine:
-        # Check if there is an already-resolved-approved token for this exact
-        # diff_hash in the registry.
-        has_approval = _has_approved_diff_hash(
-            registry, diff_hash, pattern_id
-        )
-        if not has_approval:
-            # No approved diff_hash → skip, file unchanged.
-            # Do NOT count towards usage (await_approval items don't consume).
-            return {
-                "target_id": target_id,
-                "status": "await_approval",
-            }
-        # Quarantine bypass: we have an approved diff_hash, so we proceed
-        # with auto: True (approved_by: None means auto-approved).
-        approved_by = None
-        auto = True
-    else:
-        approved_by = operator_id
-        auto = False
+    # --- Blocking high/critical findings check (mvp-contract §4) ---------
+    _check_blocking_findings(registry, target_id, audit_id)
+
+    # --- Approval gate: require out-of-band approved token ---------------
+    approved_token = _find_approved_token(registry, diff_hash, pattern_id)
+    if approved_token is None:
+        # No approved token → await_approval, file unchanged.
+        return {
+            "target_id": target_id,
+            "status": "await_approval",
+        }
+
+    # We have an approved token. Use its token_value as the approval_id for
+    # apply_write (the actual registry-issued approval ID, not diff_hash).
+    approval_id_for_apply = approved_token["token_value"]
+    approved_by = operator_id
+    auto = False
 
     # --- Apply the write ------------------------------------------------
-    # Out-of-quarantine items need an approval record for apply_write.
-    # Quarantine items that pass the diff_hash check already have one.
-    if not _has_approved_diff_hash(registry, diff_hash, pattern_id):
-        # Issue self-approval so apply_write finds it.
-        from ..core.registry import TOKEN_RECORD, APPROVAL_ID
-
-        # Read the target file to compute source_sha256 (OCC check).
-        try:
-            with open(target_path, "rb") as fh:
-                _src_bytes_for_sha = fh.read()
-        except OSError:
-            _src_bytes_for_sha = b""
-        source_sha256 = "sha256:" + hashlib.sha256(
-            _src_bytes_for_sha).hexdigest()
-
-        approval_data = {
-            "token_type": APPROVAL_ID,
-            "token_value": diff_hash,
-            "bound_to": {"audit_id": audit_id, "target_id": target_id},
-            "consumed": False,
-            "consumed_at": None,
-            "target_ids": [target_id],
-            "diff_hash": diff_hash,
-            "proposer_id": operator_id,
-            "created_at": registry.now(),
-            "decision": "approved",
-            "resolved_at": registry.now(),
-            "resolved_by": operator_id,
-            "pattern_id": pattern_id,
-            "source_sha256": source_sha256,
-        }
-        registry.append(TOKEN_RECORD, approval_data)
-
     try:
         result = _apply_write(
             root, manifest, registry, policy, events, engine,
-            approval_id=diff_hash,  # use diff_hash as approval_id (per-pattern)
+            approval_id=approval_id_for_apply,  # actual registry approval_id
             operator_id=operator_id,
             diff_input=diff_input,
             data_dir=registry.data_dir,
@@ -616,26 +716,72 @@ def _validate_canonical_diff(
         )
 
 
-def _has_approved_diff_hash(registry, diff_hash: str, pattern_id: str) -> bool:
-    """Check if there is a resolved-approved token for this diff_hash.
+def _find_approved_token(registry, diff_hash: str, pattern_id: str):
+    """Find the latest approved token matching (diff_hash, pattern_id).
 
-    Look through approval token_records: find one with the matching diff_hash
-    and a "pattern_id" field matching the given pattern_id, with decision==
-    "approved".
+    Returns the token's ``data`` dict when all conditions are met:
+      - token_type == APPROVAL_ID
+      - data["diff_hash"] == diff_hash
+      - data["pattern_id"] == pattern_id
+      - decision == "approved"
+      - proposer_id != resolved_by (both non-None) — prevents self-approved
+        tokens (module acting as both proposer and resolver).
+      - token_value != diff_hash — must be a UUID or similar out-of-band
+        value, NOT the diff_hash itself (diff_hash reuse → token_replay).
+      - consumed is not True — a token already spent by a previous apply
+        cannot be reused; a still-unconsumed duplicate approval may serve
+        the next application instead.
+
+    Returns None when no such token exists.
     """
     from ..core.registry import TOKEN_RECORD, APPROVAL_ID
 
     records, _ = registry.read_all()
+    # Pass 1: the registry is append-only — a consumed approval keeps its
+    # earlier unconsumed records.  Collect every token_value that was EVER
+    # marked consumed; those approvals are spent regardless of which record
+    # copy a later filter happens to see.
+    consumed_values = set()
+    for rec in records:
+        if rec["record_type"] != TOKEN_RECORD:
+            continue
+        data = rec["data"]
+        if data.get("token_type") == APPROVAL_ID and data.get("consumed"):
+            consumed_values.add(data.get("token_value"))
+
+    best = None
     for rec in records:
         if rec["record_type"] != TOKEN_RECORD:
             continue
         data = rec["data"]
         if data.get("token_type") != APPROVAL_ID:
             continue
+        if data.get("token_value") in consumed_values:
+            continue
         if data.get("diff_hash") != diff_hash:
             continue
         if data.get("pattern_id") != pattern_id:
             continue
-        if data.get("decision") == "approved":
-            return True
-    return False
+        if data.get("decision") != "approved":
+            continue
+        # Require proposer != resolver (prevents self-approval).
+        proposer = data.get("proposer_id")
+        resolver = data.get("resolved_by")
+        if proposer is None or resolver is None or proposer == resolver:
+            continue
+        # Must be out-of-band: token_value must NOT be the diff_hash.
+        if data.get("token_value") == diff_hash:
+            continue
+        best = data
+    return best
+
+
+def _has_approved_diff_hash(registry, diff_hash: str, pattern_id: str) -> bool:
+    """Check if there is a resolved-approved out-of-band token for this diff_hash.
+
+    Looks through approval token_records: finds one with the matching diff_hash
+    and a ``pattern_id`` field, where the token was issued by an operator
+    (proposer != resolver), and the token_value is a UUID (out-of-band),
+    NOT the diff_hash itself.
+    """
+    return _find_approved_token(registry, diff_hash, pattern_id) is not None
