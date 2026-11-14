@@ -35,7 +35,6 @@ from documenter_service.adapters.commit_protocol import (  # noqa: E402
     scan_intents,
     ordered_renames,
     _valid_intent,
-    _hash_matches,
 )
 from documenter_service.adapters.jsonl_registry import JsonlAuditRegistry  # noqa: E402
 from documenter_service.core.errors import StructuredError  # noqa: E402

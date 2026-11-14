@@ -46,11 +46,16 @@ SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def override_gate(root, data_dir, registry, policy, events, *, target_id,
-                  diff_hash, reason, operator_id, audit_id=None):
+                  diff_hash, reason, operator_id, audit_id=None,
+                  manifest=None):
     """Gate an override invocation (mvp-contract §2.2.6, §4).
 
     Bound to one (target_id, diff_hash); one consumption; emits event;
     unavailable for critical findings.
+
+    manifest — optional ManifestSource used to decide whether a corpus-level
+    finding subject (a path) covers the target document (p.24: replaces the
+    former ``registry.__dict__["_manifest_for_override"]`` back-channel).
 
     Returns {"override_id", "target_id", "diff_hash", "reason", "operator_id",
              "emitted_at", "next_action": "rerun_audit"}.
@@ -104,7 +109,8 @@ def override_gate(root, data_dir, registry, policy, events, *, target_id,
                     next_action="resolve_finding")
             # Corpus-level: finding subject is a file path, and target maps to
             # a manifest entry whose path is a sub-path of the subject.
-            if _is_corpus_level_finding(subject, target_id, registry, root):
+            if _is_corpus_level_finding(subject, target_id, registry, root,
+                                        manifest=manifest):
                 raise StructuredError(
                     "blocking_finding",
                     "override is unavailable for critical findings "
@@ -165,15 +171,22 @@ def override_gate(root, data_dir, registry, policy, events, *, target_id,
     }
 
 
-def _is_corpus_level_finding(subject_id, target_id, registry, root):
-    """Return True when the subject is a corpus-level path that covers target."""
+def _is_corpus_level_finding(subject_id, target_id, registry, root,
+                             manifest=None):
+    """Return True when the subject is a corpus-level path that covers target.
+
+    p.24: the manifest is now an explicit parameter (the caller passes it);
+    the legacy ``registry.__dict__["_manifest_for_override"]`` back-channel is
+    kept as a fallback for callers that cannot supply a manifest (tests).
+    """
     # A corpus-level subject is a file system path (contains '/') not a
     # simple document ID like "alpha".
     if "/" not in subject_id:
         return False
     # The target must not itself be a corpus-level subject, and must map to
     # a manifest entry whose path is a sub-path of the subject.
-    manifest = registry.__dict__.get("_manifest_for_override")
+    if manifest is None:
+        manifest = registry.__dict__.get("_manifest_for_override")
     if manifest is None:
         # No manifest available: check if subject looks like a corpus path
         # and target looks like a simple doc ID.

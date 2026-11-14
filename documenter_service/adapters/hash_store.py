@@ -116,6 +116,14 @@ class HashStore:
         self._path = os.path.join(self.data_dir, "hashes.json")
         self._bak_path = os.path.join(self.data_dir, "hashes.json.bak")
 
+    # -- public accessors -----------------------------------------------------
+
+    @property
+    def path(self) -> str:
+        """Absolute path of ``hashes.json`` (public per fix plan p.24; the
+        CLI reports it in the --rebuild-hashes response)."""
+        return self._path
+
     # -- persistence --------------------------------------------------------
 
     def _ensure_dir(self) -> None:

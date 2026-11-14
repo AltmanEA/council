@@ -542,16 +542,15 @@ def _handle_tools_call(service, request_id, params):
                     "isError": True,
                 })
 
-    # --- Tool-specific: delegate(preview=False) for delegate_write ---
+    # --- Tool-specific: delegate(preview=False) when absent ------------------
     if method_name == "delegate" and "preview" not in kwargs:
         # preview absent → reject tier_interlock per mvp-interfaces §2
         # ("MUST be true. false or absent → reject"): pass False and let
         # Service.delegate refuse; defaulting to true here would turn an
         # explicit write-intent probe into a silent preview.
-        kwargs["preview"] = False
-    elif method_name == "delegate" and name == "delegate_write":
-        # delegate_write: server always passes preview=False (schema has no
-        # preview property). Strip any client-supplied preview param.
+        # delegate_write always lands here: its schema has no "preview"
+        # property and strict _validate_args rejects a client-supplied one
+        # (-32602), so no separate strip-branch is needed (p.24 dead-code).
         kwargs["preview"] = False
 
     # --- Call service method ----------------------------------------

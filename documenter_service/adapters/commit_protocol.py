@@ -14,7 +14,6 @@ Public API (all docstrings reference index.md §Safety Protocol #9):
   * _valid_intent(record)                         → bool  (accepts "missing" sentinel)
   * delete_intent(data_dir, tx_id)                → None
   * ordered_renames(root, entries, sha_func)      → list[str]
-  * _hash_matches(value, expected)                → bool
 """
 from __future__ import annotations
 
@@ -38,7 +37,6 @@ __all__ = [
     "scan_intents",
     "delete_intent",
     "ordered_renames",
-    "_hash_matches",
 ]
 
 # ---------------------------------------------------------------------------
@@ -363,17 +361,6 @@ def scan_intents(data_dir):
 
 
 _SHA256_HEX_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
-
-
-def _hash_matches(value, expected):
-    """Return True when *value* matches the expected sha256:<hex> format.
-
-    Both must be strings, both must start with ``sha256:`` and have exactly
-    64 lowercase hex characters after the prefix.
-    """
-    if not isinstance(value, str) or not isinstance(expected, str):
-        return False
-    return value == expected
 
 
 def _valid_intent(record) -> bool:

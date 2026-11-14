@@ -221,9 +221,10 @@ def approval_is_expired(approval: dict, now_iso: str, expiry_min: int) -> bool:
     """Return True when the approval's created_at is older than ``expiry_min``
     minutes from ``now_iso``.
 
-    Parses ISO 8601 ``Z`` timestamps (mvp-interfaces §5).  Returns False when
-    ``created_at`` is absent or malformed (caller must treat such approvals
-    as expired).
+    Parses ISO 8601 ``Z`` timestamps (mvp-interfaces §5).  Fail-closed:
+    returns True when ``created_at``/``issued_at`` is absent or malformed,
+    or when ``now_iso`` is malformed — callers must treat such approvals as
+    expired.
     """
     created = approval.get("created_at") or approval.get("issued_at")
     if not isinstance(created, str) or not created.endswith("Z"):

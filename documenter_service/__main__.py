@@ -93,10 +93,11 @@ def _stderr_log(msg: str, level: str = "warn", env=None) -> None:
     response).  Unknown configured levels fall back to "info".
 
     IMPORTANT: This helper is for SERVICE-WARNING messages (e.g. degraded
-    policy state).  Usage errors — mandatory argument missing, invalid CLI
-    argument — are NOT filtered by this helper; they write directly to
-    stderr via print(..., file=sys.stderr) to guarantee visibility per the
-    exit-code contract (0=success, 2=structured refusal, 3=internal error).
+    policy state, degraded event persistence).  Usage errors — mandatory
+    argument missing, invalid CLI argument — are NOT routed through this
+    helper; they are emitted as a structured refusal JSON object on stdout
+    with exit code 2 via ``_usage_error`` (fix plan p.24: the transport
+    contract "the last stdout line is the response" covers refusals too).
     """
     e = env if env is not None else os.environ
     configured = str(e.get("DOCUMENTER_LOG_LEVEL", "info")).lower()
@@ -426,6 +427,7 @@ class Service:
             self.root, self._data_dir, self.registry, policy, self.events,
             target_id=target_id, diff_hash=diff_hash, reason=reason,
             operator_id=operator_id, audit_id=audit_id,
+            manifest=self.manifest,
         )
 
     def reconcile(self) -> dict:
@@ -492,6 +494,19 @@ class Service:
 
 def _print_json(obj) -> None:
     print(json.dumps(obj, sort_keys=True, ensure_ascii=False))
+
+
+def _usage_error(message: str) -> int:
+    """Emit a usage refusal as the structured response object.
+
+    Fix plan p.24: mandatory-argument mistakes are refusals like any other —
+    the transport contract is "the last stdout line is the response"
+    (mvp-data-models §5), so the JSON object goes to stdout (not a bare
+    stderr ERROR line) and the process exits 2 (structured refusal).
+    """
+    err = StructuredError("unknown", message, next_action="preview_denied")
+    _print_json(err.to_dict())
+    return 2
 
 
 def _print_status_human(resp: dict) -> None:
@@ -667,7 +682,7 @@ def main(argv=None) -> int:
         if args.rebuild_hashes:
             rebuilt = service.hash_store.rebuild(service.manifest)
             resp = {"rebuilt_entries": len(rebuilt.get("entries", {})),
-                    "path": service.hash_store._path}
+                    "path": service.hash_store.path}
             if args.json_mode:
                 _print_json(resp)
             else:
@@ -682,9 +697,9 @@ def main(argv=None) -> int:
         # --approve
         if args.approve:
             if not args.approval_id:
-                print("ERROR: --approve requires --approval-id",
-                      file=sys.stderr)
-                return 2
+                return _usage_error(
+                    "--approve requires --approval-id")
+
             operator_id = resolve_operator_id(service._env)
             resp = service.approve(args.approval_id, operator_id)
             if args.json_mode:
@@ -703,9 +718,8 @@ def main(argv=None) -> int:
                     missing.append("--diff-hash")
                 if not args.reason:
                     missing.append("--reason")
-                print(f"ERROR: --override-gate requires {', '.join(missing)}",
-                      file=sys.stderr)
-                return 2
+                return _usage_error(
+                    f"--override-gate requires {', '.join(missing)}")
             operator_id = resolve_operator_id(service._env)
             resp = service.override_gate(
                 target_id=args.target,
@@ -722,18 +736,21 @@ def main(argv=None) -> int:
 
         # --delegate-preview or --delegate-write
         if not args.change_type or not args.trust_level:
-            print("ERROR: --delegate-preview/--delegate-write requires "
-                  "--change-type and --trust-level", file=sys.stderr)
-            return 2
+            return _usage_error(
+                "--delegate-preview/--delegate-write requires --change-type "
+                "and --trust-level")
         if args.diff_base64 is not None:
             payload = args.diff_base64
         elif args.diff_file is not None:
-            payload = (sys.stdin.read() if args.diff_file == "-" else
-                       open(args.diff_file, encoding="utf-8").read())
+            if args.diff_file == "-":
+                payload = sys.stdin.read()
+            else:
+                with open(args.diff_file, encoding="utf-8") as diff_fh:
+                    payload = diff_fh.read()
         else:
-            print("ERROR: --delegate-preview/--delegate-write requires "
-                  "--diff-base64 or --diff-file", file=sys.stderr)
-            return 2
+            return _usage_error(
+                "--delegate-preview/--delegate-write requires "
+                "--diff-base64 or --diff-file")
         preview = True
         if args.delegate_write:
             preview = False
@@ -753,10 +770,6 @@ def main(argv=None) -> int:
                 _print_json(resp)
             else:
                 _print_delegate_human(resp)
-        return 0
-
-        # Fallback (should not reach here given required=True on mode)
-        parser.print_help()
         return 0
     except StructuredError as exc:
         _print_json(exc.to_dict())

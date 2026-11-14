@@ -749,5 +749,45 @@ class TestDocumenterLogLevel(unittest.TestCase):
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# Usage refusals as structured responses (fix plan p.24)
+# ---------------------------------------------------------------------------
+
+class TestCLIUsageRefusalJson(unittest.TestCase):
+    """Mandatory-argument mistakes are refusals: JSON object on stdout
+    (last-line contract), exit 2 — not a bare stderr ERROR line."""
+
+    def test_approve_without_approval_id_json_refusal(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            corpus = _make_corpus(tmpdir)
+            result, rc = _run_cli(
+                ["--approve", "--root", corpus, "--json"],
+                env_extra={"COUNCIL_OPERATOR_ID": "op-user1"})
+            self.assertEqual(rc, 2)
+            self.assertIsNotNone(result, "refusal JSON must be on stdout")
+            self.assertEqual(result["error_category"], "unknown")
+            self.assertIn("--approval-id", result["message"])
+            self.assertEqual(result["next_action"], "preview_denied")
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_delegate_write_missing_diff_json_refusal(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            corpus = _make_corpus(tmpdir)
+            result, rc = _run_cli(
+                ["--delegate-write", "--root", corpus, "--json",
+                 "--target", "alpha", "--change-type", "update",
+                 "--trust-level", "safe"],
+                env_extra={"COUNCIL_OPERATOR_ID": "op-user1"})
+            self.assertEqual(rc, 2)
+            self.assertIsNotNone(result)
+            self.assertEqual(result["error_category"], "unknown")
+            self.assertIn("--diff-base64", result["message"])
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
