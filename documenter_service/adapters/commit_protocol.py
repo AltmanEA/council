@@ -5,12 +5,13 @@ Public API (all docstrings reference index.md §Safety Protocol #9):
   * commit_rank(rel_path)          → int     (priority rank)
   * sort_for_commit(rel_paths)     → list    (ordered paths)
   * allowed_changeset_paths(manifest) → set  (manifest-tracked roots)
-  * validate_changeset_paths(rel_paths, manifest) → None
+  * validate_changeset_paths(rel_paths, manifest) → None  (R2: manifest-tracked)
+  * validate_changeset_scope(rel_paths, manifest, target_id) → None  (R3: target-scope)
   * stage_bytes(root, rel_path, data, tx_id)   → str  (absolute .tmp path)
   * write_intent(data_dir, tx_id, record)       → str  (atomic temp+rename)
   * read_intent(data_dir, tx_id)                → dict|None
   * scan_intents(data_dir)                        → list[dict]
-  * _valid_intent(record)                         → bool
+  * _valid_intent(record)                         → bool  (accepts "missing" sentinel)
   * delete_intent(data_dir, tx_id)                → None
   * ordered_renames(root, entries, sha_func)      → list[str]
   * _hash_matches(value, expected)                → bool
@@ -30,6 +31,7 @@ __all__ = [
     "sort_for_commit",
     "allowed_changeset_paths",
     "validate_changeset_paths",
+    "validate_changeset_scope",
     "stage_bytes",
     "write_intent",
     "read_intent",
@@ -155,6 +157,63 @@ def validate_changeset_paths(rel_paths, manifest):
                 "unknown",
                 f"changeset path {p!r} is not manifest-tracked — "
                 "no writes proceed (index.md §Safety Protocol #9b)")
+
+
+def validate_changeset_scope(rel_paths, manifest, target_id, policy_entry=None):
+    """Second-level scope guard (fix plan p.15, R3): changeset paths may
+    only touch the target's own file-set plus commit bookkeeping.
+
+    Allowed (exact paths only — no directory prefixes, so a changeset
+    can never write sibling documents or foreign changelogs):
+
+      - <target path> (the target document itself, when repeated in the
+        changeset — still checked for duplication elsewhere),
+      - <target changelog> (manifest ``changelog-path`` of the target),
+      - <target translation> (manifest ``has_translation`` of the target),
+      - ``docs-manifest.yaml`` and ``documenter/hashes.json`` (bookkeeping).
+
+    Anything else → StructuredError("unknown", ...) before any writes.
+
+    This is distinct from validate_changeset_paths: that function checks
+    manifest-tracked inclusion (R2), while this function checks that the
+    changeset only modifies the target document's own scope (R3).  Both
+    guards must pass before any writes proceed.
+
+    Parameters
+    ----------
+    rel_paths : list[str]
+        Normalized path strings from the changeset.
+    manifest : ManifestSource
+        Manifest source to resolve target entry.
+    target_id : str
+        Target document identifier.
+    policy_entry : dict, optional
+        Reserved for policy-declared extra scope (post-MVP).  Unused in
+        the MVP implementation; kept to preserve the planned interface.
+    """
+    entry = manifest.resolve(target_id) or {}
+    allowed = set()
+
+    # Exact target file-set paths.
+    for key in ("path", "changelog-path", "has_translation"):
+        v = entry.get(key)
+        if v:
+            allowed.add(str(v).replace("\\", "/"))
+
+    # Always allowed bookkeeping paths
+    allowed.add("docs-manifest.yaml")
+    allowed.add("documenter/hashes.json")
+
+    for p in rel_paths:
+        norm = p.replace("\\", "/")
+        if norm in allowed:
+            continue
+        raise StructuredError(
+            "unknown",
+            f"changeset path {p!r} is outside the target scope of "
+            f"{target_id!r} (only target file, its changelog, its "
+            "translation, docs-manifest.yaml, documenter/hashes.json "
+            "are permitted)")
 
 
 # ---------------------------------------------------------------------------
@@ -330,12 +389,16 @@ def _valid_intent(record) -> bool:
                 {
                     path: string,
                     tmp_path: string,
-                    before_hash: sha256:<64-hex>,
+                    before_hash: sha256:<64-hex> | "missing",
                     after_hash: sha256:<64-hex>
                 },
                 ...
             ]
         }
+
+    *before_hash* may be "missing" (sentinel) for create operations where
+    the target file does not yet exist on disk.  *after_hash* must always be
+    a valid sha256:<64-hex>.
 
     Returns False when any required field is missing / wrong type, or
     when entries is empty / any entry has malformed hash fields.
@@ -373,7 +436,8 @@ def _valid_intent(record) -> bool:
             return False
         if not isinstance(tmp_path, str) or not tmp_path:
             return False
-        if not _SHA256_HEX_RE.match(before_hash or ""):
+        # before_hash: sha256:<64-hex> or the "missing" sentinel (create ops).
+        if before_hash not in ("missing",) and not _SHA256_HEX_RE.match(before_hash or ""):
             return False
         if not _SHA256_HEX_RE.match(after_hash or ""):
             return False

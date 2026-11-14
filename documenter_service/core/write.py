@@ -37,6 +37,21 @@ from ..ports import ManifestSource, AuditRegistry, DiffEngine, EventSink
 from ..adapters.lock import DelegateLock
 from ..adapters import commit_protocol as _commit_protocol
 
+# Sentinel for a file that does not exist (create operations).
+# Used consistently across propose_write, _apply_write_changeset, and
+# _reconcile_new_format so that the "file absent" state is always
+# represented by the same string.
+BEFORE_HASH_MISSING = "missing"
+
+
+def _before_hash_of(root, rel_path):
+    """sha256:<hex> of the file, or BEFORE_HASH_MISSING when absent/unreadable."""
+    try:
+        with open(os.path.join(root, rel_path), "rb") as fh:
+            return "sha256:" + hashlib.sha256(fh.read()).hexdigest()
+    except OSError:
+        return BEFORE_HASH_MISSING
+
 # Lazy import these to avoid circular imports (audit.py imports check_all).
 def _get_resolve_scope():
     from ..core.audit import _resolve_scope
@@ -222,16 +237,16 @@ def propose_write(
                 rec_b64 = rec_for_p.get("content_b64", "") if rec_for_p else ""
                 after_hash = "sha256:" + hashlib.sha256(
                     base64.b64decode(rec_b64)).hexdigest()
-            try:
-                with open(os.path.join(root, p), "rb") as fh:
-                    before_hash = "sha256:" + hashlib.sha256(fh.read()).hexdigest()
-            except OSError:
-                before_hash = ""
+            before_hash = _before_hash_of(root, p)
             path_hashes.append([p, before_hash, after_hash])
         path_hashes.sort(key=lambda x: x[0])
         _json_str = json.dumps(path_hashes, sort_keys=True)
         changeset_digest = "sha256:" + hashlib.sha256(_json_str.encode()).hexdigest()
         extra["changeset_digest"] = changeset_digest
+        # Extract normalized paths (sorted alongside path_hashes)
+        extra["changeset_paths"] = sorted(
+            [posixpath.normpath(rec["path"].replace("\\", "/")) for rec in changeset]
+        )
 
     registry.issue_approval(
         approval_id=approval_id,
@@ -263,6 +278,13 @@ def _validate_changeset(changeset: list, manifest, target_id: str, root: str):
     Raises StructuredError("unknown", ...) on any validation failure.
     Called BEFORE any guard chain (except the preview check) so that
     no files are created on failure.
+
+    Validation steps:
+      1. Each record must be a dict with exactly {path, content_b64}
+      2. Normalize paths, check for absolute/.. paths, deduplicate
+      3. All paths must be manifest-tracked (validate_changeset_paths, R2)
+      4. All paths must be within target scope (validate_changeset_scope, R3)
+         — target file-set + commit bookkeeping only.
     """
     import posixpath
 
@@ -316,6 +338,11 @@ def _validate_changeset(changeset: list, manifest, target_id: str, root: str):
     #    unknown for non-manifest paths, with no writes — spec #9b)
     _commit_protocol.validate_changeset_paths(norm_paths, manifest)
 
+    # 4. Second-level scope guard (R3): changeset may only touch the
+    #    target's own file-set + commit bookkeeping files.
+    _commit_protocol.validate_changeset_scope(norm_paths, manifest,
+                                              target_id, policy_entry=None)
+
 
 def _staged_hash_for_diff(full_path, original_text, normalized):
     """Compute the sha256 of the file that *would* be staged (source + diff).
@@ -333,20 +360,6 @@ def _staged_hash_for_diff(full_path, original_text, normalized):
                                   normalized.decode("utf-8"))
     return "sha256:" + hashlib.sha256(new_text.encode("utf-8")).hexdigest()
 
-
-def _changeset_digest(manifest, root, changeset):
-    """Compute the deterministic changeset digest for a non-empty changeset.
-
-    Returns "sha256:<hex>" of the JSON-encoded sorted [path, before_hash,
-    after_hash] list.  The target document (target_id) is computed by
-    applying the diff to the current source file.
-
-    Used by apply_write to recompute and compare the digest against the
-    approval's stored changeset_digest.
-    """
-    target_entry = manifest.resolve("")  # placeholder — caller passes target_path
-    # We need the target path; callers that use this helper will compute the
-    # list manually.  This is kept as a reference signature from the brief.
 
 # --- approve ---------------------------------------------------------------
 
@@ -799,11 +812,7 @@ def _apply_write_changeset(
             p = posixpath.normpath(rec["path"].replace("\\", "/"))
             after_hash = "sha256:" + hashlib.sha256(
                 base64.b64decode(rec["content_b64"])).hexdigest()
-            try:
-                with open(os.path.join(root, p), "rb") as fh:
-                    before_hash = "sha256:" + hashlib.sha256(fh.read()).hexdigest()
-            except OSError:
-                before_hash = ""
+            before_hash = _before_hash_of(root, p)
             path_hashes.append([p, before_hash, after_hash])
         # Add the target document
         try:
@@ -843,7 +852,15 @@ def _apply_write_changeset(
                     break
             else:
                 expected_before = ""
-            if expected_before:
+            if expected_before == BEFORE_HASH_MISSING:
+                # Create operation: file must not exist.
+                if os.path.exists(os.path.join(root, p)):
+                    raise StructuredError(
+                        "hash_mismatch",
+                        f"create operation for {p!r} but file already exists — "
+                        "rerun audit then re-propose",
+                        next_action="rerun_audit")
+            elif expected_before:
                 try:
                     with open(os.path.join(root, p), "rb") as fh:
                         actual = fh.read()
@@ -857,7 +874,7 @@ def _apply_write_changeset(
                         f"rerun audit then re-propose",
                         next_action="rerun_audit")
             else:
-                # before_hash is "" → file must not exist (create operation)
+                # before_hash is "" → legacy compatibility: file must not exist.
                 if os.path.exists(os.path.join(root, p)):
                     raise StructuredError(
                         "hash_mismatch",
@@ -872,7 +889,13 @@ def _apply_write_changeset(
                 break
         else:
             expected_target_before = ""
-        if expected_target_before:
+        if expected_target_before == BEFORE_HASH_MISSING:
+            # Create doc: file must not exist.
+            if os.path.exists(target_path):
+                raise StructuredError(
+                    "hash_mismatch",
+                    f"create operation for target {target_path_rel!r} but file exists")
+        elif expected_target_before:
             actual_src = "sha256:" + hashlib.sha256(src_bytes).hexdigest()
             if actual_src != expected_target_before:
                 raise StructuredError(
@@ -881,7 +904,7 @@ def _apply_write_changeset(
                     "write denied (rerun audit then re-propose)",
                     next_action="rerun_audit")
         else:
-            # before="" means file must not exist (create doc)
+            # before="" means file must not exist (legacy compat).
             if os.path.exists(target_path):
                 raise StructuredError(
                     "hash_mismatch",
