@@ -232,7 +232,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertTrue(prop_result["approval_required"])
         self.assertEqual(prop_result["next_action"], "await_approval")
@@ -300,7 +302,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
@@ -405,7 +409,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", changeset=changeset)
+                diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertEqual(ctx.exception.error_category, "unknown")
         self.assertIn("outside the target scope", ctx.exception.message)
@@ -434,7 +440,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", changeset=changeset)
+                diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "unknown")
         self.assertIn("outside the target scope", ctx.exception.message)
 
@@ -466,7 +474,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", changeset=changeset)
+                diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         except StructuredError as exc:
             # Should NOT be from scope guard
             self.assertNotEqual(exc.error_category, "unknown",
@@ -501,7 +511,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", changeset=changeset)
+                diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         except StructuredError as exc:
             self.assertNotEqual(exc.error_category, "unknown",
                                 "scope guard should pass for target changelog")
@@ -538,7 +550,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertTrue(prop_result["approval_required"])
         approval_id = prop_result["approval_id"]
@@ -587,7 +601,9 @@ class TestChangesetCreateOperations(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         # Approve

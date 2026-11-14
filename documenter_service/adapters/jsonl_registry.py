@@ -2,8 +2,9 @@
 
 File: <data_dir>/audit_registry.jsonl (default documenter/, mvp-data-models
 §4). This is the ONLY writer path in the entire service: a single `open(path,
-"a")` per append. The file is never rewritten in place; compaction happens
-only through the explicit, checkpoint-governed `truncate()` below.
+"a")` per append, guarded by a per-appender fcntl advisory lock
+(<data_dir>/.registry.lock).  The file is never rewritten in place; compaction
+happens only through the explicit, checkpoint-governed `truncate()` below.
 
 Health model (mvp-interfaces §3 "Registry health"):
   healthy  — readable, prev_hash chain consistent
@@ -19,9 +20,11 @@ reporting as corruption while still failing closed on real damage.
 from __future__ import annotations
 
 import base64
+import fcntl
 import json
 import os
 import secrets
+import time
 from datetime import datetime, timezone
 
 from ..core import registry as reg
@@ -33,8 +36,14 @@ __all__ = ["JsonlAuditRegistry", "REGISTRY_FILENAME", "new_token"]
 #: Registry file name inside the data directory (mvp-data-models §4).
 REGISTRY_FILENAME = "audit_registry.jsonl"
 
+#: Lock file name used for serializing concurrent appends.
+_REGISTRY_LOCK_FILENAME = ".registry.lock"
+
 #: scan_cursor token length: 32 random bytes, base64 (mvp-data-models §1).
 TOKEN_BYTES = 32
+
+#: Default timeout (seconds) for acquiring the registry append lock.
+_REGISTRY_LOCK_TIMEOUT = 30
 
 
 def new_token() -> str:
@@ -68,21 +77,78 @@ class JsonlAuditRegistry(AuditRegistry):
         with open(self.path, encoding="utf-8") as fh:
             return [ln for ln in fh.read().splitlines() if ln.strip()]
 
+    # -- registry append lock (separate from DelegateLock) -------------------
+
+    def _acquire_registry_lock(self):
+        """Acquire a per-appender advisory lock.
+
+        Uses ``fcntl.flock(LOCK_EX | LOCK_NB)`` on a dedicated lock file
+        ``<data_dir>/.registry.lock`` with a poll loop (0.1 s sleep) up to
+        ``_REGISTRY_LOCK_TIMEOUT`` seconds.  Returns the file descriptor on
+        success; the caller is responsible for unlocking.
+        """
+        lock_path = os.path.join(self.data_dir, _REGISTRY_LOCK_FILENAME)
+        os.makedirs(self.data_dir, exist_ok=True)
+        fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+        deadline = time.monotonic() + _REGISTRY_LOCK_TIMEOUT
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fd  # acquired
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    os.close(fd)
+                    raise StructuredError(
+                        "lock_conflict",
+                        "Another process holds the registry append lock. "
+                        "Retry later.",
+                        next_action="preview_denied",
+                    )
+                time.sleep(0.1)
+            except OSError as exc:
+                os.close(fd)
+                raise StructuredError(
+                    "lock_conflict",
+                    "unexpected error acquiring registry lock: "
+                    f"{exc}",
+                    next_action="preview_denied",
+                )
+
+    def _release_registry_lock(self, fd: int) -> None:
+        """Release a registry append lock acquired by ``_acquire_registry_lock``."""
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+        except OSError:
+            pass  # best-effort release
+
     # -- AuditRegistry port ---------------------------------------------------
 
     def append(self, record_type: str, data: dict) -> dict:
         """Append one envelope record (the only write path); returns envelope.
 
+        Serializes concurrent appends via a per-appender advisory lock
+        (``.registry.lock`` via fcntl) to prevent torn lines when multiple
+        processes write simultaneously.  Lock timeout is ``_REGISTRY_LOCK_TIMEOUT``
+        seconds; timeout → StructuredError("lock_conflict", …).
+
         Creates the data directory when absent (permitted state mutation).
         """
-        lines = self._raw_lines() or []
-        records = [reg.parse_line(ln) for ln in lines]  # corrupt → ValueError
-        prev = reg.record_hash(records[-1]) if records else None
-        envelope = reg.make_envelope(record_type, data, prev)
-        os.makedirs(self.data_dir, exist_ok=True)
-        with open(self.path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(envelope, sort_keys=True) + "\n")
-        return envelope
+        # Acquire lock, read-modify-write, release lock.
+        fd_lock = self._acquire_registry_lock()
+        try:
+            lines = self._raw_lines() or []
+            records = [reg.parse_line(ln) for ln in lines]  # corrupt → ValueError
+            prev = reg.record_hash(records[-1]) if records else None
+            envelope = reg.make_envelope(record_type, data, prev)
+            os.makedirs(self.data_dir, exist_ok=True)
+            with open(self.path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(envelope, sort_keys=True) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
+            return envelope
+        finally:
+            self._release_registry_lock(fd_lock)
 
     def read_all(self) -> tuple:
         """Return (records, status); status ∈ healthy|degraded|corrupt.
@@ -129,7 +195,7 @@ class JsonlAuditRegistry(AuditRegistry):
     # -- approval lifecycle (mvp-data-models §1 token_type=approval_id) --------
 
     def issue_approval(self, *, approval_id: str, target_ids: list,
-                       diff_hash: str, proposer_id: str | None,
+                       diff_hash: str, proposer_id: str,
                        audit_id: str | None,
                        extra: dict | None = None) -> dict:
         """Persist an approval token_record (consumed=False).

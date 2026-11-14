@@ -183,6 +183,7 @@ def main():
         corpus, manifest, registry, policy, events, engine,
         target_id="alpha", change_type="update", trust_level="safe",
         diff_input=encoded_diff, audit_id="aid-crash", preview=False,
+        proposer_id="op-proposer1",
     )
 
     approval_id = prop_result["approval_id"]

@@ -280,7 +280,8 @@ class TestTierInterlock(unittest.TestCase):
     def test_delegate_preview_false_and_absent_denied(self):
         # Same refusal via the composition root for preview=False/None.
         from documenter_service.__main__ import Service
-        svc = Service(FIXTURE_CORPUS_FOR_DELEGATE)
+        svc = Service(FIXTURE_CORPUS_FOR_DELEGATE,
+                      env={"COUNCIL_OPERATOR_ID": "op-test"})
         for bad_preview in (False, None):
             with self.assertRaises(StructuredError) as ctx:
                 svc.delegate(target_id="alpha", change_type="update",

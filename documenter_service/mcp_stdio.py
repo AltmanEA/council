@@ -364,7 +364,8 @@ def _handle_tools_list(request_id):
 
 _AUDIT_SCHEMA = {
     "target_id": {"type": "string", "default": "*"},
-    "severity_min": {"type": "string", "default": "low"},
+    "severity_min": {"type": "string", "default": "low",
+                     "enum": ["low", "medium", "high", "critical"]},
     "pre_check": {"type": "boolean", "default": False},
     "scan_cursor": {"type": ["string", "null"], "default": None},
 }
@@ -375,8 +376,9 @@ _STATUS_SCHEMA = {
 
 _DELEGATE_PREVIEW_SCHEMA = {
     "target_id": {"type": "string"},
-    "change_type": {"type": "string"},
-    "trust_level": {"type": "string"},
+    "change_type": {"type": "string",
+                    "enum": ["update", "split", "create_ru", "custom"]},
+    "trust_level": {"type": "string", "enum": ["safe", "review"]},
     "diff_input": {"type": "string"},
     "preview": {"type": "boolean", "default": True},
     "audit_id": {"type": ["string", "null"], "default": None},
@@ -395,8 +397,9 @@ _OVERRIDE_GATE_SCHEMA = {
 
 _DELEGATE_WRITE_SCHEMA = {
     "target_id": {"type": "string"},
-    "change_type": {"type": "string"},
-    "trust_level": {"type": "string"},
+    "change_type": {"type": "string",
+                    "enum": ["update", "split", "create_ru", "custom"]},
+    "trust_level": {"type": "string", "enum": ["safe", "review"]},
     "diff_input": {"type": "string"},
     "audit_id": {"type": ["string", "null"], "default": None},
     "approval_id": {"type": ["string", "null"], "default": None},
@@ -440,6 +443,48 @@ TOOL_HANDLERS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Arg-validation: JSON-Schema subset enforcement.
+# ---------------------------------------------------------------------------
+
+def _validate_args(schema: dict, args: dict) -> str | None:
+    """Validate *args* against *schema* (the ``properties`` dict from an
+    inputSchema).  Returns an error message string or None when valid.
+
+    Checks performed:
+      1. No keys outside ``schema`` keys → "unknown argument: <key>".
+      2. Type enforcement: ``string`` → str, ``boolean`` → bool,
+         ``["string","null"]`` → str|None, ``enum`` → value in list.
+    """
+    for key, val in args.items():
+        if key not in schema:
+            return f"unknown argument: {key}"
+        prop = schema[key]
+        prop_type = prop.get("type")
+        # Enum check
+        if "enum" in prop and val is not None:
+            if val not in prop["enum"]:
+                return f"invalid value {val!r}: must be one of {prop['enum']}"
+        # Type check
+        if prop_type == "string":
+            if val is not None and not isinstance(val, str):
+                return f"argument {key!r}: expected string, got {type(val).__name__}"
+        elif prop_type == "boolean":
+            if not isinstance(val, bool):
+                return f"argument {key!r}: expected boolean, got {type(val).__name__}"
+        elif isinstance(prop_type, list):
+            # Union type: e.g. ["string", "null"]
+            # "null" means None is acceptable
+            if val is not None:
+                valid_types = [t for t in prop_type if t != "null"]
+                for t in valid_types:
+                    if t == "string" and isinstance(val, str):
+                        break
+                else:
+                    return f"argument {key!r}: expected {prop_type}, got {type(val).__name__}"
+    return None
+
+
 def _handle_tools_call(service, request_id, params):
     """Handle tools/call method."""
     name = params.get("name")
@@ -464,6 +509,11 @@ def _handle_tools_call(service, request_id, params):
                 request_id, -32602,
                 f"missing required argument: {key}")
 
+    # --- Strict schema validation (type, enum, no unknown keys) ---------
+    validation_error = _validate_args(schema, args)
+    if validation_error:
+        return _error_response(request_id, -32602, validation_error)
+
     # --- Build kwargs for service method ---------------------------
     kwargs = {}
     for key, val in args.items():
@@ -477,8 +527,8 @@ def _handle_tools_call(service, request_id, params):
     # --- Tool-specific: resolve operator from env (authN) ----------
     if method_name in ("approve", "override_gate"):
         # AuthN: operator from env, NOT from args (operator-surface §AuthN).
-        # Extra args like "operator_id" are silently ignored (additionalProperties
-        # false in schema, but be defensive).
+        # Extra args like "operator_id" are rejected by schema validation
+        # (additionalProperties: false) → -32602.
         try:
             kwargs["operator_id"] = _resolve_operator_id(
                 service._env if hasattr(service, "_env") else os.environ)

@@ -291,5 +291,83 @@ class TestFileEventSinkDirectoryCreation(unittest.TestCase):
         self.assertEqual(len(lines), 2)
 
 
+# ---------------------------------------------------------------------------
+# Persistence degradation (fix plan p.22, decision E0.3): OSError during the
+# durable write degrades to a stderr warning; the event still reaches the
+# stream and validation errors still raise.
+# ---------------------------------------------------------------------------
+
+class TestFileEventSinkPersistenceDegrades(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp = _tmpdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _payload(self):
+        return {"audit_id": "a1", "subject_id": "alpha",
+                "severity": "low", "description": "degraded"}
+
+    def _patch_open_fail(self, exc):
+        """Make os.open fail for the persistence write only."""
+        from unittest import mock
+        real_open = os.open
+
+        def fake_open(path, flags, *a, **kw):
+            if str(path).endswith("events.jsonl"):
+                raise exc
+            return real_open(path, flags, *a, **kw)
+
+        return mock.patch("documenter_service.adapters.file_events.os.open",
+                          side_effect=fake_open)
+
+    def test_oserror_does_not_raise_stream_still_receives(self):
+        import io as _io
+        import errno as _errno
+        sink = FileEventSink(os.path.join(self.tmp, "events"),
+                             stream=_io.StringIO())
+        with self._patch_open_fail(OSError(_errno.EACCES, "Permission denied")):
+            sink.emit("documenter.issue", self._payload())  # must not raise
+        out = sink._stream.getvalue()
+        self.assertIn("documenter.issue", out)  # event reached the stream
+
+    def test_stderr_warning_emitted_by_default(self):
+        import io as _io
+        import errno as _errno
+        sink = FileEventSink(os.path.join(self.tmp, "events"),
+                             stream=_io.StringIO())
+        from unittest import mock
+        with self._patch_open_fail(OSError(_errno.EACCES, "Permission denied")):
+            with mock.patch("sys.stderr", new_callable=_io.StringIO) as err:
+                sink.emit("documenter.issue", self._payload())
+        self.assertIn("WARNING", err.getvalue())
+        self.assertIn("event persistence failed", err.getvalue())
+
+    def test_stderr_warning_suppressed_at_error_level(self):
+        import io as _io
+        import errno as _errno
+        os.environ["DOCUMENTER_LOG_LEVEL"] = "error"
+        try:
+            sink = FileEventSink(os.path.join(self.tmp, "events"),
+                                 stream=_io.StringIO())
+            from unittest import mock
+            with self._patch_open_fail(
+                    OSError(_errno.EACCES, "Permission denied")):
+                with mock.patch("sys.stderr", new_callable=_io.StringIO) as err:
+                    sink.emit("documenter.issue", self._payload())
+            self.assertNotIn("event persistence failed", err.getvalue())
+        finally:
+            del os.environ["DOCUMENTER_LOG_LEVEL"]
+
+    def test_validation_error_still_raises(self):
+        """Degradation applies to persistence only — schema violations keep
+        raising StructuredError (fail-loud for validation preserved)."""
+        sink = FileEventSink(os.path.join(self.tmp, "events"),
+                             stream=__import__("io").StringIO())
+        with self.assertRaises(StructuredError):
+            sink.emit("documenter.issue", {"bogus": 1})
+
+
 if __name__ == "__main__":
     unittest.main()

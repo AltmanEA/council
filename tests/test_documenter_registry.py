@@ -285,5 +285,68 @@ class TestClockInjection(unittest.TestCase):
         self.assertEqual(reg_r.now(), "2026-11-13T12:00:00Z")
 
 
+# ---------------------------------------------------------------------------
+# Registry append lock (fix plan p.18): concurrent appends serialize via
+# the dedicated .registry.lock (separate from .delegate.lock — no
+# self-deadlock when apply holds the delegate lock and appends).
+# ---------------------------------------------------------------------------
+
+class TestRegistryConcurrentAppend(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp = _tmpdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_two_threads_chain_healthy(self):
+        """Two writers × 50 records each: every line parses, prev_hash chain
+        verifies healthy (no torn/interleaved lines)."""
+        import threading
+
+        data_dir = os.path.join(self.tmp, "state")
+        r1 = JsonlAuditRegistry(data_dir)
+        r2 = JsonlAuditRegistry(data_dir)  # second writer, same directory
+        errors = []
+
+        def writer(r, tag):
+            try:
+                for i in range(50):
+                    r.append(reg.AUDIT_RECORD, {"audit_id": f"{tag}-{i}",
+                                                "findings": [],
+                                                "scanned_ids": [],
+                                                "has_remaining": False})
+            except Exception as exc:  # pragma: no cover - failure path
+                errors.append(exc)
+
+        t1 = threading.Thread(target=writer, args=(r1, "a"))
+        t2 = threading.Thread(target=writer, args=(r2, "b"))
+        t1.start(); t2.start(); t1.join(); t2.join()
+        self.assertEqual(errors, [])
+
+        path = os.path.join(data_dir, REGISTRY_FILENAME)
+        with open(path, encoding="utf-8") as fh:
+            lines = [ln for ln in fh.read().splitlines() if ln.strip()]
+        self.assertEqual(len(lines), 100)
+        records = [reg.parse_line(ln) for ln in lines]  # torn line → ValueError
+        self.assertEqual(reg.verify_chain(records), "healthy")
+
+    def test_lock_file_is_separate_from_delegate_lock(self):
+        """The registry lock file name differs from .delegate.lock (p.18:
+        reusing the delegate lock would self-deadlock apply)."""
+        from documenter_service.adapters.jsonl_registry import (
+            _REGISTRY_LOCK_FILENAME)
+        self.assertEqual(_REGISTRY_LOCK_FILENAME, ".registry.lock")
+        self.assertNotEqual(_REGISTRY_LOCK_FILENAME, ".delegate.lock")
+        data_dir = os.path.join(self.tmp, "state")
+        r = JsonlAuditRegistry(data_dir)
+        fd = r._acquire_registry_lock()
+        try:
+            self.assertTrue(
+                os.path.exists(os.path.join(data_dir, ".registry.lock")))
+        finally:
+            r._release_registry_lock(fd)
+
+
 if __name__ == "__main__":
     unittest.main()

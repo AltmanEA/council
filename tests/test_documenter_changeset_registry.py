@@ -169,7 +169,9 @@ def _full_cycle(changeset=None, data_dir=None, tmpdir=None,
     prop_result = core_write.propose_write(
         corpus, manifest, registry, policy, events, engine,
         target_id="alpha", change_type="update", trust_level="safe",
-        diff_input=encoded, audit_id="aid-1", changeset=changeset)
+        diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
     approval_id = prop_result["approval_id"]
 
@@ -254,7 +256,9 @@ class TestChangesetRegistry(unittest.TestCase):
         prop2 = core_write.propose_write(
             self.corpus, self.manifest, self.registry, self.policy, self.events, self.engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded_2, audit_id="aid-2", changeset=changeset)
+            diff_input=encoded_2, audit_id="aid-2", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id2 = prop2["approval_id"]
         core_write.approve(self.registry, self.policy, self.events,
                            root=self.corpus,
@@ -381,7 +385,9 @@ class TestChangesetRegistry(unittest.TestCase):
         prop2 = core_write.propose_write(
             self.corpus, self.manifest, self.registry, self.policy, self.events, self.engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded_2, audit_id="aid-2")
+            diff_input=encoded_2, audit_id="aid-2",
+            proposer_id="op-bot1"
+        )
         approval_id2 = prop2["approval_id"]
         core_write.approve(self.registry, self.policy, self.events,
                            root=self.corpus,

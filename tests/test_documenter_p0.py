@@ -337,7 +337,9 @@ class TestDormancyMatrix(unittest.TestCase):
                     root, manifest, registry, policy0, events, engine,
                     target_id="alpha", change_type="update",
                     trust_level="safe", diff_input=encoded, audit_id="aid-1",
-                    preview=False)
+                    preview=False,
+            proposer_id="op-bot1"
+        )
             self.assertEqual(ctx.exception.error_category, "tier_interlock")
 
             # 4b: approve -> tier_interlock
@@ -506,7 +508,9 @@ class TestLegitCycle(unittest.TestCase):
                 corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update",
                 trust_level="safe", diff_input=encoded, audit_id="aid-1",
-                preview=False)
+                preview=False,
+            proposer_id="op-bot1"
+        )
 
             self.assertTrue(prop_result["approval_required"])
             approval_id = prop_result["approval_id"]
@@ -554,7 +558,9 @@ class TestBudgetAfterTierGate(unittest.TestCase):
                     root, manifest, registry, policy0, events, engine,
                     target_id="alpha", change_type="update",
                     trust_level="safe", diff_input=encoded, audit_id="aid-1",
-                    preview=False, sync_latency_budget_ms=0)
+                    preview=False, sync_latency_budget_ms=0,
+            proposer_id="op-bot1"
+        )
             self.assertEqual(ctx.exception.error_category, "tier_interlock")
         finally:
             shutil.rmtree(tmpdir)

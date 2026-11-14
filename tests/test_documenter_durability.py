@@ -480,7 +480,9 @@ class TestTokenReplay(_Harness):
             self.corpus, self.manifest, self.registry, self.policy,
             self.events, self.engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=self.encoded, audit_id="aid-1")
+            diff_input=self.encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         with self.assertRaises(StructuredError) as ctx:
             self.apply(prop["approval_id"])
         self.assertEqual(ctx.exception.error_category, "gate_failure")

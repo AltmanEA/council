@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import uuid
 from datetime import datetime, timezone
 
@@ -42,6 +43,24 @@ class _DiscardStream:
 
     def flush(self) -> None:
         pass
+
+
+# ---------------------------------------------------------------------------
+# Log-level filter (local copy — avoids circular import with __main__).
+# ---------------------------------------------------------------------------
+_STDERR_LOG_RANK = {"debug": 10, "info": 20, "warn": 30, "error": 40}
+
+
+def _file_event_log_warn(msg: str) -> None:
+    """Emit a stderr warning filtered by DOCUMENTER_LOG_LEVEL.
+
+    Default log level is "info" (rank 20); "warn" (rank 30) is emitted.
+    When DOCUMENTER_LOG_LEVEL=error (rank 40), this warning is suppressed.
+    """
+    configured = os.environ.get("DOCUMENTER_LOG_LEVEL", "info").lower()
+    threshold = _STDERR_LOG_RANK.get(configured, _STDERR_LOG_RANK["info"])
+    if _STDERR_LOG_RANK.get("warn", _STDERR_LOG_RANK["warn"]) >= threshold:
+        print(msg, file=sys.stderr)
 
 
 class FileEventSink(StdoutEventSink):
@@ -71,8 +90,9 @@ class FileEventSink(StdoutEventSink):
         """Validate (via parent), persist to file, then emit to stream.
 
         Validation errors raise StructuredError before any side effect.
-        Persistence errors raise OSError (fail loud — registry is the provenance
-        carrier; we never silently drop events).
+        Persistence failures degrade to a stderr warning (filtered by
+        DOCUMENTER_LOG_LEVEL ≤ warn); events are NOT silently dropped —
+        the stream still receives them.
         """
         # Validate via parent (drops stdout to _DiscardStream).
         super().emit(event_type, payload)
@@ -88,16 +108,22 @@ class FileEventSink(StdoutEventSink):
             "payload": payload,
         }
         line = json.dumps(envelope, sort_keys=True, ensure_ascii=False)
-        fd = os.open(
-            self._file_path,
-            os.O_WRONLY | os.O_CREAT | os.O_APPEND,
-            0o644,
-        )
         try:
-            os.write(fd, (line + "\n").encode("utf-8"))
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+            fd = os.open(
+                self._file_path,
+                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                0o644,
+            )
+            try:
+                os.write(fd, (line + "\n").encode("utf-8"))
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        except OSError as exc:
+            _file_event_log_warn(
+                f"WARNING: event persistence failed ({type(exc).__name__}): "
+                f"{exc}; event emitted to stream only")
+            # Event still goes to stream below — NOT silently dropped.
 
         # Emit to the public stream (stdout if stream=None).
         if self._stream is not None:

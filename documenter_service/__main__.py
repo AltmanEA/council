@@ -342,6 +342,12 @@ class Service:
                     "apply requires authenticated operator ingress: set "
                     "COUNCIL_OPERATOR_ID (operator-surface §AuthN); "
                     "this is a deployment defect, not operator action")
+            if not _OPERATOR_ID_RE.match(operator_id):
+                raise StructuredError(
+                    "unknown",
+                    f"malformed operator_id {operator_id!r} "
+                    f"(expected ^op-[a-z0-9][a-z0-9-]{{2,63}}$)",
+                    next_action="preview_denied")
             budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms
                          is not None else
                          int(policy.get("sync_latency_budget_ms"))
@@ -352,6 +358,18 @@ class Service:
 
         # propose_write (full guard chain, see core/write.py)
         operator_id = self._env.get("COUNCIL_OPERATOR_ID")
+        if operator_id is None:
+            raise StructuredError(
+                "unknown",
+                "delegate write proposal requires COUNCIL_OPERATOR_ID "
+                "(attribution)",
+                next_action="preview_denied")
+        if not _OPERATOR_ID_RE.match(operator_id):
+            raise StructuredError(
+                "unknown",
+                f"malformed proposer id {operator_id!r} "
+                f"(expected ^op-[a-z0-9][a-z0-9-]{{2,63}}$)",
+                next_action="preview_denied")
         budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms
                      is not None else
                      int(policy.get("sync_latency_budget_ms"))

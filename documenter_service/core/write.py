@@ -80,7 +80,7 @@ def propose_write(
     trust_level: str,
     diff_input: str,
     audit_id: str | None,
-    proposer_id: str | None = None,
+    proposer_id: str,
     preview: bool = False,
     max_diff_bytes: int = 524288,
     sync_latency_budget_ms: int = 30000,
@@ -382,9 +382,9 @@ def approve(
       4. expired → StructuredError("approval_expired", next_action="preview_denied").
          (Approval expiry ≠ audit staleness; "preview_denied" tells the operator
          to re-propose.  "rerun_audit" is reserved for audit-level staleness.)
-      5. self-approval check: if proposer_id == operator_id →
-         StructuredError("gate_failure", "self-approval denied").
-         (proposer_id is None → allowed: unattributed proposal.)
+      5. proposer absent (None) → gate_failure "unattributed approval —
+         re-propose with attribution"; proposer present and == operator_id →
+         gate_failure "self-approval denied".
       6. resolve_approval(approval_id, "approved", operator_id) → raises
          token_replay if already resolved.
       7. emit event documenter.approval.
@@ -423,12 +423,16 @@ def approve(
 
     # 5. Self-approval check
     proposer = approval.get("proposer_id")
-    if proposer is not None and proposer == operator_id:
+    if proposer is None:
+        raise StructuredError(
+            "gate_failure",
+            "unattributed approval — re-propose with attribution",
+            next_action="preview_denied")
+    if proposer == operator_id:
         raise StructuredError(
             "gate_failure",
             "self-approval denied: approver must differ from the proposing "
             "actor (operator-surface §Documenter Integration)")
-    # proposer_id is None → allowed: unattributed proposal
 
     # 6. Resolve approval (single-use — raises token_replay if already resolved)
     resolved = registry.resolve_approval(approval_id, decision="approved",

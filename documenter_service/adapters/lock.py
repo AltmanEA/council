@@ -6,12 +6,17 @@ wait_timeout seconds.  On success writes {pid, acquired_at} to the file.
 
 On timeout → StructuredError("lock_conflict", ..., next_action="preview_denied").
 
+On unexpected OSError (e.g. EBADF, ENOSPC) → StructuredError("unknown", …,
+next_action="escalate").  Only BlockingIOError / EWOULDBLOCK / EAGAIN is
+treated as "already locked" (retry).
+
 On release: truncate lock file, unlock, close.  NEVER raises from release.
 
 Create data_dir if missing.
 """
 from __future__ import annotations
 
+import errno
 import fcntl
 import json
 import os
@@ -64,7 +69,8 @@ class DelegateLock:
             try:
                 fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break  # acquired
-            except (BlockingIOError, OSError):
+            except BlockingIOError:
+                # Normal retry: lock is held by another process.
                 if self._clock() >= deadline:
                     owner = self._read_owner_info()
                     self._unlock_no_raise()
@@ -78,6 +84,33 @@ class DelegateLock:
                         next_action="preview_denied",
                     )
                 time.sleep(0.1)
+            except OSError as exc:
+                # Only EWOULDBLOCK / EAGAIN counts as "already locked"; all
+                # other OS errors (EBADF, ENOSPC, …) are unexpected.
+                if exc.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    if self._clock() >= deadline:
+                        owner = self._read_owner_info()
+                        self._unlock_no_raise()
+                        raise StructuredError(
+                            "lock_conflict",
+                            "Another agent holds an advisory lock on "
+                            f"{self._lock_path!r}. "
+                            f"Lock owner: pid {owner.get('pid', '?')}, "
+                            f"acquired at {owner.get('acquired_at', '?')}. "
+                            f"Wait? (yes/no) — Default: no after "
+                            f"{self._wait_timeout}s.",
+                            next_action="preview_denied",
+                        )
+                    time.sleep(0.1)
+                else:
+                    # Unexpected OS error (EBADF, ENOSPC, …) — close fd and
+                    # escalate; treating it as "locked" would loop forever.
+                    self._unlock_no_raise()
+                    raise StructuredError(
+                        "unknown",
+                        f"unexpected error acquiring lock: {exc}",
+                        next_action="escalate",
+                    )
 
         # Write owner info to the lock file (truncate then write).
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

@@ -438,6 +438,43 @@ class TestLock(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_unexpected_oserror_not_treated_as_conflict(self):
+        """p.21: OSError other than EWOULDBLOCK/EAGAIN (e.g. ENOSPC) must
+        escalate as 'unknown', not spin until lock_conflict timeout."""
+        import errno as _errno
+        from unittest import mock
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            boom = OSError(_errno.ENOSPC, "No space left on device")
+            with mock.patch("documenter_service.adapters.lock.fcntl.flock",
+                            side_effect=boom):
+                with self.assertRaises(StructuredError) as ctx:
+                    with DelegateLock(tmpdir, wait_timeout=1):
+                        pass
+            self.assertEqual(ctx.exception.error_category, "unknown")
+            self.assertEqual(ctx.exception.next_action, "escalate")
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_eagain_still_retries_then_conflict(self):
+        """p.21: EAGAIN (plain OSError, not BlockingIOError) keeps the retry
+        semantics → lock_conflict on timeout (not regression of p.21)."""
+        import errno as _errno
+        from unittest import mock
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            boom = OSError(_errno.EAGAIN, "Resource temporarily unavailable")
+            with mock.patch("documenter_service.adapters.lock.fcntl.flock",
+                            side_effect=boom):
+                with self.assertRaises(StructuredError) as ctx:
+                    with DelegateLock(tmpdir, wait_timeout=0):
+                        pass
+            self.assertEqual(ctx.exception.error_category, "lock_conflict")
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_lock_truncates_file_on_release(self):
         tmpdir = tempfile.mkdtemp()
         lock_path = os.path.join(tmpdir, ".delegate.lock")
@@ -555,7 +592,9 @@ class TestProposeWrite(unittest.TestCase):
         result = core_write.propose_write(
             self.corpus, manifest, reg_obj, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", preview=False)
+            diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
 
         self.assertTrue(result["approval_required"])
         self.assertIn("approval_id", result)
@@ -577,7 +616,9 @@ class TestProposeWrite(unittest.TestCase):
         core_write.propose_write(
             self.corpus, manifest, reg_obj, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", preview=False)
+            diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
 
         with open(os.path.join(self.corpus, "docs", "en", "alpha", "index.md")) as f:
             content = f.read()
@@ -594,7 +635,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input="dGVzdA==", audit_id="aid-1", preview=True)
+                diff_input="dGVzdA==", audit_id="aid-1", preview=True,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "unknown")
 
     def test_propose_write_tier_interlock(self):
@@ -608,7 +651,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input="dGVzdA==", audit_id="aid-1", preview=False)
+                diff_input="dGVzdA==", audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "tier_interlock")
 
     def test_propose_write_policy_none_raises(self):
@@ -621,7 +666,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, None, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input="dGVzdA==", audit_id="aid-1", preview=False)
+                diff_input="dGVzdA==", audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "tier_interlock")
 
     def test_propose_write_corrupt_registry_raises(self):
@@ -638,7 +685,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input="dGVzdA==", audit_id="aid-1", preview=False)
+                diff_input="dGVzdA==", audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "gate_failure")
 
     def test_propose_write_no_audit_id_raises(self):
@@ -652,7 +701,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input="dGVzdA==", audit_id=None, preview=False)
+                diff_input="dGVzdA==", audit_id=None, preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "audit_mismatch")
         self.assertEqual(ctx.exception.next_action, "rerun_audit")
 
@@ -672,7 +723,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, policy, events, engine,
                 target_id="nonexistent", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", preview=False)
+                diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "unknown")
 
     def test_propose_write_not_in_allowed_ops_raises(self):
@@ -697,7 +750,9 @@ class TestProposeWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, reg_obj, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", preview=False)
+                diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(ctx.exception.error_category, "gate_failure")
 
     def test_propose_write_trust_mismatch_raises(self):
@@ -719,7 +774,9 @@ class TestProposeWrite(unittest.TestCase):
         result = core_write.propose_write(
             self.corpus, manifest, reg_obj, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="review",
-            diff_input=encoded, audit_id="aid-1", preview=False)
+            diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertTrue(result["approval_required"])
 
     def test_propose_write_issues_approval_in_registry(self):
@@ -737,7 +794,9 @@ class TestProposeWrite(unittest.TestCase):
         result = core_write.propose_write(
             self.corpus, manifest, reg_obj, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", preview=False)
+            diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
 
         approval = reg_obj.find_approval(result["approval_id"])
         self.assertIsNotNone(approval)
@@ -783,7 +842,9 @@ class TestProposeWrite(unittest.TestCase):
         result = core_write.propose_write(
             self.corpus, manifest, reg_obj, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", preview=False)
+            diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(result["expires_in_min"], 30)
 
     def test_propose_write_no_policy_fallback_expiry(self):
@@ -803,7 +864,9 @@ class TestProposeWrite(unittest.TestCase):
         result = core_write.propose_write(
             self.corpus, manifest, reg_obj, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", preview=False)
+            diff_input=encoded, audit_id="aid-1", preview=False,
+            proposer_id="op-bot1"
+        )
         self.assertEqual(result["expires_in_min"], 30)  # DEFAULTS fallback
 
 
@@ -827,7 +890,7 @@ class TestApprove(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
     def _issue_approval(self, approval_id, diff_hash="sha256:" + "a" * 64,
-                        proposer_id=None, target_id="alpha"):
+                        proposer_id="op-bot1", target_id="alpha"):
         self.registry.issue_approval(
             approval_id=approval_id,
             target_ids=[target_id] if target_id else [],
@@ -907,14 +970,26 @@ class TestApprove(unittest.TestCase):
         self.assertEqual(event["payload"]["decision"], "approved")
         self.assertEqual(event["payload"]["approval_id"], approval_id)
 
-    def test_approve_unattributed_proposal_allowed(self):
+    def test_approve_unattributed_proposal_denied(self):
+        """approve an approval with proposer_id=None → gate_failure
+        (unattributed proposals are rejected — fail-closed)."""
         approval_id = "app-1"
-        self._issue_approval(approval_id, proposer_id=None)
-        result = core_write.approve(
-            self.registry, self.policy, self.events,
-            root=self.root,
-            approval_id=approval_id, operator_id="op-user1")
-        self.assertEqual(result["decision"], "approved")
+        # Issue approval directly with proposer_id=None (bypassing the
+        # helper which now defaults to "op-bot1")
+        self.registry.issue_approval(
+            approval_id=approval_id,
+            target_ids=["alpha"],
+            diff_hash="sha256:" + "a" * 64,
+            proposer_id=None,
+            audit_id="aid-1",
+        )
+        with self.assertRaises(StructuredError) as ctx:
+            core_write.approve(
+                self.registry, self.policy, self.events,
+                root=self.root,
+                approval_id=approval_id, operator_id="op-user1")
+        self.assertEqual(ctx.exception.error_category, "gate_failure")
+        self.assertIn("unattributed", ctx.exception.message)
 
     def test_approve_expired_raises(self):
         approval_id = "app-1"
@@ -1037,7 +1112,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id=target_id, change_type=change_type,
-            trust_level=trust_level, diff_input=encoded, audit_id="aid-1")
+            trust_level=trust_level, diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
 
         # approve
         approval_id = prop_result["approval_id"]
@@ -1161,7 +1238,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
 
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
@@ -1217,7 +1296,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
                            root=self.corpus,
@@ -1247,7 +1328,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
                            root=self.corpus,
@@ -1276,7 +1359,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
                            root=self.corpus,
@@ -1305,7 +1390,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
         core_write.approve(registry, policy, events,
                            root=self.corpus,
@@ -1344,7 +1431,9 @@ class TestApplyWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         # approve
@@ -1587,7 +1676,7 @@ class TestServiceWriteBranch(unittest.TestCase):
 
     def test_preview_false_policy_low_tier_interlock(self):
         self._write_policy(tier=1)
-        svc = self._service()
+        svc = self._service(env_extra={"COUNCIL_OPERATOR_ID": "op-test"})
         self._seed_audit(svc)
         with self.assertRaises(StructuredError) as ctx:
             svc.delegate(target_id="alpha", change_type="update",
@@ -1597,7 +1686,7 @@ class TestServiceWriteBranch(unittest.TestCase):
 
     def test_preview_false_happy_then_apply_via_delegate(self):
         self._write_policy(tier=2)
-        svc = self._service()
+        svc = self._service(env_extra={"COUNCIL_OPERATOR_ID": "op-test"})
         self._seed_audit(svc)
         diff = self._diff()
         prop = svc.delegate(target_id="alpha", change_type="update",
@@ -1614,11 +1703,13 @@ class TestServiceWriteBranch(unittest.TestCase):
         self.assertEqual(appr["decision"], "approved")
         # apply through delegate(preview=False, approval_id=...) WITHOUT
         # authenticated ingress → unknown (target_id is not a principal)
+        svc_nop = self._service()
+        svc_nop.registry = svc.registry
         with self.assertRaises(StructuredError) as ctx:
-            svc.delegate(target_id="alpha", change_type="update",
-                         trust_level="safe", diff_input=diff,
-                         preview=False, audit_id="aid-1",
-                         approval_id=prop["approval_id"])
+            svc_nop.delegate(target_id="alpha", change_type="update",
+                             trust_level="safe", diff_input=diff,
+                             preview=False, audit_id="aid-1",
+                             approval_id=prop["approval_id"])
         self.assertEqual(ctx.exception.error_category, "unknown")
         # now with authenticated ingress
         svc2 = self._service(env_extra={"COUNCIL_OPERATOR_ID": "op-approver2"})
@@ -1778,8 +1869,8 @@ class TestProposeWritePolicyFloor(unittest.TestCase):
                 self.tmpdir, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update",
                 trust_level="safe", diff_input=diff_b64,
-                audit_id="aud-1",
-            )
+                audit_id="aud-1", proposer_id="op-bot1",
+        )
         self.assertEqual(ctx.exception.error_category, "trust_mismatch")
         self.assertIn("policy entry floor", ctx.exception.message)
 
@@ -1810,7 +1901,7 @@ class TestProposeWritePolicyFloor(unittest.TestCase):
             self.tmpdir, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update",
             trust_level="review", diff_input=diff_b64,
-            audit_id="aud-1",
+            audit_id="aud-1", proposer_id="op-bot1",
         )
         self.assertEqual(result["next_action"], "await_approval")
         self.assertTrue(result["approval_required"])
@@ -1834,7 +1925,7 @@ class TestProposeWritePolicyFloor(unittest.TestCase):
             self.tmpdir, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update",
             trust_level="safe", diff_input=diff_b64,
-            audit_id="aud-1",
+            audit_id="aud-1", proposer_id="op-bot1",
         )
         self.assertEqual(result["next_action"], "await_approval")
         self.assertTrue(result["approval_required"])

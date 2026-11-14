@@ -408,7 +408,8 @@ class TestStructuredErrorToolLevel(unittest.TestCase):
                       "trust_level": "safe",
                       "diff_input": diff_b64,
                   },
-              }}])
+              }}],
+            env_extra={"COUNCIL_OPERATOR_ID": "op-test"})
         self.assertEqual(rc, 0)
         self.assertEqual(len(responses), 1)
         resp = responses[0]
@@ -703,11 +704,11 @@ class TestMCPApprove(unittest.TestCase):
             except OSError:
                 pass  # not empty or already gone
 
-    def test_approve_operator_id_param_ignored(self):
-        """approve with operator_id param → additionalProperties false in schema,
-        but extra params should not break ingress.
-        Verify isError is false path for known approval (but approval doesn't exist
-        so it's audit_mismatch; the key is that env ingress still works).
+    def test_approve_operator_id_param_rejected(self):
+        """approve with operator_id param → -32602 (unknown argument).
+
+        With strict schema validation, extra keys (additionalProperties: false)
+        are rejected.  Operator identity must come from env, not client params.
         """
         setup = _setup_approve_mcp_test()
         try:
@@ -727,11 +728,10 @@ class TestMCPApprove(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertEqual(len(responses), 1)
             resp = responses[0]
-            # Still isError=true because approval doesn't exist, but operator_id
-            # from env was used (not client param).
-            self.assertTrue(resp["result"].get("isError"))
-            error_data = json.loads(resp["result"]["content"][0]["text"])
-            self.assertEqual(error_data["error_category"], "audit_mismatch")
+            # -32602: unknown argument "operator_id"
+            self.assertIn("error", resp)
+            self.assertEqual(resp["error"]["code"], -32602)
+            self.assertIn("unknown argument", resp["error"]["message"])
         finally:
             # Clean up temporary policy and data dirs (shutil-safe).
             for d in [os.path.dirname(setup["policy_path"]),
@@ -750,6 +750,76 @@ class TestMCPApprove(unittest.TestCase):
             except OSError:
                 pass  # not empty or already gone
 
+    # -----------------------------------------------------------------------
+    # Arg-validation: strict schema enforcement (P.19)
+    # -----------------------------------------------------------------------
+
+    def test_audit_unknown_argument(self):
+        """audit with extra key -> -32602 (unknown argument)."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 93,
+              "method": "tools/call",
+              "params": {"name": "audit",
+                         "arguments": {"target_id": "*", "bogus": 1}}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        self.assertIn("error", resp)
+        self.assertEqual(resp["error"]["code"], -32602)
+        self.assertIn("unknown argument", resp["error"]["message"])
+
+    def test_audit_severity_not_in_enum(self):
+        """audit severity='urgent' (not in enum) -> JSON-RPC -32602.
+
+        Runtime schema enforcement (additionalProperties/enum/type) rejects
+        the invalid enum value at the transport layer (fix plan p.19).
+        """
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 94,
+              "method": "tools/call",
+              "params": {"name": "audit",
+                         "arguments": {"severity_min": "urgent"}}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        self.assertIn("error", resp)
+        self.assertEqual(resp["error"]["code"], -32602)
+        self.assertIn("urgent", resp["error"]["message"])
+
+    def test_status_target_id_wrong_type(self):
+        """status target_id=123 (int, not string/null) -> -32602."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 95,
+              "method": "tools/call",
+              "params": {"name": "status",
+                         "arguments": {"target_id": 123}}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        self.assertIn("error", resp)
+        self.assertEqual(resp["error"]["code"], -32602)
+        self.assertIn("expected", resp["error"]["message"])
+
+    def test_status_correct_args_no_regression(self):
+        """status with valid args still works (no regression)."""
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 96,
+              "method": "tools/call",
+              "params": {"name": "status",
+                         "arguments": {"target_id": None}}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        self.assertNotIn("error", resp)
+
 
 # ---------------------------------------------------------------------------
 # Test 10: MCP delegate_write tool
@@ -758,8 +828,12 @@ class TestMCPApprove(unittest.TestCase):
 class TestMCPDelegateWrite(unittest.TestCase):
     """MCP tools/call delegate_write: preview always False, no preview param."""
 
-    def test_delegate_write_no_preview_param(self):
-        """delegate_write with preview param present → ignored (server passes False)."""
+    def test_delegate_write_rejects_preview_param(self):
+        """delegate_write: preview not in schema → rejected as unknown argument.
+
+        Per mvp-interfaces §3, delegate_write has no preview property in its
+        inputSchema.  P.19 strict schema enforcement (P.19) returns -32602.
+        """
         diff_b64 = _diff_for_alpha_simple()
         responses, _, rc = _run_mcp(
             ["--root", FIXTURE_CORPUS],
@@ -771,7 +845,29 @@ class TestMCPDelegateWrite(unittest.TestCase):
                              "change_type": "update",
                              "trust_level": "safe",
                              "diff_input": diff_b64,
-                             "preview": True,  # present but ignored
+                             "preview": True,  # rejected: not in schema
+                         }}}],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses), 1)
+        resp = responses[0]
+        self.assertIn("error", resp)
+        self.assertEqual(resp["error"]["code"], -32602)
+        self.assertIn("unknown argument", resp["error"]["message"])
+
+    def test_delegate_write_no_preview_param(self):
+        """delegate_write without preview param → server passes False."""
+        diff_b64 = _diff_for_alpha_simple()
+        responses, _, rc = _run_mcp(
+            ["--root", FIXTURE_CORPUS],
+            [{"jsonrpc": "2.0", "id": 101,
+              "method": "tools/call",
+              "params": {"name": "delegate_write",
+                         "arguments": {
+                             "target_id": "alpha",
+                             "change_type": "update",
+                             "trust_level": "safe",
+                             "diff_input": diff_b64,
                          }}}],
             env_extra={"COUNCIL_OPERATOR_ID": "op-test-writer"},
         )

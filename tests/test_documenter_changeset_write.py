@@ -221,7 +221,9 @@ class TestChangesetWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertTrue(prop_result["approval_required"])
         self.assertEqual(prop_result["next_action"], "await_approval")
@@ -296,7 +298,9 @@ class TestChangesetWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", changeset=changeset)
+                diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertEqual(ctx.exception.error_category, "unknown")
         self.assertIn("not manifest-tracked", ctx.exception.message)
@@ -329,7 +333,9 @@ class TestChangesetWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
@@ -386,7 +392,9 @@ class TestChangesetWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
@@ -436,7 +444,9 @@ class TestChangesetWrite(unittest.TestCase):
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
                 diff_input="dGVzdA==", audit_id="aid-1",
-                preview=True, changeset=changeset)
+                preview=True, changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertEqual(ctx.exception.error_category, "unknown")
 
@@ -459,7 +469,9 @@ class TestChangesetWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1")
+            diff_input=encoded, audit_id="aid-1",
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
@@ -508,7 +520,9 @@ class TestChangesetWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
@@ -584,7 +598,9 @@ class TestChangesetWrite(unittest.TestCase):
         prop_result = core_write.propose_write(
             self.corpus, manifest, registry, policy, events, engine,
             target_id="alpha", change_type="update", trust_level="safe",
-            diff_input=encoded, audit_id="aid-1", changeset=changeset)
+            diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
         approval_id = prop_result["approval_id"]
 
         core_write.approve(registry, policy, events,
@@ -737,7 +753,9 @@ class TestChangesetWrite(unittest.TestCase):
             core_write.propose_write(
                 self.corpus, manifest, registry, policy, events, engine,
                 target_id="alpha", change_type="update", trust_level="safe",
-                diff_input=encoded, audit_id="aid-1", changeset=changeset)
+                diff_input=encoded, audit_id="aid-1", changeset=changeset,
+            proposer_id="op-bot1"
+        )
 
         self.assertEqual(ctx.exception.error_category, "unknown")
         self.assertIn("duplicated", ctx.exception.message)
