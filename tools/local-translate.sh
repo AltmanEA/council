@@ -4,6 +4,7 @@
 # Usage:
 #   tools/local-translate.sh en ru < glossary.md < input.txt
 #   echo "text" | tools/local-translate.sh en ru docs/en/glossary/index.md file.md > out.md
+#   tools/local-translate.sh --summary-json en ru < input.txt  (JSON summary on stderr)
 #
 # Environment variables (defaults set for validated configuration):
 #   TRANSLATE_BACKEND   — "cloud" (default) or "ollama"
@@ -19,6 +20,10 @@
 #   TRANSLATE_FORCE_SECTION — "1" to merge all prose into one block (default paragraphs)
 #   REQUEST_TIMEOUT     — Curl timeout in seconds (default 120)
 #   MAX_RETRIES         — Number of retries per chunk (default 2)
+#   TOTAL_DEADLINE_SECONDS — Global deadline for all requests (default 0 = off); if > 0,
+#                            per-request timeout shrinks to remaining time (min 5s);
+#                            exhausted deadline marks blocks as [FAIL], exit 4.
+#   TRANSLATE_RUN_LOG   — File path to append a JSON run-record after each invocation.
 #
 # Output: Only the translated text goes to stdout.
 #         Debug/warnings/preflight messages go to stderr.
@@ -28,6 +33,7 @@
 #   1 — invalid arguments / python error
 #   2 — cloud backend key missing
 #   3 — local model server unreachable (no fallback to cloud without explicit override)
+#   4 — translation incomplete (one or more lines failed); stdout still contains output
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -53,13 +59,50 @@ _CKDW='{"enable_thinking":false}'
 
 # ── Preflight: check local server availability when backend=cloud ──
 preflight_local() {
-    if curl -sf --max-time 3 "${NEURALDEEP_BASE_URL}/models" > /dev/null 2>&1; then
-        return 0
+    if ! curl -sf --max-time 3 "${NEURALDEEP_BASE_URL}/models" > /dev/null 2>&1; then
+        echo "[preflight] local model server unreachable; run with " \
+             "NEURALDEEP_BASE_URL=https://api.neuraldeep.ru/v1 " \
+             "CLOUD_MODEL=qwen3.6-35b-a3b-noreason" >&2
+        return 1
     fi
-    echo "[preflight] local model server unreachable; run with " \
-         "NEURALDEEP_BASE_URL=https://api.neuraldeep.ru/v1 " \
-         "CLOUD_MODEL=qwen3.6-35b-a3b-noreason" >&2
-    return 1
+    # Verify CLOUD_MODEL is listed on the server (warn-only on parse failure)
+    local model_list
+    model_list=$(curl -sf --max-time 5 "${NEURALDEEP_BASE_URL}/models" 2>/dev/null) || {
+        echo "[preflight] [WARN] could not fetch /models for model check" >&2
+        return 0
+    }
+    local found
+    found=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.stdin.read())
+    ids = [m.get('id','') for m in data.get('data',[])]
+    target = sys.argv[1]
+    if target in ids:
+        print('yes')
+    else:
+        print('no')
+except Exception:
+    print('parse-error')
+" "${CLOUD_MODEL}" <<< "${model_list}" 2>/dev/null)
+    if [ "$found" = "no" ]; then
+        local ids_json
+        ids_json=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.stdin.read())
+    ids = [m.get('id','') for m in data.get('data',[])]
+    print(', '.join(ids))
+except Exception:
+    print('N/A')
+" <<< "${model_list}" 2>/dev/null)
+        echo "[preflight] model '${CLOUD_MODEL}' not found on server; available: ${ids_json}" >&2
+        return 1
+    fi
+    if [ "$found" = "parse-error" ]; then
+        echo "[preflight] [WARN] could not parse /models response" >&2
+    fi
+    return 0
 }
 
 if [ "${TRANSLATE_BACKEND}" = "cloud" ]; then

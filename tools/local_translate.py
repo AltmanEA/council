@@ -6,9 +6,24 @@ model keeps context. Only glossary terms actually present in the block are
 mentioned in the prompt; Russian equivalents are force-applied afterwards.
 """
 
-import json, os, re, subprocess, sys, tempfile
+import json, os, re, subprocess, sys, tempfile, time
 from difflib import SequenceMatcher
 
+# Total deadline across all requests: env TOTAL_DEADLINE_SECONDS > 0 → enforce
+_TOTAL_DEADLINE_S = int(os.environ.get("TOTAL_DEADLINE_SECONDS", "0"))
+_DEADLINE_START = time.monotonic() if _TOTAL_DEADLINE_S > 0 else 0
+
+
+def _deadline_remaining():
+    """Seconds left on the total deadline; returns 0 if exhausted."""
+    if _TOTAL_DEADLINE_S <= 0:
+        return 0  # feature off
+    elapsed = time.monotonic() - _DEADLINE_START
+    return max(0, _TOTAL_DEADLINE_S - elapsed)
+
+
+# E-003 (hint style), E-004 (temperature), E-006 (codeguard): see tools/EXPERIMENTS.md
+PROMPT_VERSION = "2026.11-r2"  # r2: headings translated (restore_heading_prefix), table separators skipped, identifier-safe glossary regex
 
 SYSTEM_PROMPT = ("You are a translator. Translate only the text between === markers. "
                  "Keep markdown formatting intact: **bold**, `code`, and list markers.")
@@ -29,8 +44,30 @@ def log(msg):
     print(msg, file=sys.stderr, flush=True)
 
 
-METADATA_KEYS = ('Version:', 'Status:', 'Last Modified:', 'Abstraction:',
-                 'changelog-path:', 'Source:', 'ID:', 'Date:', 'Participants:')
+# Import KNOWN_KEYS from docmeta.py as the base for metadata-line detection.
+# Divergences (e.g. 'has_translation:') are handled by the explicit
+# TRANSLATE_EXTRA_META_KEYS below — translation-specific additions that
+# docmeta does not track (see sess-prevention-measures consensus).
+try:
+    from docmeta import KNOWN_KEYS as _DOC_META_KEYS
+except ImportError:
+    # Fallback for standalone runs without docmeta on path.
+    _DOC_META_KEYS = ("id", "Version", "Status", "Abstraction", "changelog-path",
+                      "title", "has_translation", "references",
+                      "allow_non_index_paths", "Last Modified")
+
+# Translation-specific metadata keys NOT in docmeta.KNOWN_KEYS.
+# These are added to the base so local_translate.py knows which lines to skip
+# during translation (they must match the on-disk EN metadata verbatim in RU).
+_TRANSLATE_EXTRA_META_KEYS = ('Source:', 'ID:', 'Date:', 'Participants:')
+
+METADATA_KEYS = _DOC_META_KEYS + _TRANSLATE_EXTRA_META_KEYS
+
+
+def _is_table_separator(line):
+    """Table delimiter row like |---|:--:| — structural, never translated."""
+    s = line.strip()
+    return bool(s) and set(s) <= set('|-: ') and '-' in s
 
 
 def is_metadata_line(line):
@@ -43,9 +80,12 @@ def needs_skip(line):
     # Metadata headers stay untranslated by default: existing docs/ru/*/index-RU.md
     # keep English keys/values (machine-parsed by Documenter). E-005 decision.
     # TRANSLATE_METADATA=1 opts back into model translation of those lines.
+    # Headings ARE translated (existing RU convention: `# Сценарии`); the `#`
+    # prefix is structurally restored by restore_heading_prefix().
     s = line.strip()
     keep_metadata = os.environ.get("TRANSLATE_METADATA") != "1"
-    return not s or s.startswith('#') or bool(re.match(r'^-{3,}\s*$', s)) or \
+    return not s or bool(re.match(r'^-{3,}\s*$', s)) or \
+        _is_table_separator(line) or \
         (keep_metadata and is_metadata_line(line))
 
 
@@ -82,7 +122,7 @@ def load_glossary(path):
     for key, info in _GLOSSARY_CACHE.items():
         en = info['en']
         if en:
-            _TERM_RES[key] = re.compile(r'(?<![A-Za-z0-9])' + re.escape(en) + r'(?![A-Za-z0-9])', re.IGNORECASE)
+            _TERM_RES[key] = re.compile(r'(?<![A-Za-z0-9_])' + re.escape(en) + r'(?![A-Za-z0-9_])', re.IGNORECASE)
     return list(_GLOSSARY_CACHE.keys())
 
 
@@ -246,6 +286,21 @@ PATH_RX = re.compile(r'[\w\-.]+[.](?:md|yaml|yml|json|py|sh|txt|toml)\b')
 LIST_RX = re.compile(r'^(\s*)(?:([-*+])|(\d+\.))\s+')
 
 
+def restore_heading_prefix(src_line, translated):
+    """Headings are translated but the '#' prefix must survive; restore it
+    from the source if the model dropped or mangled it."""
+    m = re.match(r'^(\s*#{1,6}\s+)', src_line)
+    if not m:
+        return translated
+    want = m.group(1).strip()
+    t = translated.strip()
+    tm = re.match(r'^(#{1,6})\s+(.*)$', t)
+    if tm and tm.group(1) == want:
+        return translated
+    body = tm.group(2) if tm else t
+    return f"{want} {body}"
+
+
 def restore_list_marker(src_line, translated):
     """Model often drops '1.' / '-' markers; restore from the source line."""
     m = LIST_RX.match(src_line)
@@ -275,9 +330,14 @@ def restore_paths(translated, src_line):
     return translated
 
 
+_global_gloss_replacements = 0
+
+
 def enforce_glossary(text, term_keys):
     """Hard-substitute Russian equivalents for terms the model left in English.
-    Skips spans inside **bold** (handled by fix pass 2) and `inline code`."""
+    Skips spans inside **bold** (handled by fix pass 2) and `inline code`.
+    Updates _global_gloss_replacements counter (see summary-json support)."""
+    global _global_gloss_replacements
     protected = []
     for rx in (r'\*\*[^*]+\*\*', r'`[^`]+`'):
         for m in re.finditer(rx, text):
@@ -286,6 +346,7 @@ def enforce_glossary(text, term_keys):
     def is_protected(start, end):
         return any(start < pe and end > ps for ps, pe in protected)
 
+    block_repl = 0
     for key in term_keys:
         info = _GLOSSARY_CACHE.get(key)
         if not info or not info['ru']:
@@ -310,6 +371,8 @@ def enforce_glossary(text, term_keys):
             out.append(text[last:])
             text = ''.join(out)
             log(f"[gloss-apply] '{info['en']}' -> '{info['ru']}' x{n_repl}")
+            block_repl += n_repl
+    _global_gloss_replacements += block_repl
     return text
 
 
@@ -355,10 +418,58 @@ def _cloud_credentials():
     return key, base
 
 
+# ── Mock backend (for tests) ────────────────────────────────────────
+
+def _load_mock_responses(mock_dir):
+    """Load responses.json from mock_dir. Returns dict {sha256hex(text): response}.
+
+    Only loads once (cached in _MOCK_RESPONSES).
+    """
+    global _MOCK_RESPONSES
+    if _MOCK_RESPONSES is not None and "loaded" in _MOCK_RESPONSES:
+        return _MOCK_RESPONSES
+    path = os.path.join(mock_dir, "responses.json")
+    if not os.path.isfile(path):
+        _MOCK_RESPONSES = {}
+        return _MOCK_RESPONSES
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        _MOCK_RESPONSES = {"loaded": True}  # sentinel
+        for k, v in data.items():
+            _MOCK_RESPONSES[k] = v
+        log(f"[mock] loaded {len(data)} responses from {path}")
+    except Exception as e:
+        log(f"[WARN] could not load mock responses: {e}")
+        _MOCK_RESPONSES = {}
+    return _MOCK_RESPONSES
+
+
+def _call_mock(user_prompt, model_name):
+    """Mock backend: look up sha256(text) in responses.json. Returns None on miss."""
+    import hashlib
+    mock_dir = os.environ.get("TRANSLATE_MOCK_DIR", "")
+    if not mock_dir:
+        log("[mock] TRANSLATE_MOCK_DIR not set")
+        return None
+    _load_mock_responses(mock_dir)
+    key = hashlib.sha256(user_prompt.encode("utf-8")).hexdigest()
+    resp = _MOCK_RESPONSES.get(key)
+    if resp is None:
+        log(f"[mock] miss for prompt sha256={key[:16]}...")
+        return None
+    log(f"[mock] hit for prompt sha256={key[:16]}...")
+    return clean_response(resp)
+
+
+_MOCK_RESPONSES = None  # Loaded on first _call_mock call
+
 def call_model(user_prompt, model_name):
     """Dispatch to the configured backend. Returns cleaned text or None."""
     if BACKEND == "cloud":
         return _call_cloud(user_prompt, model_name)
+    if BACKEND == "mock":
+        return _call_mock(user_prompt, model_name)
     host = os.environ.get("OLLAMA_HOST", OLLAMA_DEFAULT_HOST)
     return _call_ollama(user_prompt, host, model_name)
 
@@ -368,6 +479,9 @@ def _call_cloud(user_prompt, model_name):
     if not key:
         log("[error] no cloud API key"); return None
     timeout = int(os.environ.get("REQUEST_TIMEOUT", "120"))
+    remaining = _deadline_remaining()
+    if remaining > 0:
+        timeout = min(timeout, int(remaining))
     max_attempts = int(os.environ.get("MAX_RETRIES", "2"))
     temp = float(os.environ.get("TRANSLATE_TEMP", "0.2"))
     top_p = float(os.environ.get("TRANSLATE_TOP_P", "0.95"))
@@ -388,16 +502,21 @@ def _call_cloud(user_prompt, model_name):
             log(f"[WARN] bad CLOUD_CHAT_KWARGS: {e}")
     url = base.rstrip('/') + "/chat/completions"
     for attempt in range(max_attempts):
+        # Check deadline before each attempt
+        if _TOTAL_DEADLINE_S > 0 and _deadline_remaining() <= 0:
+            log("[deadline] total deadline exceeded")
+            return None
         tmp_path = None
         try:
             tmp_path = tempfile.mktemp(suffix='.json')
             with open(tmp_path, 'w', encoding='utf-8') as fh:
                 json.dump(payload, fh, ensure_ascii=False); fh.flush()
+            curl_timeout = max(5, timeout)
             cmd = ["curl", "-sf", url,
                    "-H", "Content-Type: application/json",
                    "-H", f"Authorization: Bearer {key}",
                    "--data-binary", f"@{tmp_path}"]
-            proc_result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            proc_result = subprocess.run(cmd, capture_output=True, text=True, timeout=curl_timeout)
             if proc_result.returncode != 0:
                 log(f"[retry] cloud attempt {attempt+1}/{max_attempts}"); continue
             resp_data = json.loads(proc_result.stdout)
@@ -427,9 +546,17 @@ def _call_ollama(user_prompt, host_url, model_name):
         }
     }
     timeout = int(os.environ.get("REQUEST_TIMEOUT", "120"))
+    if _TOTAL_DEADLINE_S > 0:
+        remaining = _deadline_remaining()
+        if remaining > 0:
+            timeout = min(timeout, int(remaining))
     max_attempts = int(os.environ.get("MAX_RETRIES", "2"))
 
     for attempt in range(max_attempts):
+        # Check deadline before each attempt
+        if _TOTAL_DEADLINE_S > 0 and _deadline_remaining() <= 0:
+            log("[deadline] total deadline exceeded")
+            return None
         tmp_path = None
         try:
             tmp_path = tempfile.mktemp(suffix='.json')
@@ -437,7 +564,8 @@ def _call_ollama(user_prompt, host_url, model_name):
                 json.dump(payload, fh, ensure_ascii=False); fh.flush()
             cmd = ["curl", "-sf", f"{host_url}/api/generate",
                    "-H", "Content-Type: application/json", "--data-binary", f"@{tmp_path}"]
-            proc_result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            curl_timeout = max(5, timeout)
+            proc_result = subprocess.run(cmd, capture_output=True, text=True, timeout=curl_timeout)
             if proc_result.returncode != 0:
                 log(f"[retry] attempt {attempt+1}/{max_attempts}"); continue
             resp_data = json.loads(proc_result.stdout)
@@ -555,8 +683,13 @@ def split_into_blocks(input_lines):
 # ── Main ────────────────────────────────────────────────────────────
 
 def main():
+    # Parse optional --summary-json flag before positional args
+    summary_json = "--summary-json" in sys.argv
+    if summary_json:
+        sys.argv = [a for a in sys.argv if a != "--summary-json"]
+
     if len(sys.argv) < 3:
-        log("Usage: local_translate.py <src_lang> <tgt_lang> [glossary_path]"); sys.exit(1)
+        log("Usage: local_translate.py [--summary-json] <src_lang> <tgt_lang> [glossary_path]"); sys.exit(1)
     source_lang = sys.argv[1]; target_lang = sys.argv[2]
     glossary_file = sys.argv[3] if len(sys.argv) > 3 else None
 
@@ -574,9 +707,14 @@ def main():
     all_terms = load_glossary(glossary_file)
     log(f"[debug] Glossary loaded: {len(all_terms)} terms")
 
+    # Reset global counter per invocation
+    global _global_gloss_replacements
+    _global_gloss_replacements = 0
+
     input_lines = input_text.split('\n')
     output_lines = [None] * len(input_lines)
     stats_ok = 0; stats_skip = 0; stats_fail = 0
+    exit_reason = "ok"
 
     for kind, indices in split_into_blocks(input_lines):
         if kind == 'skip':
@@ -603,6 +741,7 @@ def main():
             line_out = translated[pos]
             if line_out and line_out.strip() != input_lines[i].strip():
                 line_out = restore_list_marker(input_lines[i], line_out)
+                line_out = restore_heading_prefix(input_lines[i], line_out)
                 line_out = restore_paths(line_out, input_lines[i])
                 line_out = fix_known_terms(line_out)
                 line_out = enforce_glossary(line_out, term_keys)
@@ -616,6 +755,53 @@ def main():
     log(f"\nDone: {stats_ok} ok, {stats_skip} skip, {stats_fail} fail")
     final_output = '\n'.join(l if l is not None else '' for l in output_lines)
     if final_output: print(final_output, end="", flush=True)
+
+    # Exit code 4 if any lines failed translation (deferred: summary/run-log
+    # must be written first — they are the operator's evidence for the gate)
+    exit_reason = "ok"
+    if stats_fail > 0:
+        exit_reason = f"{stats_fail} lines failed translation"
+        log(f"[exit] {stats_fail} lines failed translation")
+        fail_exit = True
+    else:
+        fail_exit = False
+
+    # --summary-json: single JSON line on stderr
+    if summary_json:
+        summary = {
+            "ok": stats_ok,
+            "skip": stats_skip,
+            "fail": stats_fail,
+            "backend": BACKEND,
+            "model": model,
+            "prompt_version": PROMPT_VERSION,
+            "gloss_applied": _global_gloss_replacements,
+        }
+        print(json.dumps(summary), file=sys.stderr, flush=True)
+
+    # Run log: append JSONL record if TRANSLATE_RUN_LOG is set
+    run_log_path = os.environ.get("TRANSLATE_RUN_LOG")
+    if run_log_path:
+        record = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime()),
+            "backend": BACKEND,
+            "model": model,
+            "prompt_version": PROMPT_VERSION,
+            "ok": stats_ok,
+            "skip": stats_skip,
+            "fail": stats_fail,
+            "exit_reason": exit_reason,
+            "gloss_applied": _global_gloss_replacements,
+            "input_lines": len(input_lines),
+        }
+        try:
+            with open(run_log_path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record) + "\n")
+        except OSError as e:
+            log(f"[WARN] could not write run log: {e}")
+
+    if fail_exit:
+        sys.exit(4)
 
 
 if __name__ == "__main__":
