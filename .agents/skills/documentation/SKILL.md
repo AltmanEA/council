@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Documentation Worker
@@ -116,11 +116,12 @@ When `change_type: update`:
 3. Read the target's changelog file referenced by `changelog-path:`.
 4. Check `docs/en/glossary/index.md` for any domain terms used but not defined.
 5. Apply changes to `index.md` body as described in the request.
-6. If RU translation exists: resolve the RU path from the manifest `has_translation` field (not from filesystem co-location) → perform structural alignment check (`AGENTS.md` §3.3 — compare section counts, heading structures, paragraph positions) → update `index-RU.md` for changed portions only → log action taken (section updated, translation aligned, or verified consistent).
-7. Append a changelog entry: `<!-- CHANGES vX.Y.Z: <description>. -->`.
-8. Bump version per `AGENTS.md` §7.5 rules (patch for typo/formatting, minor for content addition, major for foundational rewrite).
-9. Run compliance verification (`AGENTS.md` §8): manifest up-to-date, Russian alignment checked, all terms exist in glossary, cross-references resolve, changelog appended.
-10. Report results using the Response Contract.
+6. If an RU translation is recorded (`has_translation` in the manifest): **synchronization is suspended** per `AGENTS.md` §3.3 — resolve the RU path from the manifest field (not from filesystem co-location), check structural drift (section counts, heading structures, paragraph positions), and REPORT it. Do not update `index-RU.md` unless the operator explicitly requested the translation. See §Create or Update Russian Translation.
+7. Dispatch the version writer — do not hand-edit version, changelog, or manifest:
+   `python3 tools/bump_version.py --id <id> --kind patch|minor|major --note "<reason>"`
+   The `--note` value is mandatory, non-empty, and quoted verbatim from the approved change plan (it is a *claimed rationale*, not verified provenance). Kind selection follows `AGENTS.md` §7.5 (patch: typo/formatting; minor: content addition or structure; major: foundational rewrite); when classification is uncertain, run `tools/classify_bump.py` read-only for a proposal and escalate per `AGENTS.md` §6 rather than guessing.
+8. Run compliance verification (`AGENTS.md` §8): `python3 tools/check_all.py` — see §Deterministic Delegation and §Compliance Checklist.
+9. Report results using the Response Contract.
 
 ### Split a Document
 
@@ -128,11 +129,13 @@ When `change_type: split`:
 
 - If the document exceeds 200 lines (`AGENTS.md` §7.3), this is an **escalation condition** (see Escalation Rules below). Do NOT proceed with splitting autonomously.
 - Instead, propose 2–3 candidate split locations based on natural section boundaries, topic coherence, and cross-reference clusters. Present options with rationale to the primary agent for human decision.
-- After human selects the split point: create new sub-documents with stable identifiers, move appropriate sections, update cross-references in all referencing documents, update the manifest (remove old entry, add new ones), and bump version accordingly.
+- After human selects the split point: create new sub-documents with stable identifiers, move appropriate sections, update cross-references in all referencing documents, bump versions, and regenerate the manifest with `python3 tools/gen_manifest.py --write` (the sole writer, `AGENTS.md` §2.2) — never hand-edit `docs-manifest.yaml`.
 
 ### Create or Update Russian Translation
 
 When `change_type: create_ru`:
+
+> **Current phase — synchronization suspended (`AGENTS.md` §3.3).** Execute this capability ONLY when the human operator explicitly requests a translation. Otherwise operate in drift-audit mode: run the structural comparison (Phases 1–2 logic, read-only), report the drift, and do not write `index-RU.md`. Existing RU files are convenience copies and are not a correctness gate.
 
 #### Phase 1 — Parse English source
 
@@ -227,13 +230,36 @@ Fallback: if the configured server is unreachable and no explicit cloud override
 
 When `change_type: audit`:
 
-- Read `docs-manifest.yaml` and iterate through every listed document.
-- For each document: read `index.md`, verify metadata header completeness, check line count ≤ 200, verify changelog existence, confirm glossary terms are defined, check cross-references resolve (scan for `xref:` or standard reference patterns).
-- Flag non-compliant documents in the REPORT with specific violations.
-- When scanning the filesystem for documents not present in the manifest, distinguish between truly orphaned files (no cross-reference anywhere) and auxiliary/operational files that are cross-referenced from a parent document body (e.g., templates, prompts, helpers mentioned inside `fallback/fallback-mode.md`). Only report true orphans as manifest compliance violations; flag auxiliaries as INFO-level notes instead.
-- Verify the naming convention per `AGENTS.md` §7.1: for every manifest entry whose `path` contains a directory component (i.e., the document lives inside a folder, not at root), confirm the file name is exactly `index.md`. Root-level operational files (`AGENTS.md`, `docs-manifest.yaml`) are exempt from this rule since they live at repository root by design.
-- **Division with `tools/check_all`:** of the Documenter audit rules (`documenter-service/mvp-interfaces.md`, §Compliance rules scanned), rules 3 (glossary terms) and 5 (abstraction consistency) remain skill/AI-reserved judgments. The deterministic `tools/check_all` suite covers rules 1, 2, 4, 6 (+naming/schema) and MUST NOT advertise itself as implementing "audit rules 1–6".
-- DO NOT fix issues automatically during audit mode unless the trust level is `safe` AND the violation is a clear, deterministic correction (e.g., missing `Last Modified` field matching today's date).
+- **Dispatch, do not re-implement:** run `python3 tools/check_all.py` (options: `--json`, `--severity low|medium|high`, `--rule <ID>`, `--strict`) and analyze its report. Line count, changelog existence, cross-reference anchors, manifest parity, naming and schema are deterministic findings owned by the tool — the skill MUST NOT re-check them by reading files, and MUST NOT claim to implement "audit rules 1–6" (`AGENTS.md` §8).
+- **Skill/AI-reserved judgments** (`documenter-service/mvp-interfaces.md`, §Compliance rules scanned — rules 3 and 5):
+  - **Rule 3 — glossary terms:** every domain term used in a body exists in `docs/en/glossary/index.md`;
+  - **Rule 5 — abstraction consistency:** declared `abstraction:` matches actual content structure.
+- **Orphan classification (AI judgment):** when the manifest↔disk comparison reports on-disk documents absent from the manifest, distinguish truly orphaned files (no cross-reference anywhere) from auxiliary/operational files referenced from a parent document body (e.g., templates, prompts, helpers mentioned inside `fallback/fallback-mode.md`). Report only true orphans as compliance violations; flag auxiliaries as INFO-level notes.
+- Flag non-compliant documents in the REPORT with specific violations, naming the rule and the file.
+- DO NOT fix issues automatically during audit mode unless the trust level is `safe` AND the violation is a clear, deterministic correction already owned by a `tools/` script.
+
+---
+
+## Deterministic Delegation
+
+Mechanical documentation operations are owned by the deterministic suites under `tools/`. The skill **dispatches** them; it never reimplements their logic by hand and never edits their output by hand.
+
+| Operation | Tool | Notes |
+| --- | --- | --- |
+| Regenerate the manifest | `python3 tools/gen_manifest.py --write` | Sole writer of `docs-manifest.yaml` (`AGENTS.md` §2.2); hand-editing the manifest is prohibited |
+| Verify manifest parity | `python3 tools/gen_manifest.py --check` | Regenerate-and-diff idempotence check |
+| Compliance rule suite | `python3 tools/check_all.py [--json] [--severity] [--rule] [--strict]` | Rules 1, 2, 4, 6 + naming/schema; exit 0 clean, 1 findings, 2 internal error |
+| Version bump + changelog + manifest | `python3 tools/bump_version.py --id <id> --kind <patch\|minor\|major> --note "<reason>"` | Enforced write order: document content → changelog → manifest (last); atomic per-file temp+rename with rollback; exit 2 = refusal/rolled back |
+| Diff→bump classification proposal | `python3 tools/classify_bump.py` | Read-only; ambiguous → `minor` with a §7.5 warning; `--report` gate: escalation rate > 20% → redesign |
+| Translation | `tools/local-translate.sh` | Optional path, §Translation via project translator |
+
+Rules of engagement:
+
+1. **Atomicity, not authority.** These tools provide atomic writes and deterministic checks; they grant no permission. Every dispatch is permitted only after step (5) Approve of `AGENTS.md` §5.2, and only by this skill.
+2. **No rule fork.** Any check available in `tools/check_all.py` is obtained by invoking it — duplicating the check in prose or ad-hoc commands is prohibited (mirrors the Documenter `audit()` reuse rule, `documenter-service/mvp-interfaces.md` §Compliance rules scanned).
+3. **No coverage claims.** Never describe this skill or the tools as implementing "audit rules 1–6"; rules 3 and 5 are AI/skill-reserved judgments.
+4. **Trust alignment.** The lists in §Trust Levels MUST stay aligned with the Documenter trust classifier (`documenter-service/index.md`, §Trust Classification) and with the shipped `tools/` behavior; a mismatch is escalated, not resolved silently.
+5. **Structured failure handling.** A tool exit code 2 is a refusal or a rollback — report it as such and escalate; never retry with weakened arguments.
 
 ---
 
@@ -268,20 +294,26 @@ Since this skill performs direct filesystem edits, the following safety measures
 
 ## Compliance Checklist
 
-Verify ALL items against `AGENTS.md` before completing any task:
+Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skill-reserved judgments.
 
-- [ ] Manifest reflects current on-disk state (no stale entries, correct paths)
-- [ ] Russian alignment performed per `AGENTS.md` §3.3 (if RU version exists)
-  - [ ] Line number parity verified with English source
-- [ ] All domain terms exist in `docs/en/glossary/index.md` (or escalated)
-- [ ] All cross-references resolve (stable anchors, no line-number dependencies)
-- [ ] Changelog entry appended to correct file with proper format
-- [ ] Version bumped correctly per `AGENTS.md` §7.5 (type of bump matches change type)
-- [ ] Line count ≤ 200 (or escalation triggered per `AGENTS.md` §7.3)
+**Deterministic — obtained by running the tools, not by hand:**
+
+- [ ] `python3 tools/check_all.py` reports no `high` findings; every `medium`/`low` finding is either explained or fixed (covers line count ≤ 200 per §7.3, changelog existence and format, cross-reference anchors, manifest parity, naming, schema)
+- [ ] Manifest reflects current on-disk state via `python3 tools/gen_manifest.py --check` (regenerate-and-diff; no hand edits)
+- [ ] Version bumped correctly per `AGENTS.md` §7.5 and changelog entry written — both via `tools/bump_version.py` (type of bump matches change type; `--note` non-empty)
+
+**Skill/AI-reserved — no tool substitutes for these:**
+
+- [ ] All domain terms exist in `docs/en/glossary/index.md` (or escalated) — audit rule 3
+- [ ] Abstraction level appropriate and consistent across related docs (`AGENTS.md` §7.4) — audit rule 5
 - [ ] Metadata header follows `AGENTS.md` §7.2 conventions (no `Language` field, `Source:` present for RU)
-- [ ] Abstraction level appropriate (`AGENTS.md` §7.4), consistent across related docs
+- [ ] Split decision (if size exceeded) escalated to the operator with 2–3 candidate points (§7.3)
+- [ ] Changelog `--note` reason string is operator-supplied or quoted verbatim from the approved plan
+- [ ] Trust levels aligned with the Documenter classifier and shipped `tools/` behavior (§Trust Levels, `AGENTS.md` §1.7)
+- [ ] Russian drift recorded per `AGENTS.md` §3.3 — **report-only while the suspension is in effect**; no `index-RU.md` update unless the operator explicitly requested it
+  - [ ] When an explicit translation was requested: line number parity verified with the English source
 
-Fix failures mechanically; escalate if unfixable.
+Fix failures mechanically where a `tools/` script owns the fix; escalate if unfixable or if the fix requires semantic judgment.
 
 ---
 
