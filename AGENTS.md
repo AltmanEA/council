@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.15.0
+Version: 0.16.0
 Status: active
 Last Modified: 2026-11-14
 changelog-path: CHANGELOGS/agents.changes.md
@@ -31,7 +31,7 @@ This separation is documented in the consensus document from session `sess-docum
 
 ### 1.5 Project Stage
 
-The project has moved from the **Specification** phase to **Specification→MVP implementation started**: per operator decision of 2026-11-12 (ADR-011), implementation of Documenter MVP (Tier 0–1) and `tools/` is approved; Tier 2+ remains interlocked (Operator Surface out-of-band approval requirement unchanged) and code implementation beyond that scope (Layer 0+) has not started. The code-based Moderator is not yet built. All Council sessions during this phase run in fallback mode until a Moderator adapter is available.
+The project has moved from the **Specification** phase to **Specification→MVP implementation started**: per operator decision of 2026-11-12 (ADR-011), implementation of Documenter MVP (Tier 0–1) and `tools/` is approved; the Documenter Tier 2+ write branch is implemented but **dormant behind the dual interlock** (ADR-013): a policy gate plus an unbuilt Operator Surface — Tier 2+ stays not activatable until the Operator Surface exists as code providing authenticated operator ingress, and the Operator Surface specification alone is not sufficient. Code implementation beyond that scope (Layer 0+) has not started. The code-based Moderator is not yet built. All Council sessions during this phase run in fallback mode until a Moderator adapter is available.
 
 **Fallback is frozen.** `fallback/index.md` is operational and is the working mode for development. Do not modify fallback documents as part of remediation, refactoring, or consistency cleanup. Changes require an explicit operator request and a confirmed critical defect.
 
@@ -45,7 +45,7 @@ Tools are divided into two categories:
 - Documentation Worker skill (`/.agents/skills/documentation/SKILL.md`) — write and audit operations on documentation artifacts per `AGENTS.md` rules.
 
 **Under development (not yet operational):**
-- Documenter Service — automated quality auditing and delegated writes. Specification exists in `documenter-service/index.md` but the service is not yet implemented. Do not treat its specification as an available tool or API.
+- Documenter Service — automated quality auditing and delegated writes. Implementation status (glossary, §Implementation Status): Tier 0–1 surface Operational (CLI and MCP stdio implemented, `documenter_service/` package, covered by tests); the MCP server is **not registered** in the workspace configuration — registration is an explicit operator decision. The Tier 2+ write branch is Dormant behind the dual interlock (ADR-013) and not activatable until the Operator Surface exists as code. Agents MUST NOT invoke unregistered `documenter.*` MCP tools, MUST NOT register the MCP server, and MUST NOT edit `documenter_policy.yml` — changing `active_tier`, `allowed_operations`, or `briefing_ref` is an activation act reserved to the operator out-of-session. The Tier 0–1 CLI (`python3 -m documenter_service`) may be used in read-only/preview mode where the operator has sanctioned it.
 - Code-based Moderator — automated Council session execution. Not yet built (see §1.5); all sessions run in fallback mode.
 
 Prohibition: Do not invoke any `council.*`, `documenter.*`, or equivalent MCP tools while these services are under development. Enforcement point: the OpenCode workspace configuration (`.opencode/opencode.jsonc`) currently registers no MCP servers for Council or Documenter tools — their absence is the effective guard. Violating this rule without explicit operator approval is a protocol error.
@@ -156,6 +156,14 @@ the primary agent MUST consider splitting the work into smaller subtasks
 and delegate each separately rather than launching one oversized run. The
 estimate is recorded in the delegation brief. This keeps subagent outputs
 reviewable and prevents context exhaustion mid-task.
+
+**Concurrency limit.** The number of subagents the primary agent may run
+concurrently depends on the subagent model configured in
+`.opencode/opencode.jsonc` (see the comment block there for switching):
+local model — at most **1** concurrent subagent (queue sequentially);
+cloud model — at most **2**. The limit is behavioral (executed by the
+primary agent); the config carries no mechanical cap. Subtasks must be
+sequenced to respect it.
 
 ---
 

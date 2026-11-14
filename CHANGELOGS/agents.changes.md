@@ -1,3 +1,4 @@
+<!-- CHANGES v0.16.0: Added concurrency limit norm to §5.4 — max 1 concurrent subagent on local model, max 2 on cloud model (operator request 2026-11-14; behavioral rule, mechanical cap not available in config; switching documented in .opencode/opencode.jsonc comment). -->
 <!-- CHANGES v0.15.0: Add prose-contract synchronization norm to §1.7 (tools behavior changes require same-changeset review of prose contracts). -->
 <!-- CHANGES v0.14.0: Conditional lift of RU synchronization suspension per ADR-012: post-Approve auto-dispatch, Phase 4 write-gates, per-document opt-out, per-run cloud consent. -->
 <!-- CHANGES v0.13.0: Added §5.4 subagent delegation budget — estimate task size before launch; tasks projected over 40k tokens must be split into smaller subtasks (operator request, sess-doc-reliability-algo). -->
