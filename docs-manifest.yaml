@@ -27,7 +27,7 @@ documents:
   - id: documenter-service-configuration-guide
     path: docs/en/documenter-service/configuration-guide.md
     title: Documenter Configuration Guide
-    version: 0.16.0-draft
+    version: 0.17.0-draft
     status: draft
     abstraction: reference
     has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -36,7 +36,7 @@ documents:
   - id: documenter-service-mvp-contract
     path: docs/en/documenter-service/mvp-contract.md
     title: Documenter Service — MVP Contract
-    version: 0.6.0-draft
+    version: 0.7.0-draft
     status: draft
     abstraction: protocol
     changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
@@ -48,7 +48,7 @@ documents:
   - id: documenter-service-mvp-data-models
     path: docs/en/documenter-service/mvp-data-models.md
     title: Documenter Service — MVP Data Models
-    version: 0.3.2-draft
+    version: 0.4.0-draft
     status: draft
     abstraction: reference
     changelog-path: CHANGELOGS/documenter-service-mvp-data-models.changes.md

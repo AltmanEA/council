@@ -1,7 +1,7 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.16.0-draft
+Version: 0.17.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -75,13 +75,13 @@ The snapshot provides O(1) OCC conflict detection. The history provides audit tr
 
 Read → compare expected hash with current content hash → apply if match → update record. On mismatch: reject with retry signal ("File changed since scan; please re-run audit() then retry"). Retry invocations MUST employ exponential backoff with jitter (base delay: `retry_backoff_base`; attempt ceiling: `retry_max_attempts` — both policy fields, see §Field Reference in `documenter-service/policy-reference.md`). Full rescan is capped by the `rescan_batch_ceiling` policy field (default 50 documents per invocation). When the ceiling is reached, the response includes `has_remaining: true` and a continuation cursor (`scan_cursor`) — pass it back to resume scanning from where the previous invocation stopped. The audit registry entry records the actual scanned document IDs (never `*` unless all documents were scanned in one invocation). A partial scan does NOT authorize delegate() for unscanned documents — the operator must complete the scan before delegation is permitted. No background execution exists. When glossary status changes, full rescan of all documents triggers hash refresh for every entry.
 
-**Behavioral self-healing guarantee:** Hash store must be recoverable on any startup failure. The implementation MUST combine at least TWO of: atomic write (temp-file + rename), pre-write snapshot hash (CRC32c/SHA-256 alongside content), or `.bak` rotation. WAL is not required for MVP. Cold-start integrity verification checks hashes.json existence, validates structure, and scans `documenter/intent/` for leftover records per §Intent Record rules.
+**Behavioral self-healing guarantee:** Hash store must be recoverable on any startup failure. The implementation MUST combine at least TWO of: atomic write (temp-file + rename), pre-write snapshot hash (CRC32c/SHA-256 alongside content), or `.bak` rotation. WAL is not required for MVP. The current implementation combines atomic write with `.bak` rotation: before every save the previous file is copied to `hashes.json.bak`, and on load a missing, unparsable, or structurally invalid `hashes.json` falls back to a valid `.bak`; when both are broken the store degrades to an empty structure (cache miss, not failure). Cold-start integrity verification checks hashes.json existence, validates structure, and scans `documenter/intent/` for leftover records per §Intent Record rules.
 
 **Git diff as supplementary signal:** `git log` over `hashes.json` may provide historical recovery but does NOT replace CRC/checksum (corruption between commits is undetectable from log alone) nor WAL/backup (crash mid-write loses uncommitted state). Git HEAD diff should remain an **advisory only** signal — it cannot serve as primary conflict detection because refs move independently of content changes. Use direct file checksums with optimistic-lock semantics for authoritative conflict resolution.
 
-`documenter/hashes.json` is tracked by the manifest as an operational artifact (`operational: true`). `documenter/intent/` (intent records) and `documenter/audits.json` (audit registry) are similarly operational — managed exclusively by Documenter, hidden from operator, and excluded from the manifest scope of `audit()` and `delegate()`.
+`documenter/hashes.json` is tracked by the manifest as an operational artifact (`operational: true`). `documenter/intent/` (intent records) and `documenter/audit_registry.jsonl` (audit registry) are similarly operational — managed exclusively by Documenter, hidden from operator, and excluded from the manifest scope of `audit()` and `delegate()`.
 
-**Cache semantics (ADR-010):** `documenter/hashes.json` is a **rebuildable cache**, not authoritative state. Documenter may rebuild it from scratch at any time (CLI flag `--rebuild`); a cache miss triggers rebuild-and-continue, not failure. Optimistic-concurrency detection therefore covers races within a single invocation window (between audit and apply) only; the git history is the primary audit trail (per `documenter-service/mvp-contract.md` §2.1 / ADR-007). Local tooling under `tools/` is NOT required to update the hash store when it mutates manifest-tracked documents.
+**Cache semantics (ADR-010):** `documenter/hashes.json` is a **rebuildable cache**, not authoritative state. Documenter may rebuild it from scratch at any time (CLI flag `--rebuild-hashes`); a cache miss triggers rebuild-and-continue, not failure. Optimistic-concurrency detection therefore covers races within a single invocation window (between audit and apply) only; the git history is the primary audit trail (per `documenter-service/mvp-contract.md` §2.1 / ADR-007). Local tooling under `tools/` is NOT required to update the hash store when it mutates manifest-tracked documents.
 
 ---
 
@@ -99,24 +99,26 @@ A crash-recovery journal written to `documenter/intent/<tx_id>.json` before the 
 
 ## Audit Registry
 
-Audit invocations are persisted to `documenter/audits.json` — managed exclusively by Documenter, hidden from operator. Provides the data backing the `delegate()` pre-audit gate (§Interfaces, main spec). On-demand only: no background writer; the registry is updated synchronously at the end of each `audit()` invocation.
+Audit invocations are persisted to `documenter/audit_registry.jsonl` — an **append-only JSONL log** (one envelope per line, `documenter-service/mvp-data-models.md` §Audit Registry), managed exclusively by Documenter, hidden from operator. Provides the data backing the `delegate()` pre-audit gate (§Interfaces, main spec). On-demand only: no background writer; the registry is updated synchronously at the end of each `audit()` invocation. Concurrent appends are serialized by a dedicated advisory lock file `documenter/.registry.lock` (`fcntl.flock(LOCK_EX)`, separate from `.delegate.lock` so a lock holder that appends cannot self-deadlock).
 
 ### Structure
 
+Each line is an envelope `{record_type, prev_hash, data}` (mvp-data-models §Audit Registry); audit invocations are `audit_record` envelopes. Within one logical (possibly paginated) scan, `scanned_ids` and `findings` are cumulative per record, so a resumed batch reports honest coverage:
+
 ```json
 {
-  "version": 1,
-  "entries": {
-    "<audit_id>": {
-      "issued_at": "2026-11-08T10:30:00Z",
-      "scope": "*",
-      "findings": [
-        {"severity": "high", "target_id": "doc-a", "description": "Missing changelog"}
-      ],
-      "scanned_ids": ["doc-a", "doc-b", "..."],
-      "has_remaining": false,
-      "scan_cursor": null
-    }
+  "record_type": "audit_record",
+  "prev_hash": "<sha256-hex-of-previous-line>",
+  "data": {
+    "audit_id": "<uuid-v4>",
+    "issued_at": "2026-11-08T10:30:00Z",
+    "scope": "*",
+    "findings": [
+      {"subject_id": "doc-a", "severity": "high", "description": "Missing changelog", "suggested_action": "…"}
+    ],
+    "scanned_ids": ["doc-a", "doc-b"],
+    "has_remaining": false,
+    "scan_cursor": null
   }
 }
 ```
@@ -126,7 +128,7 @@ Audit invocations are persisted to `documenter/audits.json` — managed exclusiv
 | `audit_id` | uuid-v4 | Key. Matches the `audit_id` returned by `audit()`. |
 | `issued_at` | ISO8601Z | Timestamp of audit completion. Used by the gate to check `audit_freshness`. |
 | `scope` | string | `*` only when ALL documents were scanned in a single invocation; otherwise equals the single `target_id` passed to `audit()` (e.g., `audit(target_id="doc-a")`). When partial scans are used (`has_remaining: true`), scope may still equal the `target_id` but delegation is blocked by rule 5 in §Gate Validation. Full coverage is verified via `scanned_ids`, not scope alone. |
-| `findings` | array | Structured findings from `audit()`. Gate checks for `high`/`critical` entries matching `target_id`. |
+| `findings` | array | Structured findings from `audit()`: `{subject_id, severity, description, suggested_action}` (mvp-data-models §Audit Registry; `subject_id` is the manifest id, or a repository-relative path for corpus-level findings). Gate checks for `high`/`critical` entries whose `subject_id` matches the delegate target. |
 | `scanned_ids` | array[string] | List of document IDs actually scanned during this invocation. Populated on every audit — never empty unless the scan covered zero documents. |
 | `has_remaining` | boolean | `true` when the scan was paused due to `rescan_batch_ceiling`; indicates incomplete coverage. False or absent means all documents were scanned. |
 | `scan_cursor` | string \| null | Continuation token for resumed scans. Present only when `has_remaining` is `true`. Opaque value encoding the last processed document position. |
@@ -135,7 +137,7 @@ Audit invocations are persisted to `documenter/audits.json` — managed exclusiv
 
 When `delegate()` receives an `audit_id`, it reads the registry and validates:
 
-1. **Existence:** `audit_id` is a key in `entries`. Absent → reject with `error_category: audit_mismatch`.
+1. **Existence:** a `audit_record` with this `audit_id` exists in the append-only log (latest record per `audit_id` governs). Absent → reject with `error_category: audit_mismatch`.
 2. **Freshness:** `now - issued_at ≤ audit_freshness` (policy field). Expired → reject with `error_category: audit_mismatch`.
 3. **Scope coverage:** `scope == "*" OR scope == target_id`. Mismatch → reject with `error_category: audit_mismatch`. For full-corpora scans (`target_id: "*"`), completeness is additionally verified via `scanned_ids` — the delegate target must appear in the list; if `has_remaining` is `true`, some documents are unscanned and any delegate is blocked by rule 5 below.
 4. **Blocking findings:** any entry in `findings` with `severity ∈ {high, critical}` AND `target_id` matching the delegate target → reject with `error_category: blocking_finding`.
@@ -156,6 +158,8 @@ Documenter events are emitted inside the canonical [EventEnvelope](../../service
 ### Issue Payload Schema
 
 Emitted when `audit()` or `delegate()` finds issues. `event_type: documenter.issue`.
+
+**MVP-emitted payload (authoritative subset).** The MVP emitter closes the payload to exactly `{audit_id, subject_id, severity, description}` (mvp-data-models §3 Event Channel; `adapters/stdout_events.py` `EVENT_SCHEMAS`), where `subject_id` is the manifest id, or a repository-relative path for corpus-level findings (manifest drift, orphan). Emission is validated against this closed key set before any side effect; any other key is rejected. The wider table below describes the target envelope for later layers (and is the source the `service-contract` amendment will adopt); it is NOT emitted by the MVP build.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|

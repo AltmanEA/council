@@ -1,7 +1,7 @@
 # Documenter Service — MVP Data Models
 
 id: documenter-service-mvp-data-models
-Version: 0.3.2-draft
+Version: 0.4.0-draft
 Status: draft
 Abstraction: reference
 references: [documenter-service-mvp-interfaces, service-contract]
@@ -156,7 +156,7 @@ No file under `documenter/` is git-ignored. Staging files for atomic writes are 
 |----------|---------|---------|
 | `DOCUMENTER_POLICY_PATH` | `documenter_policy.yml` | Policy file location (schema: policy-reference §Policy File) |
 | `DOCUMENTER_DATA_DIR` | `documenter/` | Operational state directory |
-| `DOCUMENTER_LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` for stdout JSON logs |
+| `DOCUMENTER_LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error`; filters service warnings on **stderr** (policy degradation, event-persistence degradation). stdout is untouched — the transport contract "last stdout line is the response" is preserved (mvp-data-models §5, fix plan p.12) |
 
 ---
 

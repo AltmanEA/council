@@ -1,3 +1,4 @@
+<!-- CHANGES v0.17.0-draft: Audit Registry: append-only audit_registry.jsonl envelope + .registry.lock; Event Schema: closed MVP documenter.issue payload; Hash Store: --rebuild-hashes + .bak load fallback (fix plan stage 4 pp.26) -->
 <!-- CHANGES v0.16.0-draft: Add changelog-path row to Manifest Field Provenance table (fix plan decision A, stage 2a) -->
 <!-- CHANGES v0.15.1-draft: Fixed broken EventEnvelope cross-reference (../docs/service-contract/index.md → ../../service-contract/index.md); markdown-correct relative path, anchor #event-envelope verified. Resolves sole medium check_all finding (rule-4). -->
 <!-- CHANGES v0.15.0-draft: Added §Manifest Field Provenance (Stage A, sess-doc-reliability-algo); header migrated to canonical frontmatter (id, has_translation added, Last Modified removed). -->

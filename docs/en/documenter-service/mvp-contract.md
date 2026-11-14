@@ -1,7 +1,7 @@
 # Documenter Service — MVP Contract
 
 id: documenter-service-mvp-contract
-Version: 0.6.0-draft
+Version: 0.7.0-draft
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
@@ -14,7 +14,7 @@ changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
 
 Implementation contract for the Documenter Service MVP (Tier 0–1, read-only): technology stack, safety protocol, Tier 2+ reserved interfaces, and testing strategy. Interface schemas: `documenter-service/mvp-interfaces.md`. Data models and configuration: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
 
-**MVP boundary:** the build exposes `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface (`delegate(preview: false)`, the approval flow, `override_gate`, the durability sequence, and Tier 3 pattern auto-apply) is specified here (§2.2, §4) and **implemented in the build, gated by the policy interlock**: activation requires `active_tier >= 2`, a non-null `briefing_ref` whose file exists, matching `allowed_operations` entries, and authenticated operator ingress (`COUNCIL_OPERATOR_ID` only; never a client parameter). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`. The **Multi-file Commit Protocol** (ordered renames across documents in one commit set) remains deferred — the write branch commits one document per invocation.
+**MVP boundary:** the build exposes `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface (`delegate(preview: false)`, the approval flow, `override_gate`, the durability sequence, and Tier 3 pattern auto-apply) is specified here (§2.2, §4) and **implemented in the build, gated by the policy interlock**: activation requires `active_tier >= 2`, a non-null `briefing_ref` whose file exists, matching `allowed_operations` entries, and authenticated operator ingress (`COUNCIL_OPERATOR_ID` only; never a client parameter). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`. The **Multi-file Commit Protocol** (ordered renames across documents in one commit set) is **implemented in the build, policy-gated and dormant behind the dual interlock** (ADR-013) like the rest of the Tier 2+ write branch; the single-document legacy path remains available as the fallback write path.
 
 ---
 
@@ -96,7 +96,7 @@ The core is deterministic pure functions (trust classifier, severity rules, pre-
 | `tests/fixtures/documenter/golden_diff_canon.json` | Input diff → normalized bytes → `diff_hash` |
 | `tests/fixtures/documenter/policy_valid.yaml` / `policy_invalid.yaml` | Load-time validation, including typo'd `active_tier` and missing `briefing_ref` at tier 2 |
 
-### 3.4 Tier 2+ (deferred with the implementation)
+### 3.4 Tier 2+ (implemented, policy-gated)
 
 Crash-injection via `kill -9` after **every** boundary of the durability sequence, expecting a detectable partial state each time; apply-time `hash_mismatch` scenario (external edit between propose and apply); token replay tests.
 
@@ -111,7 +111,7 @@ Implemented per the conditions above; reachable only when **all** of: policy fil
 | `delegate(preview: false)` | Pre-audit gate rules 1–5; returns `approval_required` + `approval_id` + `diff_hash`; applies only after §2.2 verification |
 | `documenter.approve(approval_id, operator_id)` | Separate invocation from the proposal; `operator_id` from authenticated ingress only; single-use; expires after `approval_expiry_window`; changed diff invalidates it |
 | `documenter.override_gate(reason, operator_id)` | Bound to one `(target_id, diff_hash)`; one consumption; emits event; unavailable for `critical` findings |
-| Tier 3 pattern auto-apply | Pattern = `(target subset, canonical diff template, expiry, application limit)` — content-bound, never class-only. Promotion metric ≥90% approval computed **only over viewed diffs**; post-apply digest per batch; quarantine: first N uses of a pattern require per-item approval |
+| Tier 3 pattern auto-apply | Implemented at core level behind the ADR-013 interlock; exercised only by unit tests; not executable through the public surface while the Operator Surface is unbuilt. Pattern = `(target subset, canonical diff template, expiry, application limit)` — content-bound, never class-only. Promotion metric ≥90% approval computed **only over viewed diffs**; post-apply digest per batch; quarantine: first N uses of a pattern require per-item approval |
 
 ---
 
@@ -121,7 +121,7 @@ Implemented per the conditions above; reachable only when **all** of: policy fil
 |----------|---------------------------------------------|
 | C1 Token signing | No HMAC; random server-stored single-use tokens; git history as audit trail |
 | C2 Apply-time verification | Contract norm for all tiers (§2.2.3); implementation belongs to Tier 2+ |
-| C3 Tier 2/3 in contract | Interfaces and enums present here (§4); apply code absent from MVP build |
+| C3 Tier 2/3 in contract | Interfaces and enums present here (§4); apply code present in the build, policy-gated and dormant (ADR-013) |
 | C4 Event channel | Registry + stdout JSON as documented MVP carrier; envelope via `service-contract` amendment |
 | C5 Hash-chain vs retention | Chain kept as corruption aid (not anti-tamper); truncation requires checkpoint record |
 
