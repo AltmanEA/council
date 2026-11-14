@@ -23,10 +23,12 @@ def _deadline_remaining():
 
 
 # E-003 (hint style), E-004 (temperature), E-006 (codeguard): see tools/EXPERIMENTS.md
-PROMPT_VERSION = "2026.11-r3"  # r3: span-restore (identifiers in inline code), single-line fallback collapse, identifier-only lines count as skip not FAIL
+PROMPT_VERSION = "2026.11-r5"  # r5: span-restore handles decoration (added backticks) and dropped backticks
 
 SYSTEM_PROMPT = ("You are a translator. Translate only the text between === markers. "
-                 "Keep markdown formatting intact: **bold**, `code`, and list markers.")
+                 "Keep markdown formatting intact: **bold**, `code`, and list markers. "
+                 "Never add, remove, or translate backticks or their contents: every "
+                 "`code` span must appear character-for-character identical.")
 # E-006 variant: TRANSLATE_PROMPT=codeguard adds an explicit code-span guard
 SYSTEM_PROMPT_CODEGUARD = SYSTEM_PROMPT + (
     " Never change anything inside backticks: identifiers, enum values and file "
@@ -606,37 +608,113 @@ def translate_block(block_text, term_keys, model_name):
 
 def restore_code_spans(translated, src_line):
     """Invariant: inline-code spans are identifiers — the model must not
-    translate them (e.g. `awaiting-operator` -> `заблокированная-эскалация`).
-    If both lines have the same span count, restore EN spans by position.
-    Mismatched counts are left to check_drift (structural gate)."""
+    translate, add, or drop them (`awaiting-operator` -> `заблокированная-эскалация`,
+    Documenter -> `Documenter`, `allow` -> allow).
+    Equal span counts: positional restore from source. Count mismatch: multiset
+    adjustment — keep demanded spans, unwrap decoration over plain source text,
+    re-wrap dropped spans whose exact text survives bare. Translated content in
+    a mismatched run is left to check_drift (structural gate)."""
     rx = re.compile(r'`([^`]+)`')
     src_spans = rx.findall(src_line)
-    tr_spans = rx.findall(translated)
-    if not src_spans or len(src_spans) != len(tr_spans) or src_spans == tr_spans:
-        return translated
     global _global_span_restores
+    if not rx.search(translated) and not src_spans:
+        return translated
     n = 0
-    def repl(m, _it=iter(src_spans)):
+
+    def counted(val):
         nonlocal n
-        ru = m.group(1); en = next(_it)
-        if ru != en:
-            n += 1
-            log(f"[span-restore] `{'' if len(ru)>20 else ru}` -> `{en}`")
-        return f"`{en}`"
-    out = rx.sub(repl, translated)
+        n += 1
+        log(f"[span-restore] decorated/translated span -> `{val[:20]}`")
+        return val
+
+    # pass 1 — equal counts: positional restore
+    if len(rx.findall(translated)) == len(src_spans):
+        it = iter(src_spans)
+        def repl(m):
+            nonlocal n
+            ru = m.group(1); en = next(it)
+            if ru != en:
+                n += 1
+                log(f"[span-restore] `{'' if len(ru)>20 else ru}` -> `{en}`")
+            return f"`{en}`"
+        out = rx.sub(repl, translated)
+        _global_span_restores += n
+        return out
+
+    # multiset adjustment for count mismatches: keep spans while source
+    # demand lasts, unwrap surplus decoration (plain text in EN), then
+    # re-wrap dropped spans (demand left unmet, exact text present bare)
+    from collections import Counter
+    need = Counter(src_spans)
+    src_bare = re.sub(r'`[^`]+`', ' ', src_line)
+    cyrillic = re.compile(r'[\u0400-\u04FF\u0500-\u052F]')
+
+    def decide(m):
+        val = m.group(1)
+        if need[val] > 0:
+            need[val] -= 1
+            return f'`{val}`'
+        # surplus span: decoration over plain EN text (case-insensitive) ->
+        # unwrap; Cyrillic surplus while Latin demand remains -> translated
+        # identifier, swap for the first unmet demand span
+        if re.search(r'(?<![\w`/])' + re.escape(val) + r'(?![\w`/])',
+                     src_bare, re.IGNORECASE):
+            return counted(val)
+        if cyrillic.search(val):
+            for cand in list(need):
+                if need[cand] > 0 and not cyrillic.search(cand):
+                    need[cand] -= 1
+                    counted(cand)
+                    return f'`{cand}`'
+        return m.group(0)
+
+    out = rx.sub(decide, translated)
+
+    for val, k in list(need.items()):
+        for _ in range(k):
+            wrapped, cnt = re.subn(r'(?<![\w`/])' + re.escape(val) + r'(?![\w`/])',
+                                   f'`{val}`', out, count=1)
+            if not cnt:
+                # model may have translated the dropped span: try reverse
+                # glossary equivalent (e.g. dropped `role` -> bare «Роль»)
+                for info in _GLOSSARY_CACHE.values():
+                    ru_eq = info.get('ru') or ''
+                    if (info['en'].lower() == val.lower() and ru_eq
+                            and not cyrillic.search(val)):
+                        wrapped, cnt = re.subn(
+                            r'(?<![\w`/])' + re.escape(ru_eq) + r'(?![\w`/])',
+                            f'`{val}`', out, count=1)
+                        if cnt:
+                            break
+            if cnt:
+                out = wrapped
+                counted(val)
+            else:
+                break
     _global_span_restores += n
     return out
 
 
+LITERAL_TOKENS = {
+    # technical literal values that legitimately stay English in RU docs:
+    # permission/status keywords and untranslatable loan terms
+    'allow', 'deny', 'yes', 'no', 'true', 'false', 'null', 'none',
+    'optional', 'required', 'mandatory', 'read', 'write', 'only', 'reason',
+    'frontmatter', 'draft', 'active', 'deprecated',
+}
+
+
 def _is_translatable_content(line):
     """True if the line contains ordinary Latin words a translation must
-    change; identifiers (snake_case, CamelCase, ALLCAPS), inline code, URLs
-    and paths do not count."""
+    change; identifiers (snake_case, CamelCase, ALLCAPS), inline code, URLs,
+    paths and LITERAL_TOKENS do not count."""
     s = re.sub(r'`[^`]+`', ' ', line)
     s = re.sub(r'https?://\S+', ' ', s)
     s = re.sub(r'\S*/\S+\.\S+', ' ', s)
     for w in re.findall(r'[A-Za-z][A-Za-z0-9]*', s):
         if '_' in w or re.search(r'[a-z][A-Z]', w) or w.isupper():
+            continue
+        if w.lower() in LITERAL_TOKENS:
             continue
         if len(w) >= 3:
             return True
@@ -790,10 +868,12 @@ def main():
             if line_out and line_out.strip() != input_lines[i].strip():
                 line_out = restore_list_marker(input_lines[i], line_out)
                 line_out = restore_heading_prefix(input_lines[i], line_out)
-                line_out = restore_code_spans(line_out, input_lines[i])
                 line_out = restore_paths(line_out, input_lines[i])
                 line_out = fix_known_terms(line_out)
                 line_out = enforce_glossary(line_out, term_keys)
+                # last: inline-code spans are the untouchable invariant —
+                # restore after all other post-processing (incl. enforce_glossary)
+                line_out = restore_code_spans(line_out, input_lines[i])
                 output_lines[i] = line_out
                 stats_ok += 1
             else:

@@ -166,5 +166,44 @@ class TestRestoreListMarker(unittest.TestCase):
 from local_translate import _GLOSSARY_CACHE  # noqa: E402
 
 
+import local_translate as lt  # noqa: E402
+
+
+class TestSpanRestore(unittest.TestCase):
+    def test_positional_restore(self):
+        out = lt.restore_code_spans("значение `заблокированная-эскалация` тут",
+                                    "value `awaiting-operator` here")
+        self.assertIn('`awaiting-operator`', out)
+        self.assertNotIn('заблокированная', out)
+
+    def test_decoration_stripped(self):
+        # model added backticks around plain source text
+        out = lt.restore_code_spans("это `Documenter` сервис",
+                                    "this Documenter service")
+        self.assertEqual(out, "это Documenter сервис")
+
+    def test_legit_span_untouched_when_decoration_present(self):
+        out = lt.restore_code_spans("шлюз `pre_check_override` и `x`",
+                                    "gate `pre_check_override` and x")
+        # legit span preserved; decorated plain 'x' unwrapped
+        self.assertIn('`pre_check_override`', out)
+        self.assertEqual(out, "шлюз `pre_check_override` и x")
+
+    def test_dropped_backticks_rewrapped(self):
+        out = lt.restore_code_spans("флаг allow + reason тут",
+                                    "flag `allow` + reason here")
+        self.assertIn('`allow`', out)
+
+    def test_equal_count_noop(self):
+        src = "see `a` and `b`"
+        out = lt.restore_code_spans("смотри `a` и `b`", src)
+        self.assertEqual(out, "смотри `a` и `b`")
+
+class TestLiteralTokens(unittest.TestCase):
+    def test_permission_table_not_translatable(self):
+        self.assertFalse(lt._is_translatable_content("| `council.status` | allow | deny |"))
+        self.assertTrue(lt._is_translatable_content("The operator resolves this escalation"))
+
+
 if __name__ == "__main__":
     unittest.main()
