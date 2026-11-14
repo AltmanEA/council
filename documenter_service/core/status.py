@@ -75,14 +75,13 @@ def status(registry, policy=None, *, target_id: str | None = None,
     """
     records, reg_status = registry.read_all()
 
+    # Collect all audit_records with their positions for ordering.
+    audit_list = [(i, rec["data"]) for i, rec in enumerate(records)
+                  if rec["record_type"] == "audit_record"]
+
+    # last_audit: the very last audit_record in the file (for last_audit field).
+    last_record = audit_list[-1][1] if audit_list else None
     last_audit = None
-    last_record = None
-    for rec in reversed(records):
-        if rec["record_type"] == "audit_record":
-            last_record = rec["data"]
-            break
-    pending = last_record if (last_record and last_record.get("has_remaining")) \
-        else None
     if last_record is not None:
         data = last_record
         last_audit = {
@@ -90,6 +89,22 @@ def status(registry, policy=None, *, target_id: str | None = None,
             "issued_at": data.get("issued_at"),
             "fresh": _is_fresh(data.get("issued_at"), registry, policy),
         }
+
+    # pending: any audit_id whose LATEST record has has_remaining=True.
+    # Group by audit_id, keep the latest per id (last in list wins),
+    # then find which have has_remaining=True.  Among those, pick the
+    # most recently issued one.
+    _latest_per_id: dict = {}
+    for _i, rec_data in audit_list:
+        aid = rec_data.get("audit_id")
+        _latest_per_id[aid] = rec_data  # last write wins by position
+    unclosed = [
+        rec for rec in _latest_per_id.values()
+        if rec.get("has_remaining") is True]
+    # Most recent by issued_at among unclosed.
+    pending = None
+    if unclosed:
+        pending = max(unclosed, key=lambda r: r.get("issued_at", ""))
 
     active_tier = int(policy.get("active_tier")) if policy is not None else 0
 

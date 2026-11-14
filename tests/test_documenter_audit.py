@@ -611,3 +611,231 @@ class TestSyncLatencyBudget(unittest.TestCase):
             shutil.rmtree(root, ignore_errors=True)
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
+
+
+# ---------------------------------------------------------------------------
+# Dedup corpus-level findings across batched resume (Э0.2, AGENTS §17)
+# ---------------------------------------------------------------------------
+
+
+
+# ---------------------------------------------------------------------------
+# Dedup corpus-level findings across batched resume (Э0.2, AGENTS §17)
+# ---------------------------------------------------------------------------
+
+
+class TestDedupCorpusFindings(unittest.TestCase):
+    """Corpus-level findings (manifest drift, orphan) must appear exactly
+    once across a multi-batch resumed scan (Э0.2 dedup)."""
+
+    def _resume_to_complete(self, svc, cursor):
+        """Resume scan until has_remaining=False; return final response."""
+        resp = svc.audit(target_id="*", rescan_batch_ceiling=1,
+                         scan_cursor=cursor)
+        while resp["has_remaining"]:
+            cursor = resp["scan_cursor"]
+            resp = svc.audit(target_id="*", rescan_batch_ceiling=1,
+                             scan_cursor=cursor)
+        return resp
+
+    def test_manifest_drift_dedup_across_batches(self):
+        """A manifest-drift finding must appear exactly once in the final
+        audit_record even when the scan spans multiple batches."""
+        _, root = _corpus_copy()
+        try:
+            tmp_dir = tempfile.mkdtemp()
+            try:
+                svc = Service(
+                    root,
+                    registry=JsonlAuditRegistry(
+                        os.path.join(tmp_dir, "state")),
+                    events=StdoutEventSink(io.StringIO()))
+
+                # Drift the manifest.
+                mp = os.path.join(root, "docs-manifest.yaml")
+                with open(mp, encoding="utf-8") as fh:
+                    text = fh.read()
+                with open(mp, "w", encoding="utf-8") as fh:
+                    fh.write(text.replace("GENERATED", "HANGED"))
+
+                # Audit with batch_ceiling=1 forces multiple batches.
+                # First batch: scan_cursor returned.
+                resp1 = svc.audit(target_id="*", rescan_batch_ceiling=1)
+                self.assertTrue(resp1["has_remaining"])
+                cursor1 = resp1["scan_cursor"]
+                self.assertIsNotNone(cursor1)
+
+                # Count drift findings in batch 1.
+                drift1 = [f for f in resp1["report"]["findings"]
+                          if "manifest" in f["description"].lower()]
+                self.assertGreater(len(drift1), 0, "expected manifest-drift in batch 1")
+
+                # Resume to completion (may need several batches).
+                resp_final = self._resume_to_complete(svc, cursor1)
+                self.assertFalse(resp_final["has_remaining"])
+
+                # The FINAL audit_record (read from registry) must have the
+                # drift finding appearing exactly ONCE (dedup).
+                records, _ = svc.registry.read_all()
+                audit_records = [r["data"] for r in records
+                                 if r["record_type"] == "audit_record"]
+                self.assertGreaterEqual(len(audit_records), 2)
+                final_record = audit_records[-1]
+                drift_in_final = [f for f in final_record["findings"]
+                                  if "manifest" in f["description"].lower()]
+                self.assertEqual(len(drift_in_final), 1,
+                                 f"manifest-drift must appear exactly once, "
+                                 f"got {len(drift_in_final)}")
+            finally:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
+    def test_events_dedup_manifest_drift(self):
+        """documenter.issue events for corpus findings must be emitted
+        exactly once (via the dedup filter on new_findings)."""
+        _, root = _corpus_copy()
+        try:
+            tmp_dir = tempfile.mkdtemp()
+            try:
+                out = io.StringIO()
+                events = StdoutEventSink(out)
+                svc = Service(
+                    root,
+                    registry=JsonlAuditRegistry(
+                        os.path.join(tmp_dir, "state")),
+                    events=events)
+
+                # Drift the manifest.
+                mp = os.path.join(root, "docs-manifest.yaml")
+                with open(mp, encoding="utf-8") as fh:
+                    text = fh.read()
+                with open(mp, "w", encoding="utf-8") as fh:
+                    fh.write(text.replace("GENERATED", "HANGED"))
+
+                # Audit with batch_ceiling=1 → multiple batches.
+                resp1 = svc.audit(target_id="*", rescan_batch_ceiling=1)
+                self.assertTrue(resp1["has_remaining"])
+                cursor1 = resp1["scan_cursor"]
+
+                # Resume to completion.
+                self._resume_to_complete(svc, cursor1)
+
+                # Count documenter.issue events for the manifest drift subject.
+                manifest_subject = "docs-manifest.yaml"
+                issue_count = 0
+                for line in out.getvalue().strip().splitlines():
+                    if not line.strip():
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        if (obj.get("event_type") == "documenter.issue"
+                                and obj.get("payload", {}).get("subject_id")
+                                == manifest_subject):
+                            issue_count += 1
+                    except json.JSONDecodeError:
+                        pass
+                self.assertEqual(issue_count, 1,
+                                 f"documenter.issue for manifest drift must "
+                                 f"be emitted exactly once, got {issue_count}")
+            finally:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Read-before-use hash reuse (point 25a: post_hash → next pre_hash)
+# ---------------------------------------------------------------------------
+
+
+class TestHashReuse(unittest.TestCase):
+    """mvp-contract §2.1.3: hash reuse between passes (perf: 3 hashes on
+    retry instead of 4)."""
+
+    def test_stable_corpus_hash_count(self):
+        """Stable corpus: scan=1x, hash(pre)=1x, hash(post)=1x → total 2 hashes."""
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            from unittest.mock import patch
+            svc = Service(
+                root,
+                registry=JsonlAuditRegistry(os.path.join(tmp_dir, "state")),
+                events=StdoutEventSink(io.StringIO()))
+
+            from documenter_service.core import audit as audit_mod
+            hash_scope_calls = [0]
+            original_hash = audit_mod._hash_scope_files
+
+            def counted_hash(root, entries):
+                hash_scope_calls[0] += 1
+                return original_hash(root, entries)
+
+            scan_calls = [0]
+            original_raw = audit_mod._raw_findings
+
+            def counted_raw(_root):
+                scan_calls[0] += 1
+                return original_raw(_root)
+
+            with patch.object(audit_mod, '_hash_scope_files', counted_hash):
+                with patch.object(audit_mod, '_raw_findings', counted_raw):
+                    resp = svc.audit(target_id="*")
+
+            self.assertFalse(resp["has_remaining"])
+            self.assertEqual(scan_calls[0], 1,
+                             "stable corpus: scan must be called exactly once")
+            self.assertEqual(hash_scope_calls[0], 2,
+                             "stable corpus: hash(pre)+hash(post)=2, no reuse needed")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_retry_hash_count_3_instead_of_4(self):
+        """Corpus changes on first pass: scan=2x, hash=3x (reused post_hash)."""
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            from unittest.mock import patch
+            svc = Service(
+                root,
+                registry=JsonlAuditRegistry(os.path.join(tmp_dir, "state")),
+                events=StdoutEventSink(io.StringIO()))
+            target_file = os.path.join(root, "docs", "en", "alpha", "index.md")
+
+            from documenter_service.core import audit as audit_mod
+            hash_scope_calls = [0]
+            original_hash = audit_mod._hash_scope_files
+
+            def counted_hash(root, entries):
+                hash_scope_calls[0] += 1
+                return original_hash(root, entries)
+
+            scan_calls = [0]
+            original_raw = audit_mod._raw_findings
+            first_call = [True]
+
+            def counted_raw(_root):
+                scan_calls[0] += 1
+                if first_call[0]:
+                    first_call[0] = False
+                    # Mutate the file during first scan → hash mismatch.
+                    with open(target_file, "w", encoding="utf-8") as f:
+                        f.write("# Alpha\nid: alpha\nVersion: 1.0.0\n"
+                                "Status: active\nchangelog-path: "
+                                "CHANGELOGS/alpha.changes.md\n# mutated\n")
+                return original_raw(_root)
+
+            with patch.object(audit_mod, '_hash_scope_files', counted_hash):
+                with patch.object(audit_mod, '_raw_findings', counted_raw):
+                    resp = svc.audit(target_id="*")
+
+            self.assertFalse(resp["has_remaining"])
+            self.assertEqual(scan_calls[0], 2,
+                             "mutated corpus: scan called twice")
+            self.assertEqual(hash_scope_calls[0], 3,
+                             "retry: pre(1)+post(1)+reuse_pre(2)=3, not 4")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)

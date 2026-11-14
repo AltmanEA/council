@@ -249,3 +249,118 @@ class TestStatusIntegrity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# Pending scan detection (point 23: pending = any unclosed scan)
+# ---------------------------------------------------------------------------
+
+
+class TestStatusPendingUnclosed(unittest.TestCase):
+    """status() must report has_pending=True when ANY audit_id has a
+    latest record with has_remaining=True, even if a newer audit completed.
+    (mvp-interfaces §3, AGENTS §23)"""
+
+    def setUp(self):
+        self.tmp = _tmpdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_unclosed_scan_shows_pending(self):
+        """audit_record#1 has_remaining=True, audit_record#2 has_remaining=False
+        → status has_pending=True, pending=record#1."""
+        r = _registry(self.tmp)
+        now1 = "2026-01-01T00:00:00Z"
+        now2 = "2026-01-02T00:00:00Z"
+        # Unclosed scan.
+        r.append("audit_record", {
+            "audit_id": "A",
+            "scope": "*",
+            "findings": [{"subject_id": "manifest", "severity": "high",
+                          "description": "manifest drift",
+                          "suggested_action": "regenerate"}],
+            "scanned_ids": ["alpha"],
+            "has_remaining": True,
+            "scan_cursor": "cursor-A",
+            "issued_at": now1,
+        })
+        # New completed scan.
+        r.append("audit_record", {
+            "audit_id": "B",
+            "scope": "*",
+            "findings": [],
+            "scanned_ids": ["alpha", "beta"],
+            "has_remaining": False,
+            "scan_cursor": None,
+            "issued_at": now2,
+        })
+        out = status_core(r, None)
+        self.assertTrue(out["scan_status"]["has_pending_scan"])
+        self.assertEqual(out["scan_status"]["pending_scan_cursor"], "cursor-A")
+        # Pending should be record A (the unclosed one).
+        self.assertIsNotNone(out["scan_status"]["blocking_operator"])
+        self.assertIn("audit_id='A'", out["scan_status"]["blocking_operator"])
+
+    def test_closing_scan_clears_pending(self):
+        """After completing an unclosed scan (has_remaining=False) for the same
+        audit_id → has_pending=False."""
+        r = _registry(self.tmp)
+        now1 = "2026-01-01T00:00:00Z"
+        now2 = "2026-01-02T00:00:00Z"
+        # Unclosed scan.
+        r.append("audit_record", {
+            "audit_id": "A",
+            "scope": "*",
+            "findings": [],
+            "scanned_ids": ["alpha"],
+            "has_remaining": True,
+            "scan_cursor": "cursor-A",
+            "issued_at": now1,
+        })
+        # Complete the same audit.
+        r.append("audit_record", {
+            "audit_id": "A",
+            "scope": "*",
+            "findings": [],
+            "scanned_ids": ["alpha", "beta"],
+            "has_remaining": False,
+            "scan_cursor": None,
+            "issued_at": now2,
+        })
+        out = status_core(r, None)
+        self.assertFalse(out["scan_status"]["has_pending_scan"])
+        self.assertIsNone(out["scan_status"]["pending_scan_cursor"])
+        self.assertIsNone(out["scan_status"]["blocking_operator"])
+
+    def test_multiple_unclosed_selects_most_recent(self):
+        """Two unclosed scans → pending = most recent (by issued_at)."""
+        r = _registry(self.tmp)
+        r.append("audit_record", {
+            "audit_id": "A",
+            "scope": "*",
+            "findings": [],
+            "scanned_ids": ["alpha"],
+            "has_remaining": True,
+            "scan_cursor": "cursor-A",
+            "issued_at": "2026-01-01T00:00:00Z",
+        })
+        r.append("audit_record", {
+            "audit_id": "B",
+            "scope": "*",
+            "findings": [],
+            "scanned_ids": ["alpha", "beta"],
+            "has_remaining": True,
+            "scan_cursor": "cursor-B",
+            "issued_at": "2026-01-02T00:00:00Z",
+        })
+        out = status_core(r, None)
+        self.assertTrue(out["scan_status"]["has_pending_scan"])
+        self.assertEqual(out["scan_status"]["pending_scan_cursor"], "cursor-B")
+        self.assertIn("audit_id='B'", out["scan_status"]["blocking_operator"])
+
+    def test_no_audit_records_no_pending(self):
+        """Empty registry → has_pending=False."""
+        r = _registry(self.tmp)
+        out = status_core(r, None)
+        self.assertFalse(out["scan_status"]["has_pending_scan"])

@@ -181,21 +181,48 @@ class Service:
         self.engine = StdDiffEngine()
         self.worker = InterlockedWorkerStub()  # Tier 2+ stub, always locked
         self.hash_store = HashStore(data_dir, self.root)
+        # -- policy cache (mvp-data-models §5; load_policy_safe called once
+        #    per instance, not on every operation) ---------------------------
+        self._cached_policy = None  # Policy | None
+        self._cached_policy_error = None  # PolicyError | None
+        self._policy_warning_emitted = False  # ensure _stderr_log fires once
 
     # -- policy (degradation-tolerant: audit/status never blocked by it) ----
 
     def load_policy_safe(self):
         """Return (policy, PolicyError|None). Callers surface the error via
-        delegate()/CLI stderr — audit() and status() proceed regardless."""
+        delegate()/CLI stderr — audit() and status() proceed regardless.
+
+        Policy is loaded once per Service instance and cached; subsequent calls
+        return the cached result.  On first failure a degradation warning is
+        emitted to stderr exactly once (not on every invocation).
+        """
+        if self._cached_policy_error is not None:
+            # Already failed once — emit the degradation warning once.
+            if not self._policy_warning_emitted:
+                self._policy_warning_emitted = True
+                _stderr_log(
+                    f"WARNING: policy load failed — degraded: "
+                    f"{self._cached_policy_error.reason}")
+            return None, self._cached_policy_error
+        if self._cached_policy is not None:
+            return self._cached_policy, None
+        # First load.
         manifest_ids = None
         try:
             manifest_ids = {e["id"] for e in self.manifest.entries()}
         except StructuredError:
             pass  # rule 5 target validation is skipped without manifest ids
         try:
-            return load_policy(self.root, env=self._env,
-                               manifest_ids=manifest_ids), None
+            policy = load_policy(self.root, env=self._env,
+                                 manifest_ids=manifest_ids)
+            self._cached_policy = policy
+            return policy, None
         except PolicyError as exc:
+            self._cached_policy_error = exc
+            self._policy_warning_emitted = True
+            _stderr_log(
+                f"WARNING: policy load failed — degraded: {exc.reason}")
             return None, exc
 
     # -- operations -----------------------------------------------------------
@@ -271,11 +298,10 @@ class Service:
                     "registry from git; status() reports details). The MVP has "
                     "no override path (override_gate is Tier 2+, structurally "
                     "absent).")
-            policy, policy_err = self.load_policy_safe()
-            if policy_err is not None:
-                _stderr_log(
-                    f"WARNING: policy unavailable for delegate(preview) — "
-                    f"using default max_diff_bytes: {policy_err.reason}")
+            # load_policy_safe emits the degradation warning exactly once per
+            # instance (policy cache); do not re-emit here (would repeat per
+            # call and double-log alongside the cached warning).
+            policy, _ = self.load_policy_safe()
             cap = int(policy.get("max_diff_bytes")) if policy else MAX_DIFF_BYTES_DEFAULT
             freshness = (int(policy.get("audit_freshness")) if policy else 30)
             budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms

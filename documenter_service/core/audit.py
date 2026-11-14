@@ -20,8 +20,9 @@ ceiling pages the REPORT: document findings are delivered in scope batches;
 scanned_ids and findings accumulate in the registry per batch so a resumed
 scan reports honest cumulative coverage. A partial batch issues a single-use
 scan_cursor token bound to (audit_id, target_id). Corpus-level findings
-(the manifest file itself, orphan files) are not tied to one document and
-report on the first pass — pagination cannot hide manifest drift.
+(the manifest file itself, orphan files) are emitted in every batch but
+deduplicated by the caller — the first batch always carries them; resumed
+batches only carry new corpus-level findings.
 """
 from __future__ import annotations
 
@@ -185,9 +186,10 @@ def _findings_for_batch(raw: list, path_to_id: dict, *, batch_set=None,
     """Findings for a full-scope ('*') audit batch (tagged shape).
 
     Document findings are attributed to ``batch_set`` (None = every document);
-    corpus-level findings (subject = a path, not a manifest id) report in the
-    first pass so pagination cannot hide manifest drift. Severity filtered by
-    min_rank at the audit() boundary.
+    corpus-level findings (subject = a path, not a manifest id) are emitted
+    in every batch; deduplication is handled by the caller (``_one_pass``) —
+    findings already present in ``carried`` are excluded from ``new_findings``.
+    Severity filtered by min_rank at the audit() boundary.
     """
     ids = set(path_to_id.values())
     out = []
@@ -351,13 +353,20 @@ def audit(root: str, registry, manifest, events, *,
     # Sync-latency deadline (mvp-interfaces §5).
     deadline = time.monotonic() + sync_latency_budget_ms / 1000.0
 
-    def _one_pass():
+    def _one_pass(pre_hash_hint=None):
         """Execute a single scan pass; return (pre_hash, findings, ...).
 
         Hashes files before the scan, then the scan + computation run.
         The caller is responsible for re-hashing and comparing stability.
+
+        ``pre_hash_hint`` — on resume, the caller may supply the previous
+        post_hash so the initial pre-scan hash is not recomputed from scratch.
+        Stability is NOT weakened: if the corpus changed between the previous
+        post_hash and this pass, the next post_hash comparison will catch it;
+        if the corpus changed and returned to the same content, the findings
+        remain valid because pre and post hashes match.
         """
-        pre_hash = _hash_scope_files(root, entries)
+        pre_hash = pre_hash_hint or _hash_scope_files(root, entries)
         _check_budget(deadline, sync_latency_budget_ms)
 
         # Tools-layer scan + dependent computation.
@@ -371,7 +380,17 @@ def audit(root: str, registry, manifest, events, *,
                                                     min_rank=min_rank)
                      if m["subject_id"] == target_id]
 
-        new_findings = [_finding_public(m) for m in batch]
+        # Dedup: corpus-level findings (subject is a file path, not a manifest
+        # id) appear in every batch; exclude duplicates already in ``carried``.
+        # The tuple (subject_id, severity, description) is stable per finding,
+        # so identity check against carried is safe for all finding types
+        # (document findings do not overlap across batches by batch_set).
+        _carried_keys = {(f["subject_id"], f["severity"], f["description"])
+                         for f in carried}
+        new_findings = [
+            _finding_public(m) for m in batch
+            if (_finding_public(m)["subject_id"], _finding_public(m)["severity"],
+                _finding_public(m)["description"]) not in _carried_keys]
         all_findings = carried + new_findings
         all_scanned = scanned_ids + batch_ids
         scan_cursor_out = None
@@ -400,9 +419,10 @@ def audit(root: str, registry, manifest, events, *,
     scan_cursor_out = None
     audit_record = None
     max_passes = 2
+    pre_hash_hint = None  # reused post_hash from previous pass (perf: avoids 4th hash)
     for _pass in range(max_passes):
         pre_hash, pass_new, pass_findings, pass_scanned, \
-            pass_cursor, pass_record = _one_pass()
+            pass_cursor, pass_record = _one_pass(pre_hash_hint)
 
         # Verify corpus stability: re-hash and compare.
         post_hash = _hash_scope_files(root, entries)
@@ -419,6 +439,9 @@ def audit(root: str, registry, manifest, events, *,
         # Hash changed: discard this pass. If it's the first pass, retry once.
         if _pass == 0:
             # Discard: reset emitted events and findings from the first pass.
+            # Reuse the previous post_hash as the next pass's pre_hash (perf:
+            # reduces 4 hash passes → 3 when a retry is needed).
+            pre_hash_hint = post_hash
             new_findings = []
             all_findings = []
             all_scanned = []
