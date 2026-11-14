@@ -34,7 +34,7 @@ from documenter_service.adapters.stdout_events import (  # noqa: E402
 from documenter_service.core.errors import StructuredError  # noqa: E402
 from documenter_service.core import registry as reg  # noqa: E402
 from documenter_service.core.policy import (  # noqa: E402
-    check_tier2_authorized, operator_id_valid)
+    check_tier2_authorized, operator_id_valid, match_operation, trust_rank)
 from documenter_service.__main__ import Service  # noqa: E402
 from documenter_service.core import write as core_write  # noqa: E402
 from documenter_service.core.policy import Policy  # noqa: E402
@@ -1642,3 +1642,199 @@ class TestServiceWriteBranch(unittest.TestCase):
                             preview=True)
         self.assertEqual(resp["next_action"], "preview_only")
         self.assertNotIn("approval_required", resp)
+
+
+# ---------------------------------------------------------------------------
+# P.11: match_operation strictest + propose_write policy floor
+# ---------------------------------------------------------------------------
+
+
+class TestMatchOperationStrictest(unittest.TestCase):
+    """match_operation returns the STRICTEST (highest trust_level) match."""
+
+    def test_wildcard_first_specific_second_returns_specific_stricter(self):
+        """Wildcard safe first, target-specific review second → review."""
+        policy = Policy({
+            "version": "0.2.0",
+            "active_tier": 2,
+            "allowed_operations": [
+                {"change_type": "update", "targets": [], "trust_level": "safe"},
+                {"change_type": "update", "targets": ["alpha"], "trust_level": "review"},
+            ],
+            "briefing_ref": "_b.md",
+            "audit_freshness": 30, "approval_expiry_window": 30,
+            "max_diff_bytes": 524288, "lock_wait_timeout": 30,
+        })
+        result = match_operation(policy, change_type="update", target_id="alpha")
+        self.assertEqual(result["trust_level"], "review")
+        self.assertEqual(result["targets"], ["alpha"])
+
+    def test_specific_first_wildcard_second_returns_specific_stricter(self):
+        """Target-specific review first, wildcard safe second → review."""
+        policy = Policy({
+            "version": "0.2.0",
+            "active_tier": 2,
+            "allowed_operations": [
+                {"change_type": "update", "targets": ["alpha"], "trust_level": "review"},
+                {"change_type": "update", "targets": [], "trust_level": "safe"},
+            ],
+            "briefing_ref": "_b.md",
+            "audit_freshness": 30, "approval_expiry_window": 30,
+            "max_diff_bytes": 524288, "lock_wait_timeout": 30,
+        })
+        result = match_operation(policy, change_type="update", target_id="alpha")
+        self.assertEqual(result["trust_level"], "review")
+        self.assertEqual(result["targets"], ["alpha"])
+
+    def test_wildcard_earlier_same_trust_returns_earlier(self):
+        """Both safe, wildcard first → first (safe) returned."""
+        policy = Policy({
+            "version": "0.2.0",
+            "active_tier": 2,
+            "allowed_operations": [
+                {"change_type": "update", "targets": [], "trust_level": "safe"},
+                {"change_type": "update", "targets": ["alpha"], "trust_level": "safe"},
+            ],
+            "briefing_ref": "_b.md",
+            "audit_freshness": 30, "approval_expiry_window": 30,
+            "max_diff_bytes": 524288, "lock_wait_timeout": 30,
+        })
+        result = match_operation(policy, change_type="update", target_id="alpha")
+        self.assertEqual(result["trust_level"], "safe")
+        self.assertEqual(result["targets"], [])  # wildcard first
+
+    def test_no_match_returns_none(self):
+        """No matching entry → None."""
+        policy = Policy({
+            "version": "0.2.0",
+            "active_tier": 2,
+            "allowed_operations": [
+                {"change_type": "update", "targets": [], "trust_level": "safe"},
+            ],
+            "briefing_ref": "_b.md",
+            "audit_freshness": 30, "approval_expiry_window": 30,
+            "max_diff_bytes": 524288, "lock_wait_timeout": 30,
+        })
+        self.assertIsNone(match_operation(policy, change_type="split", target_id="alpha"))
+
+
+class TestProposeWritePolicyFloor(unittest.TestCase):
+    """propose_write rejects trust_level below policy entry floor (P.11b)."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.corpus = os.path.join(self.tmpdir, "docs")
+        os.makedirs(self.corpus)
+        # Create the alpha fixture document (matches _make_diff expectations)
+        alpha_dir = os.path.join(self.corpus, "en", "alpha")
+        os.makedirs(alpha_dir)
+        with open(os.path.join(alpha_dir, "index.md"), "w") as f:
+            f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
+        # Briefing
+        self.briefing_path = os.path.join(self.tmpdir, "_briefing.md")
+        with open(self.briefing_path, "w") as f:
+            f.write("# Briefing\n\nAuthorised operational context.\n")
+        # _enable_operator_surface
+        _enable_operator_surface(self.tmpdir)
+        _init_git_repo(self.tmpdir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _make_manifest(self):
+        return _make_manifest(["alpha"])
+
+    def _make_audit_record(self):
+        return _make_audit_record("aud-1", scope="*")
+
+    def test_floor_safe_below_review_proposal_rejected(self):
+        """Tier2 policy with [alpha review] first, wildcard safe second.
+        propose_write(safe) → StructuredError trust_mismatch (even mechanical diff).
+        """
+        # Use policy where [targets ["alpha"] review] is FIRST, wildcard safe is second.
+        policy = Policy({
+            "version": "0.2.0",
+            "active_tier": 2,
+            "allowed_operations": [
+                {"change_type": "update", "targets": ["alpha"], "trust_level": "review"},
+                {"change_type": "update", "targets": [], "trust_level": "safe"},
+            ],
+            "briefing_ref": self.briefing_path,
+            "audit_freshness": 30, "approval_expiry_window": 30,
+            "max_diff_bytes": 524288, "lock_wait_timeout": 30,
+        })
+        manifest = self._make_manifest()
+        registry = _make_registry(os.path.join(self.tmpdir, "state"))
+        registry.append("audit_record", self._make_audit_record())
+        engine = StdDiffEngine()
+        events = StdoutEventSink(sys.stderr)
+
+        diff_text = _make_diff()
+        diff_b64 = _encode_diff(diff_text)
+
+        # safe → rejected (policy floor = review)
+        with self.assertRaises(StructuredError) as ctx:
+            core_write.propose_write(
+                self.tmpdir, manifest, registry, policy, events, engine,
+                target_id="alpha", change_type="update",
+                trust_level="safe", diff_input=diff_b64,
+                audit_id="aud-1",
+            )
+        self.assertEqual(ctx.exception.error_category, "trust_mismatch")
+        self.assertIn("policy entry floor", ctx.exception.message)
+
+    def test_floor_review_proposal_passes(self):
+        """Same policy but review → passes (not below floor)."""
+        policy = Policy({
+            "version": "0.2.0",
+            "active_tier": 2,
+            "allowed_operations": [
+                {"change_type": "update", "targets": ["alpha"], "trust_level": "review"},
+                {"change_type": "update", "targets": [], "trust_level": "safe"},
+            ],
+            "briefing_ref": self.briefing_path,
+            "audit_freshness": 30, "approval_expiry_window": 30,
+            "max_diff_bytes": 524288, "lock_wait_timeout": 30,
+        })
+        manifest = self._make_manifest()
+        registry = _make_registry(os.path.join(self.tmpdir, "state"))
+        registry.append("audit_record", self._make_audit_record())
+        engine = StdDiffEngine()
+        events = StdoutEventSink(sys.stderr)
+
+        diff_text = _make_diff()
+        diff_b64 = _encode_diff(diff_text)
+
+        # review → passes (equal to floor)
+        result = core_write.propose_write(
+            self.tmpdir, manifest, registry, policy, events, engine,
+            target_id="alpha", change_type="update",
+            trust_level="review", diff_input=diff_b64,
+            audit_id="aud-1",
+        )
+        self.assertEqual(result["next_action"], "await_approval")
+        self.assertTrue(result["approval_required"])
+
+    def test_regression_existing_tier2_policy_safe_passes(self):
+        """Existing _make_tier2_policy: [alpha safe] first, [wildcard review] second.
+        propose(safe) → passes because strictest for alpha == safe.
+        """
+        policy = _make_tier2_policy(self.briefing_path)
+        manifest = self._make_manifest()
+        registry = _make_registry(os.path.join(self.tmpdir, "state"))
+        registry.append("audit_record", self._make_audit_record())
+        engine = StdDiffEngine()
+        events = StdoutEventSink(sys.stderr)
+
+        diff_text = _make_diff()
+        diff_b64 = _encode_diff(diff_text)
+
+        # Regression: safe is still accepted because strictest for alpha is safe.
+        result = core_write.propose_write(
+            self.tmpdir, manifest, registry, policy, events, engine,
+            target_id="alpha", change_type="update",
+            trust_level="safe", diff_input=diff_b64,
+            audit_id="aud-1",
+        )
+        self.assertEqual(result["next_action"], "await_approval")
+        self.assertTrue(result["approval_required"])

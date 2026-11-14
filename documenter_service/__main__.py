@@ -79,6 +79,31 @@ from .core import patterns as core_patterns  # Tier 3 pattern auto-apply
 
 __all__ = ["Service", "main", "resolve_operator_id"]
 
+# ---------------------------------------------------------------------------
+# DOCUMENTER_LOG_LEVEL — stderr warning filter (mvp-data-models §5)
+# ---------------------------------------------------------------------------
+#: Log level severity ranks (used for comparison against threshold).
+_STDERR_LOG_RANK = {"debug": 10, "info": 20, "warn": 30, "error": 40}
+
+
+def _stderr_log(msg: str, level: str = "warn", env=None) -> None:
+    """Emit a service warning to stderr, filtered by DOCUMENTER_LOG_LEVEL.
+
+    Never writes to stdout (transport contract: last stdout line is the
+    response).  Unknown configured levels fall back to "info".
+
+    IMPORTANT: This helper is for SERVICE-WARNING messages (e.g. degraded
+    policy state).  Usage errors — mandatory argument missing, invalid CLI
+    argument — are NOT filtered by this helper; they write directly to
+    stderr via print(..., file=sys.stderr) to guarantee visibility per the
+    exit-code contract (0=success, 2=structured refusal, 3=internal error).
+    """
+    e = env if env is not None else os.environ
+    configured = str(e.get("DOCUMENTER_LOG_LEVEL", "info")).lower()
+    threshold = _STDERR_LOG_RANK.get(configured, _STDERR_LOG_RANK["info"])
+    if _STDERR_LOG_RANK.get(level, _STDERR_LOG_RANK["warn"]) >= threshold:
+        print(msg, file=sys.stderr)
+
 _HELP = ("Documenter Service MVP scaffold (Tier 0-1 read-only, Tier 2+ write): "
          "audit(), status(), delegate(preview: true). "
          "Tier 2+ write CLI flags: --delegate-write, --approve, "
@@ -248,9 +273,9 @@ class Service:
                     "absent).")
             policy, policy_err = self.load_policy_safe()
             if policy_err is not None:
-                print(f"WARNING: policy unavailable for delegate(preview) — "
-                      f"using default max_diff_bytes: {policy_err.reason}",
-                      file=sys.stderr)
+                _stderr_log(
+                    f"WARNING: policy unavailable for delegate(preview) — "
+                    f"using default max_diff_bytes: {policy_err.reason}")
             cap = int(policy.get("max_diff_bytes")) if policy else MAX_DIFF_BYTES_DEFAULT
             freshness = (int(policy.get("audit_freshness")) if policy else 30)
             budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms

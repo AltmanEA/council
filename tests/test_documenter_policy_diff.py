@@ -23,7 +23,8 @@ from documenter_service.adapters.jsonl_registry import JsonlAuditRegistry  # noq
 from documenter_service.adapters.stdout_events import StdoutEventSink  # noqa: E402
 from documenter_service.core.errors import StructuredError  # noqa: E402
 from documenter_service.core.policy import (  # noqa: E402
-    PolicyError, load_policy, policy_structured_error, validate_policy)
+    PolicyError, load_policy, policy_structured_error, validate_policy,
+    DEFAULTS, INT_RANGES, NON_NEGATIVE_INT_FIELDS)
 
 FIXTURES = os.path.join(REPO_ROOT, "tests", "fixtures", "documenter")
 CORPUS = os.path.join(FIXTURES, "corpus")
@@ -151,7 +152,7 @@ class TestPolicyFailClosed(unittest.TestCase):
         self.assertIn("briefing_ref", ctx.exception.reason)
 
     def test_rule7_positive_ints_and_inline_mode(self):
-        for field, bad in [("audit_freshness", 0), ("max_diff_bytes", -5),
+        for field, bad in [("max_diff_bytes", -5),
                            ("rescan_batch_ceiling", "fifty")]:
             with self.assertRaises(PolicyError) as ctx:
                 validate_policy(_policy(**{field: bad}))
@@ -161,6 +162,18 @@ class TestPolicyFailClosed(unittest.TestCase):
         self.assertIn("notification_mode", ctx.exception.reason)
         with self.assertRaises(PolicyError):
             validate_policy(_policy(temperature=2.5))  # outside 0.0–2.0
+
+    def test_rule7_non_negative_int_aud_freshness_zero(self):
+        """audit_freshness: 0 disables the freshness gate (policy-reference)."""
+        p = validate_policy(_policy(audit_freshness=0))
+        self.assertEqual(p.get("audit_freshness"), 0)
+        with self.assertRaises(PolicyError) as ctx:
+            validate_policy(_policy(audit_freshness=-1))
+        self.assertIn("audit_freshness", ctx.exception.reason)
+        # bool is rejected for non-negative int too.
+        with self.assertRaises(PolicyError) as ctx:
+            validate_policy(_policy(audit_freshness=True))
+        self.assertIn("audit_freshness", ctx.exception.reason)
 
     def test_missing_file_fail_closed(self):
         env = {"DOCUMENTER_POLICY_PATH": "/definitely/not/here.yml"}
@@ -305,6 +318,61 @@ class TestDelegatePreview(unittest.TestCase):
         for marker in ("diff_text", "alpha-renamed", "--- a/"):
             self.assertNotIn(marker, registry_dump)
             self.assertNotIn(marker, events_dump)
+
+
+# ---------------------------------------------------------------------------
+# INT_RANGES and LLM defaults (P.12d, P.12e)
+# ---------------------------------------------------------------------------
+
+
+class TestINTRangesAndLLMDefaults(unittest.TestCase):
+    """policy-reference §Field Reference: INT_RANGES and LLM defaults."""
+
+    def test_approval_expiry_window_range(self):
+        """INT_RANGES: approval_expiry_window must be in [5, 1440]."""
+        # Valid values at boundaries
+        self.assertIsNotNone(validate_policy(_policy(approval_expiry_window=5)))
+        self.assertIsNotNone(validate_policy(_policy(approval_expiry_window=1440)))
+        # Out of range
+        with self.assertRaises(PolicyError) as ctx:
+            validate_policy(_policy(approval_expiry_window=4))
+        self.assertIn("approval_expiry_window", ctx.exception.reason)
+        with self.assertRaises(PolicyError) as ctx:
+            validate_policy(_policy(approval_expiry_window=1441))
+        self.assertIn("approval_expiry_window", ctx.exception.reason)
+        # Also positive-int check (below 5 is already caught by POSITIVE_INT)
+        with self.assertRaises(PolicyError) as ctx:
+            validate_policy(_policy(approval_expiry_window=1))
+        self.assertIn("approval_expiry_window", ctx.exception.reason)
+
+    def test_llm_defaults_loaded(self):
+        """DEFAULTS contain temperature, top_p, frequency_penalty."""
+        self.assertEqual(DEFAULTS["temperature"], 0.1)
+        self.assertEqual(DEFAULTS["top_p"], 0.9)
+        self.assertEqual(DEFAULTS["frequency_penalty"], 0.0)
+
+    def test_llm_defaults_via_policy_get_empty_overrides(self):
+        """Policy.get returns LLM defaults when no overrides present."""
+        # Create a minimal valid policy (tier 0, no ops)
+        p = validate_policy(_policy(
+            active_tier=0,
+            allowed_operations=[],
+        ))
+        self.assertEqual(p.get("temperature"), 0.1)
+        self.assertEqual(p.get("top_p"), 0.9)
+        self.assertEqual(p.get("frequency_penalty"), 0.0)
+
+    def test_llm_out_of_range_still_error(self):
+        """Values outside FLOAT_RANGES still raise PolicyError."""
+        with self.assertRaises(PolicyError):
+            validate_policy(_policy(temperature=2.5))
+        with self.assertRaises(PolicyError):
+            validate_policy(_policy(top_p=1.5))
+        with self.assertRaises(PolicyError):
+            validate_policy(_policy(frequency_penalty=-3.0))
+        # Valid values pass
+        self.assertIsNotNone(validate_policy(_policy(
+            temperature=0.0, top_p=0.0, frequency_penalty=-2.0)))
 
 
 if __name__ == "__main__":

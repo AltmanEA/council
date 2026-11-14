@@ -642,5 +642,112 @@ class TestReconcileCli(unittest.TestCase):
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# DOCUMENTER_LOG_LEVEL — stderr warning filter helper (P.12f)
+# ---------------------------------------------------------------------------
+
+
+def _run_cli_stderr(argv, env_extra=None):
+    """Run a CLI subprocess, return (last_stdout_json, stderr_text, returncode)."""
+    merged_env = dict(os.environ)
+    merged_env["PYTHONPATH"] = REPO_ROOT + os.pathsep + merged_env.get("PYTHONPATH", "")
+    if env_extra:
+        merged_env.update(env_extra)
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "documenter_service"] + argv,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env=merged_env, text=True)
+    out, err = proc.communicate()
+    lines = [l for l in out.strip().splitlines() if l.strip()]
+    parsed = []
+    for line in lines:
+        try:
+            parsed.append(json.loads(line))
+        except json.JSONDecodeError:
+            pass
+    last = parsed[-1] if parsed else None
+    return last, err, proc.returncode
+
+
+class TestDocumenterLogLevel(unittest.TestCase):
+    """DOCUMENTER_LOG_LEVEL filters _stderr_log output (P.12f).
+
+    A broken policy triggers a degradation warning via _stderr_log.
+    The warning should appear when DOCUMENTER_LOG_LEVEL >= warn (default info),
+    and be suppressed when DOCUMENTER_LOG_LEVEL = error.
+
+    The warning is emitted in Service.delegate(preview=True) path.
+    """
+
+    def _make_broken_policy_env(self, tmpdir):
+        """Write a policy file with an invalid tier to trigger the warning."""
+        policy_path = os.path.join(tmpdir, "documenter_policy.yml")
+        with open(policy_path, "w") as f:
+            yaml.dump({
+                "documenter_policy": {
+                    "version": "0.2.0",
+                    "active_tier": "invalid_tier",  # will fail load
+                }
+            }, f)
+        return policy_path
+
+    def test_stderr_log_default_info_shows_warning(self):
+        """Default (no env) → policy warning on stderr (level info ≥ info).
+        Uses --delegate-preview which triggers the policy warning."""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            policy_path = self._make_broken_policy_env(tmpdir)
+            corpus = os.path.join(tmpdir, "docs", "en", "alpha")
+            os.makedirs(corpus, exist_ok=True)
+            with open(os.path.join(corpus, "index.md"), "w") as f:
+                f.write("# Alpha\nid: alpha\n")
+            _, stderr, _ = _run_cli_stderr(
+                ["--delegate-preview", "--root", tmpdir, "--target", "alpha",
+                 "--change-type", "update", "--trust-level", "safe",
+                 "--diff-base64", "ZABj"],  # simple base64 payload
+                env_extra={"DOCUMENTER_POLICY_PATH": policy_path})
+            self.assertIn("WARNING", stderr)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_stderr_log_error_filters_warning(self):
+        """DOCUMENTER_LOG_LEVEL=error → warning suppressed (warn < error)."""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            policy_path = self._make_broken_policy_env(tmpdir)
+            corpus = os.path.join(tmpdir, "docs", "en", "alpha")
+            os.makedirs(corpus, exist_ok=True)
+            with open(os.path.join(corpus, "index.md"), "w") as f:
+                f.write("# Alpha\nid: alpha\n")
+            _, stderr, _ = _run_cli_stderr(
+                ["--delegate-preview", "--root", tmpdir, "--target", "alpha",
+                 "--change-type", "update", "--trust-level", "safe",
+                 "--diff-base64", "ZABj"],
+                env_extra={"DOCUMENTER_POLICY_PATH": policy_path,
+                           "DOCUMENTER_LOG_LEVEL": "error"})
+            self.assertNotIn("WARNING", stderr)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_stderr_log_invalid_level_falls_back_to_info(self):
+        """DOCUMENTER_LOG_LEVEL=<garbage> → falls back to info (shows warning)."""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            policy_path = self._make_broken_policy_env(tmpdir)
+            corpus = os.path.join(tmpdir, "docs", "en", "alpha")
+            os.makedirs(corpus, exist_ok=True)
+            with open(os.path.join(corpus, "index.md"), "w") as f:
+                f.write("# Alpha\nid: alpha\n")
+            _, stderr, _ = _run_cli_stderr(
+                ["--delegate-preview", "--root", tmpdir, "--target", "alpha",
+                 "--change-type", "update", "--trust-level", "safe",
+                 "--diff-base64", "ZABj"],
+                env_extra={"DOCUMENTER_POLICY_PATH": policy_path,
+                           "DOCUMENTER_LOG_LEVEL": "mushroom_level_???!!!"})
+            self.assertIn("WARNING", stderr)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

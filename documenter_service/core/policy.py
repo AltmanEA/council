@@ -23,12 +23,15 @@ from .trust import STATIC_FLOORS
 
 __all__ = ["PolicyError", "Policy", "load_policy", "validate_policy",
            "operator_id_valid", "check_tier2_authorized", "check_tier3_authorized",
-           "match_operation", "match_pattern", "policy_structured_error"]
+           "match_operation", "match_pattern", "policy_structured_error",
+           "trust_rank"]
 
 #: Only policy schema version recognized at MVP (mvp-data-models §2 rule 1).
 POLICY_VERSION = "0.2.0"
 
 #: Defaults per mvp-data-models §2 example / policy-reference §Field Reference.
+#: LLM defaults (temperature, top_p, frequency_penalty) are per
+#: policy-reference §Field Reference (Zero silent defaults, layer-1.md).
 DEFAULTS = {
     "version": POLICY_VERSION,
     "active_tier": 0,
@@ -46,11 +49,13 @@ DEFAULTS = {
     "briefing_ref": None,
     "retry_backoff_base": 1,
     "retry_max_attempts": 3,
+    "temperature": 0.1,
+    "top_p": 0.9,
+    "frequency_penalty": 0.0,
 }
 
 #: Integer fields that must be positive integers (mvp-data-models §2 rule 7).
 POSITIVE_INT_FIELDS = (
-    "audit_freshness",
     "approval_expiry_window",
     "rescan_batch_ceiling",
     "max_diff_bytes",
@@ -61,6 +66,13 @@ POSITIVE_INT_FIELDS = (
     "retry_backoff_base",
     "retry_max_attempts",
 )
+
+#: Integer fields that must be non-negative integers (>= 0).
+#: audit_freshness=0 disables the freshness gate entirely (policy-reference).
+NON_NEGATIVE_INT_FIELDS = ("audit_freshness",)
+
+#: Integer fields with documented value ranges (policy-reference §Field Reference).
+INT_RANGES = {"approval_expiry_window": (5, 1440)}
 
 #: Float fields with documented ranges (policy-reference §Field Reference).
 FLOAT_RANGES = {
@@ -260,7 +272,7 @@ def validate_policy(raw, manifest_ids=None) -> Policy:
             "briefing_ref must be non-null when active_tier >= 2 "
             "(mvp-data-models §2 rule 6)")
 
-    # Rule 7: positive ints, ranged floats, notification_mode == inline.
+    # Rule 7: positive ints, non-negative ints, ranged floats, enums.
     fields = dict(DEFAULTS)
     fields.update(data)
     for name in POSITIVE_INT_FIELDS:
@@ -268,6 +280,18 @@ def validate_policy(raw, manifest_ids=None) -> Policy:
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise PolicyError(
                 f"policy field {name}={value!r} must be a positive integer")
+    for name in NON_NEGATIVE_INT_FIELDS:
+        value = fields[name]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise PolicyError(
+                f"policy field {name}={value!r} must be a non-negative integer")
+    for name, (lo, hi) in INT_RANGES.items():
+        if name in data:
+            value = data[name]
+            if isinstance(value, bool) or not isinstance(value, int) \
+                    or not (lo <= value <= hi):
+                raise PolicyError(
+                    f"policy field {name}={value!r} outside range [{lo}, {hi}]")
     for name, (lo, hi) in FLOAT_RANGES.items():
         if name in data:
             value = data[name]
@@ -285,6 +309,11 @@ def validate_policy(raw, manifest_ids=None) -> Policy:
 
 def _trust_rank(level: str) -> int:
     return {"safe": 0, "review": 1}[level]
+
+
+#: Public alias for internal ``_trust_rank`` — exposed in ``__all__`` so
+#: callers (e.g. write.py) can import it without reaching into private API.
+trust_rank = _trust_rank
 
 
 def load_policy(root: str, env=None, manifest_ids=None) -> Policy:
@@ -398,7 +427,7 @@ def check_tier3_authorized(policy, root) -> None:
 
 
 def match_operation(policy, *, change_type, target_id, path=None) -> dict | None:
-    """Return the first matching operation-type entry or None.
+    """Return the STRICTEST matching operation-type entry or None.
 
     An operation matches when:
     - type is "operation" (or absent),
@@ -406,22 +435,60 @@ def match_operation(policy, *, change_type, target_id, path=None) -> dict | None
     - targets is empty (match any) or target_id is in targets,
     - trust_level satisfies the static floor (already guaranteed by validation).
 
+    The function collects ALL matching entries and returns the one with the
+    highest trust_level (strictest floor).  Crucially, a wildcard entry
+    (targets: []) cannot shadow a target-specific entry: when both specific
+    and wildcard match, the effective trust ceiling is the highest trust
+    among specific entries only — a wildcard with higher trust is ignored
+    (prevents shadowing).  When multiple entries tie at the same effective
+    trust level, the first matching entry (by original list order) is
+    returned.
+
     The ``path`` parameter is accepted for future use but not evaluated here.
     """
     if not policy:
         return None
-    for entry in (policy.get("allowed_operations") or []):
-        etype = entry.get("type", "operation")
-        if etype != "operation":
+    matching = []  # (list_idx, entry, is_specific, is_wildcard)
+    for i, entry in enumerate(policy.get("allowed_operations") or []):
+        if entry.get("type", "operation") != "operation":
             continue
         if entry.get("change_type") != change_type:
             continue
         targets = entry.get("targets") or []
-        if targets and target_id not in targets:
+        is_specific = bool(targets) and target_id in targets
+        is_wildcard = not targets
+        if not is_specific and not is_wildcard:
             continue
-        return entry
-    return None
+        matching.append((i, entry, is_specific, is_wildcard))
 
+    if not matching:
+        return None
+
+    # Compute trust ranks for each match (include flags in ranked tuple
+    # so they remain accessible in generator expressions).
+    ranked = [(i, e, _trust_rank(e["trust_level"]), is_s, is_wc)
+              for i, e, is_s, is_wc in matching]
+
+    specific_max = max((tr for _, _, tr, is_s, _ in ranked if is_s), default=-1)
+    wildcard_max = max((tr for _, _, tr, _, is_wc in ranked if is_wc), default=-1)
+    has_specific = any(is_s for _, _, _, is_s, _ in ranked)
+    has_wildcard = any(is_wc for _, _, _, _, is_wc in ranked)
+
+    # When both specific and wildcard match, effective ceiling = specific_max
+    # (a higher-trust wildcard cannot shadow the specific entry's trust).
+    if has_specific and has_wildcard:
+        effective_max = specific_max
+    else:
+        effective_max = max(specific_max, wildcard_max)
+
+    # Among entries at effective_max, first by list index wins.
+    best: dict | None = None
+    best_idx: int = float("inf")
+    for i, e, tr, is_s, is_wc in ranked:
+        if tr == effective_max and i < best_idx:
+            best = e
+            best_idx = i
+    return best
 
 def _pattern_matches(rel_path: str, file_pattern: str) -> bool:
     """Match rel_path against a file_pattern, supporting ** (recursive)."""

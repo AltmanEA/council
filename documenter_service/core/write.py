@@ -31,6 +31,7 @@ from ..core.policy import (
     check_tier2_authorized,
     match_operation,
     operator_id_valid,
+    trust_rank,
 )
 from ..ports import ManifestSource, AuditRegistry, DiffEngine, EventSink
 from ..adapters.lock import DelegateLock
@@ -82,7 +83,10 @@ def propose_write(
       (e) audit_id REQUIRED: None → audit_mismatch.
       (f) _resolve_scope — off-manifest → unknown.
       (g) match_operation → None → gate_failure.
-      (h) decode_diff_input + engine.normalize + check_invariant → trust_mismatch.
+      (gg) policy floor — trust_level below entry floor → trust_mismatch
+          (policy may only tighten, never weaken, the requested floor).
+      (h) decode_diff_input + engine.normalize + check_invariant →
+          trust_mismatch.
       (i) pre_audit_gate → propagate error (audit_mismatch / blocking_finding).
       (j) Compute new content: read target file → apply_unified_diff → new_text.
       (k) diff_hash + approval_id; registry.issue_approval(...) with
@@ -133,11 +137,24 @@ def propose_write(
     entries, scope_ids = resolve_scope(manifest, target_id)
 
     # (f) match_operation
-    if match_operation(policy, change_type=change_type, target_id=target_id) is None:
+    match_entry = match_operation(
+        policy, change_type=change_type, target_id=target_id)
+    if match_entry is None:
         raise StructuredError(
             "gate_failure",
             "operation not in allowed_operations — change_type={!r} for "
             "target_id={!r} is not permitted by policy".format(change_type, target_id),
+            next_action="preview_denied")
+
+    # (gg) policy floor: requested trust_level must not be below the
+    #      entry's trust_level floor (policy may only tighten, never weaken).
+    entry_floor = match_entry.get("trust_level", "safe")
+    if trust_rank(trust_level) < trust_rank(entry_floor):
+        raise StructuredError(
+            "trust_mismatch",
+            f"requested trust_level {trust_level!r} is below the policy "
+            f"entry floor {entry_floor!r} for change_type={change_type!r} "
+            f"target={target_id!r} (policy may only tighten the floor)",
             next_action="preview_denied")
 
     # (g) decode, normalize, trust check (lazy imports to avoid circular deps)
