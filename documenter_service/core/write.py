@@ -632,6 +632,8 @@ def _apply_write_legacy(
             "per_file_sha256": {target_id: source_sha},
             "resolved": False,
             "git_snapshot": snapshot,
+            "tx_id": approval_id,
+            "entries": None,
         }
         registry.append("intent_record", intent_record)
 
@@ -738,11 +740,13 @@ def _apply_write_changeset(
       4. read source, apply diff → new_text
       5. tx_id, stage ALL files via commit_protocol.stage_bytes
       6. _check_budget
-      7. write_intent
+      7. write_intent + append registry intent_record (cross-index with legacy)
+         for observability by status().staged_files and find_intent()
       8. seams: after_stage, after_intent, before_rename
       9. C2 verify staged hashes
       10. _check_budget + ordered_renames
-      11. cleanup: append intent → emit event → delete_intent (LAST)
+      11. cleanup: append resolved registry intent_record → emit event →
+          delete_intent (LAST)
       12. consume approval
       13. return
     """
@@ -908,7 +912,10 @@ def _apply_write_changeset(
         if seams and "after_stage" in seams:
             seams["after_stage"]()
 
-        # Step 7b: write_intent
+        # Step 7b: write_intent (on-disk intent file for cold-start recovery).
+        # Also emit a registry intent_record for cross-format observability:
+        # status().staged_files and find_intent() resolve it via
+        # target_ids + resolved=False, same as legacy intent_record.
         intent_record = {
             "tx_id": tx_id,
             "target_id": target_id,
@@ -916,6 +923,16 @@ def _apply_write_changeset(
             "entries": staged_entries,
         }
         _commit_protocol.write_intent(data_dir, tx_id, intent_record)
+
+        registry_intent = {
+            "target_ids": [target_id],
+            "staged_at": registry.now(),
+            "per_file_sha256": {target_id: source_sha},
+            "tx_id": tx_id,
+            "entries": staged_entries,
+            "resolved": False,
+        }
+        registry.append("intent_record", registry_intent)
 
         # Step 8: seams
         if seams and "after_intent" in seams:
@@ -950,10 +967,11 @@ def _apply_write_changeset(
         _commit_protocol.ordered_renames(root, staged_entries, sha_func=hasher_fn)
 
         # Step 11: cleanup #9d
-        # 11a: registry.append("intent_record", resolved)
-        resolved_intent = dict(intent_record)
-        resolved_intent["resolved"] = True
-        registry.append("intent_record", resolved_intent)
+        # 11a: mark registry intent_record resolved (cross-format compat: the
+        # unresolved registry_intent written at step 7b+ is now resolved).
+        resolved_registry = dict(registry_intent)
+        resolved_registry["resolved"] = True
+        registry.append("intent_record", resolved_registry)
 
         # 11b: emit event
         diff_hash_val = approval.get("diff_hash", "")
@@ -1080,27 +1098,32 @@ def reconcile(
                 })
 
         if all_match and target_ids:
-            # Clean up: move staged temp files to data_dir/staged/
-            staged_dir = os.path.join(data_dir, "staged")
-            os.makedirs(staged_dir, exist_ok=True)
-            for tid in target_ids:
-                target_entry = manifest.resolve(tid)
-                if target_entry is None:
-                    continue
-                target_path = os.path.join(root, target_entry["path"])
-                target_dir_of_target = os.path.dirname(target_path)
-                target_basename = os.path.basename(target_path)
-                # Find staged temp files matching pattern .<basename>.<hex16>.tmp
-                # Staged names are ".<basename>.<16hex>.tmp" (see apply_write).
-                for fname in os.listdir(target_dir_of_target):
-                    if (fname.startswith(".{}.".format(target_basename))
-                            and fname.endswith(".tmp")):
-                        src = os.path.join(target_dir_of_target, fname)
-                        dst = os.path.join(staged_dir, fname)
-                        try:
-                            shutil.move(src, dst)
-                        except OSError:
-                            pass
+            # Clean up: move staged temp files to data_dir/staged/.
+            # Only for legacy intent records (entries is None or absent).
+            # Changeset-style intents carry structured entries; Phase 2
+            # (_reconcile_new_format) handles their roll-forward, so leave
+            # staged files in place to avoid breaking branch-2 roll-forward.
+            entries = intent.get("entries")
+            if entries is None:
+                staged_dir = os.path.join(data_dir, "staged")
+                os.makedirs(staged_dir, exist_ok=True)
+                for tid in target_ids:
+                    target_entry = manifest.resolve(tid)
+                    if target_entry is None:
+                        continue
+                    target_path = os.path.join(root, target_entry["path"])
+                    target_dir_of_target = os.path.dirname(target_path)
+                    target_basename = os.path.basename(target_path)
+                    # Find staged temp files matching pattern .<basename>.<hex16>.tmp
+                    for fname in os.listdir(target_dir_of_target):
+                        if (fname.startswith(".{}.".format(target_basename))
+                                and fname.endswith(".tmp")):
+                            src = os.path.join(target_dir_of_target, fname)
+                            dst = os.path.join(staged_dir, fname)
+                            try:
+                                shutil.move(src, dst)
+                            except OSError:
+                                pass
             # Append resolved intent record
             resolved_intent = dict(intent)
             resolved_intent["resolved"] = True

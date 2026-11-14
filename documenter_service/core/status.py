@@ -95,8 +95,10 @@ def status(registry, policy=None, *, target_id: str | None = None,
 
     # -- staged_files & override_counter (mvp-interfaces §3 table fields) ----
     # staged_files: unresolved intent_record leftovers from interrupted writes.
-    # Each unresolved intent produces one {target_id, staged_at} per target_id;
-    # deduplication keeps only the latest per target (reversed iteration, last wins).
+    # Source: all unresolved intent_record data dicts (both legacy format with
+    # per_file_sha256 and changeset format with tx_id/entries); readers
+    # (find_intent, unresolved_intents) unify on target_ids + resolved=False.
+    # Deduplication keeps only the latest per target (forward iteration, last wins).
     _staged_map: dict = {}
     for rec in records:  # forward: later record overwrites earlier (last per target wins)
         if rec["record_type"] == reg.INTENT_RECORD:
