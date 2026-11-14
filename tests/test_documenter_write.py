@@ -1320,6 +1320,98 @@ class TestApplyWrite(unittest.TestCase):
             data_dir=os.path.join(self.tmpdir, "documenter"))
         self.assertTrue(hit)
 
+    def test_apply_write_source_changed_between_propose_and_apply(self):
+        """OCC: source file changed between propose and apply → hash_mismatch.
+
+        The approval carries source_sha256 from propose; when apply reads
+        the source file, if the hash differs it must raise hash_mismatch
+        and NOT modify the target file.
+        """
+        manifest = _make_manifest()
+        registry = _make_registry(self.tmpdir)
+        policy = _make_tier2_policy(_make_briefing(self.tmpdir))
+        events = StdoutEventSink()
+        engine = StdDiffEngine()
+        record = _make_audit_record("aid-1")
+        registry.append("audit_record", record)
+        diff_text = _make_diff()
+        encoded = _encode_diff(diff_text)
+
+        alpha_path = os.path.join(self.corpus, "docs", "en", "alpha",
+                                  "index.md")
+
+        # propose_write → approval with source_sha256
+        prop_result = core_write.propose_write(
+            self.corpus, manifest, registry, policy, events, engine,
+            target_id="alpha", change_type="update", trust_level="safe",
+            diff_input=encoded, audit_id="aid-1")
+        approval_id = prop_result["approval_id"]
+
+        # approve
+        core_write.approve(registry, policy, events,
+                           root=self.corpus,
+                           approval_id=approval_id, operator_id="op-user1")
+
+        # Read the original content
+        with open(alpha_path) as f:
+            original_content = f.read()
+
+        # Tamper with the source file between approve and apply
+        with open(alpha_path, "w") as f:
+            f.write(original_content + "# injected line\n")
+
+        with self.assertRaises(StructuredError) as ctx:
+            core_write.apply_write(
+                self.corpus, manifest, registry, policy, events, engine,
+                approval_id=approval_id, operator_id="op-user1",
+                diff_input=encoded,
+                data_dir=os.path.join(self.tmpdir, "documenter"))
+        self.assertEqual(ctx.exception.error_category, "hash_mismatch")
+
+        # The file must NOT have been modified by the diff.
+        with open(alpha_path) as f:
+            content = f.read()
+        # Should still contain the injected line, NOT the diff result.
+        self.assertIn("injected line", content)
+
+    def test_apply_write_approval_without_source_sha256(self):
+        """Legacy approval without source_sha256 → approval_invalidated.
+
+        When issue_approval is called directly (without extra) and the
+        approval reaches apply_write at Tier 2, the missing source_sha256
+        must trigger approval_invalidated.
+        """
+        manifest = _make_manifest()
+        registry = _make_registry(self.tmpdir)
+        policy = _make_tier2_policy(_make_briefing(self.tmpdir))
+        events = StdoutEventSink()
+        engine = StdDiffEngine()
+
+        # Issue approval WITHOUT source_sha256 (simulating a legacy path).
+        approval_id = "app-no-source"
+        diff_hash = "sha256:" + "a" * 64
+        registry.issue_approval(
+            approval_id=approval_id,
+            target_ids=["alpha"],
+            diff_hash=diff_hash,
+            proposer_id="op-proposer",
+            audit_id="aid-1",
+            extra=None,  # no source_sha256
+        )
+        # Mark as approved.
+        record = registry.find_approval(approval_id)
+        record["decision"] = "approved"
+        registry.append(reg.TOKEN_RECORD, record)
+
+        encoded = _encode_diff(_make_diff())
+        with self.assertRaises(StructuredError) as ctx:
+            core_write.apply_write(
+                self.corpus, manifest, registry, policy, events, engine,
+                approval_id=approval_id, operator_id="op-user1",
+                diff_input=encoded,
+                data_dir=os.path.join(self.tmpdir, "documenter"))
+        self.assertEqual(ctx.exception.error_category, "approval_invalidated")
+
 
 # ---------------------------------------------------------------------------
 # Test class: TestReconcile

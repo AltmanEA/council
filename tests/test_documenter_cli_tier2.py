@@ -496,5 +496,151 @@ class TestCLIOverrideGate(unittest.TestCase):
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# CLI --reconcile tests (Service-level, not subprocess — manual intent
+# construction to simulate leftover state)
+# ---------------------------------------------------------------------------
+
+class TestReconcileCli(unittest.TestCase):
+    """CLI --reconcile: Service.reconcile + JSON output + exit 0."""
+
+    def _get_alpha_hash(self, tmpdir):
+        """Return the sha256 of the alpha index.md file."""
+        corpus = os.path.join(tmpdir, "corpus")
+        alpha_path = os.path.join(corpus, "docs", "en", "alpha", "index.md")
+        with open(alpha_path, "rb") as f:
+            return "sha256:" + __import__("hashlib").sha256(f.read()).hexdigest()
+
+    def test_reconcile_leftover_intent_resolved(self):
+        """--reconcile with a leftover staged intent whose source hash
+        matches → exit 0, no needs_attention (resolved silently).
+
+        The reconcile function silently resolves clean intents.
+        """
+        tmpdir = tempfile.mkdtemp()
+        try:
+            corpus = _make_corpus(tmpdir)
+            briefing = _write_briefing(tmpdir)
+            policy_path = _write_policy(tmpdir, tier=2)
+            data_dir = os.path.join(tmpdir, "state")
+
+            # Compute the actual file hash so reconcile sees a match.
+            alpha_sha = self._get_alpha_hash(tmpdir)
+
+            # Manually create a leftover intent (unresolved) in the
+            # registry — mimicking a crash between stage and rename.
+            reg = JsonlAuditRegistry(data_dir)
+            intent_record = {
+                "target_ids": ["alpha"],
+                "staged_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "per_file_sha256": {"alpha": alpha_sha},
+                "resolved": False,
+                "git_snapshot": {},
+            }
+            reg.append("intent_record", intent_record)
+
+            # Run --reconcile via CLI (subprocess).
+            resp, rc = _run_cli([
+                "--reconcile", "--root", corpus, "--json"],
+                env_extra={
+                    "DOCUMENTER_POLICY_PATH": policy_path,
+                    "DOCUMENTER_DATA_DIR": data_dir,
+                })
+            self.assertEqual(rc, 0)
+            self.assertIn("resolutions", resp)
+            self.assertIn("counts", resp)
+            # Clean resolution: needs_attention is false (no resolution
+            # dicts produced for silently-resolved intents).
+            self.assertFalse(resp["needs_attention"])
+            self.assertEqual(resp["counts"]["needs_attention"], 0)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_reconcile_noop_on_second_run(self):
+        """--reconcile a second time → already no unresolved intents (in the
+        subprocess that ran the first reconcile), counts all zero."""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            corpus = _make_corpus(tmpdir)
+            briefing = _write_briefing(tmpdir)
+            policy_path = _write_policy(tmpdir, tier=2)
+            data_dir = os.path.join(tmpdir, "state")
+
+            # Create a leftover intent and reconcile once.
+            alpha_sha = self._get_alpha_hash(tmpdir)
+            reg = JsonlAuditRegistry(data_dir)
+            intent_record = {
+                "target_ids": ["alpha"],
+                "staged_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "per_file_sha256": {"alpha": alpha_sha},
+                "resolved": False,
+                "git_snapshot": {},
+            }
+            reg.append("intent_record", intent_record)
+
+            # First reconcile
+            _, rc1 = _run_cli(["--reconcile", "--root", corpus, "--json"],
+                              env_extra={
+                                  "DOCUMENTER_POLICY_PATH": policy_path,
+                                  "DOCUMENTER_DATA_DIR": data_dir,
+                              })
+            self.assertEqual(rc1, 0)
+
+            # Second reconcile → the subprocess finds no unresolved intents
+            # (the first reconcile's resolved record is the latest intent,
+            #  and the old unresolved intent's data may or may not match
+            #  the current file hash).  Regardless, counts should be zero.
+            resp2, rc2 = _run_cli(["--reconcile", "--root", corpus, "--json"],
+                                   env_extra={
+                                       "DOCUMENTER_POLICY_PATH": policy_path,
+                                       "DOCUMENTER_DATA_DIR": data_dir,
+                                   })
+            self.assertEqual(rc2, 0)
+            # resolutions empty (no unresolved intents), counts zero
+            self.assertEqual(len(resp2["resolutions"]), 0)
+            self.assertEqual(resp2["counts"]["reconciled"], 0)
+            self.assertEqual(resp2["counts"]["needs_attention"], 0)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+    def test_reconcile_hash_mismatch_needs_attention(self):
+        """--reconcile with an unresolved intent whose per_file_sha256 no
+        longer matches the file on disk → exit 0, needs_attention=true,
+        counts.needs_attention>=1 (needs_attention is data, not refusal)."""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            corpus = _make_corpus(tmpdir)
+            briefing = _write_briefing(tmpdir)
+            policy_path = _write_policy(tmpdir, tier=2)
+            data_dir = os.path.join(tmpdir, "state")
+
+            reg = JsonlAuditRegistry(data_dir)
+            intent_record = {
+                "target_ids": ["alpha"],
+                "staged_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                # Wrong hash → mismatch against the actual file.
+                "per_file_sha256": {"alpha": "sha256:" + "f" * 64},
+                "resolved": False,
+                "git_snapshot": {},
+            }
+            reg.append("intent_record", intent_record)
+
+            resp, rc = _run_cli([
+                "--reconcile", "--root", corpus, "--json"],
+                env_extra={
+                    "DOCUMENTER_POLICY_PATH": policy_path,
+                    "DOCUMENTER_DATA_DIR": data_dir,
+                })
+            # Exit code stays 0 per decision E0.1 — status is in JSON.
+            self.assertEqual(rc, 0)
+            self.assertTrue(resp["needs_attention"])
+            self.assertGreaterEqual(resp["counts"]["needs_attention"], 1)
+            statuses = [r.get("status") for r in resp["resolutions"]]
+            self.assertIn("needs_attention", statuses)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

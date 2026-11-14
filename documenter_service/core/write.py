@@ -75,8 +75,9 @@ def propose_write(
     ORDER of guards (fail-closed, each step its own guard):
 
       (a) preview MUST be False — structural guard.
-      (b) sync_latency_budget_ms check — mvp-interfaces §5.
-      (c) check_tier2_authorized(policy, root) → tier_interlock.
+      (b) check_tier2_authorized(policy, root) → tier_interlock.
+      (c) sync_latency_budget_ms check (single deadline computed at entry) —
+          mvp-interfaces §5.
       (d) registry.status() == "corrupt" → gate_failure.
       (e) audit_id REQUIRED: None → audit_mismatch.
       (f) _resolve_scope — off-manifest → unknown.
@@ -84,7 +85,8 @@ def propose_write(
       (h) decode_diff_input + engine.normalize + check_invariant → trust_mismatch.
       (i) pre_audit_gate → propagate error (audit_mismatch / blocking_finding).
       (j) Compute new content: read target file → apply_unified_diff → new_text.
-      (k) diff_hash + approval_id; registry.issue_approval(...).
+      (k) diff_hash + approval_id; registry.issue_approval(...) with
+          source_sha256 in extra (the approval's source hash).
       (l) Return result with next_action="await_approval".  NO file written.
 
     Changeset support (Multi-file commit protocol):
@@ -103,13 +105,16 @@ def propose_write(
     if preview is False and changeset is not None and len(changeset) > 0:
         _validate_changeset(changeset, manifest, target_id, root)
 
-    # (b) sync latency budget check (mvp-interfaces §5)
-    _check_budget(sync_latency_budget_ms)
-
-    # (c) tier 2+ authorization
+    # (b) tier 2+ authorization (MUST precede budget so Tier 0 always yields
+    # tier_interlock, never gate_failure from the budget check).
     check_tier2_authorized(policy, root)
 
-    # (c) corrupt registry check
+    # (c) Sync-latency budget: compute deadline ONCE at operation entry,
+    # then pass it to all internal _check_budget calls (audit.py pattern).
+    deadline = time.monotonic() + sync_latency_budget_ms / 1000.0
+    _check_budget(sync_latency_budget_ms, deadline)
+
+    # (d) corrupt registry check
     if registry.status() == "corrupt":
         raise StructuredError(
             "gate_failure",
@@ -159,16 +164,23 @@ def propose_write(
         raise StructuredError(
             "unknown", f"manifest entry for target_id {target_id!r} not found")
     target_path = os.path.join(root, target_entry["path"])
-    with open(target_path, encoding="utf-8") as fh:
-        original_text = fh.read()
+
+    # Read source file as bytes (for source_sha256) and as text (for diff).
+    with open(target_path, "rb") as fh:
+        source_bytes = fh.read()
+    original_text = source_bytes.decode("utf-8")
     new_text = apply_unified_diff(original_text, normalized.decode("utf-8"))
 
     # (j) issue approval — NO file written
     diff_hash = engine.diff_hash(normalized)
     approval_id = str(uuid.uuid4())
 
-    # Build optional extra for changeset_digest.
-    extra: dict | None = None
+    # Compute source_sha256 for the OCC check on apply (always present).
+    source_sha256 = "sha256:" + hashlib.sha256(source_bytes).hexdigest()
+
+    # Build extra: always carries source_sha256; additionally carries
+    # changeset_digest when *changeset* is a non-empty list.
+    extra: dict = {"source_sha256": source_sha256}
     if changeset is not None and len(changeset) > 0:
         # We need before_hashes for the digest; re-read them.
         all_paths = [target_entry["path"]]
@@ -202,7 +214,7 @@ def propose_write(
         path_hashes.sort(key=lambda x: x[0])
         _json_str = json.dumps(path_hashes, sort_keys=True)
         changeset_digest = "sha256:" + hashlib.sha256(_json_str.encode()).hexdigest()
-        extra = {"changeset_digest": changeset_digest}
+        extra["changeset_digest"] = changeset_digest
 
     registry.issue_approval(
         approval_id=approval_id,
@@ -436,6 +448,11 @@ def apply_write(
     The first check is check_tier2_authorized(policy, root) -> tier_interlock
     (ADR-013); it precedes the sync-latency budget check.
 
+    OCC (optimistic concurrency control): source hash from the approval
+    (source_sha256) is verified before staging; legacy approvals without it
+    fail closed with approval_invalidated.  The staged output is verified
+    against the approved diff applied to the current source.
+
     When *changeset* is None or empty the legacy single-file path is used
     (intent_<approval_id>.json, per_file_sha256, etc.).  When *changeset* is
     a non-empty list the Multi-file Commit Protocol (#9) path is used.
@@ -451,9 +468,9 @@ def apply_write(
         conditions.
     sync_latency_budget_ms : int, optional
         Maximum wall-clock budget (milliseconds) for synchronous operations
-        (mvp-interfaces §5).  Default 30000.  Checks occur before acquiring
-        the lock, before reading the source file, and before the final
-        rename.
+        (mvp-interfaces §5).  Default 30000.  A single monotonic-clock
+        deadline is computed once at operation entry and passed to all
+        internal _check_budget calls.
     changeset : list[dict] | None, optional
         Each entry: {"path": <rel posix path>, "content_b64": <base64 of new
         content>}.  Used with the Multi-file commit protocol path.  When
@@ -471,8 +488,10 @@ def apply_write(
     # gate_failure from the budget check.
     check_tier2_authorized(policy, root)
 
-    # 0. sync_latency_budget_ms check (mvp-interfaces §5)
-    _check_budget(sync_latency_budget_ms)
+    # 0. Sync-latency budget: compute deadline ONCE at operation entry, then
+    # pass it to all internal _check_budget calls (audit.py pattern).
+    deadline = time.monotonic() + sync_latency_budget_ms / 1000.0
+    _check_budget(sync_latency_budget_ms, deadline)
 
     # 1. Find approval
     approval = registry.find_approval(approval_id)
@@ -538,34 +557,53 @@ def apply_write(
             root, manifest, registry, policy, events, engine,
             approval, approval_id, operator_id, text, normalized, diff_hash,
             target_id, target_path, target_dir, target_basename,
-            data_dir, seams, sync_latency_budget_ms)
+            data_dir, seams, sync_latency_budget_ms, deadline)
 
     # === Multi-file commit protocol path ===
     return _apply_write_changeset(
         root, manifest, registry, policy, events, engine,
         approval, approval_id, operator_id, text, normalized, diff_hash,
         target_id, target_path, entry["path"],
-        changeset, data_dir, seams, sync_latency_budget_ms)
+        changeset, data_dir, seams, sync_latency_budget_ms, deadline)
 
 
 def _apply_write_legacy(
     root, manifest, registry, policy, events, engine,
     approval, approval_id, operator_id, text, normalized, diff_hash,
     target_id, target_path, target_dir, target_basename,
-    data_dir, seams, sync_latency_budget_ms):
-    """Legacy single-file apply_write (unchanged from original)."""
+    data_dir, seams, sync_latency_budget_ms, deadline):
+    """Legacy single-file apply_write (unchanged from original, except OCC)."""
+    # OCC source hash check (before any file modification):
+    # read the stored source SHA from the approval; legacy approvals without
+    # it fail closed (approval_invalidated); if present, verify the current
+    # source file matches.
+    stored_src = approval.get("source_sha256")
+    if stored_src is None:
+        raise StructuredError(
+            "approval_invalidated",
+            "legacy approval without source_sha256 — re-propose",
+            next_action="preview_denied")
+
     with DelegateLock(data_dir, policy.get("lock_wait_timeout") or 30):
         # 6x. Pre-change git snapshot (mvp-contract §2.2 line 64, ADR-007).
         _git_snapshot_fn = (seams or {}).get(
             "git_snapshot_fn", _default_git_snapshot)
         snapshot = _git_snapshot_fn(root)
 
-        _check_budget(sync_latency_budget_ms)
+        _check_budget(sync_latency_budget_ms, deadline)
 
         # 6a. Read source file bytes, sha256
         with open(target_path, "rb") as fh:
             source_bytes = fh.read()
         source_sha = "sha256:" + hashlib.sha256(source_bytes).hexdigest()
+
+        # OCC: verify source has not changed between propose and apply.
+        if source_sha != stored_src:
+            raise StructuredError(
+                "hash_mismatch",
+                "source changed between propose and apply — "
+                "rerun audit then re-propose",
+                next_action="rerun_audit")
 
         # 6b. Apply unified diff to get new_text
         original_text = source_bytes.decode("utf-8")
@@ -618,22 +656,24 @@ def _apply_write_legacy(
             seams["after_intent"]()
 
         # 6e. Apply-time verification (C2, mvp-contract §2.2.3)
-        intent_verified = registry.find_intent(target_id) or intent_record
-        expected_source = intent_verified.get("per_file_sha256", {}).get(
-            target_id, source_sha)
+        # (1) Re-read the source: catches an external edit AFTER the 6a read
+        # (mid-apply race) — the intent record was already written, so this
+        # abort leaves a resolvable unresolved intent.
+        # (2) Staged output: verify the staged file matches the approved diff
+        # applied to the source (catches stage corruption / tampering).
         with open(target_path, "rb") as fh:
             source_recheck = fh.read()
         source_sha_recheck = "sha256:" + hashlib.sha256(source_recheck).hexdigest()
-        if source_sha_recheck != expected_source:
+        if source_sha_recheck != source_sha:
             raise StructuredError(
                 "hash_mismatch",
                 "source changed between approval and apply — "
                 "write denied (expected {}, got {})".format(
-                    expected_source, source_sha_recheck),
+                    source_sha, source_sha_recheck),
                 next_action="resolve_finding")
 
         approved_new_text = apply_unified_diff(
-            source_recheck.decode("utf-8"), normalized.decode("utf-8"))
+            source_bytes.decode("utf-8"), normalized.decode("utf-8"))
         expected_staged_sha = "sha256:" + hashlib.sha256(
             approved_new_text.encode("utf-8")).hexdigest()
         with open(staged_path, "rb") as fh:
@@ -650,7 +690,7 @@ def _apply_write_legacy(
         if seams and "before_rename" in seams:
             seams["before_rename"]()
 
-        _check_budget(sync_latency_budget_ms)
+        _check_budget(sync_latency_budget_ms, deadline)
 
         os.replace(staged_path, target_path)
         dir_fd = os.open(target_dir, os.O_RDONLY)
@@ -688,7 +728,7 @@ def _apply_write_changeset(
     root, manifest, registry, policy, events, engine,
     approval, approval_id, operator_id, text, normalized, diff_hash,
     target_id, target_path, target_path_rel,
-    changeset, data_dir, seams, sync_latency_budget_ms):
+    changeset, data_dir, seams, sync_latency_budget_ms, deadline):
     """Multi-file commit protocol apply_write path (#9).
 
     Steps:
@@ -729,7 +769,7 @@ def _apply_write_changeset(
             "git_snapshot_fn", _default_git_snapshot)
         snapshot = _git_snapshot_fn(root)
 
-        _check_budget(sync_latency_budget_ms)
+        _check_budget(sync_latency_budget_ms, deadline)
 
         # Step 2: recompute changeset_digest and compare with approval
         # Build the path_hashes list like propose_write did
@@ -860,7 +900,7 @@ def _apply_write_changeset(
             })
 
         # Step 6: _check_budget
-        _check_budget(sync_latency_budget_ms)
+        _check_budget(sync_latency_budget_ms, deadline)
 
         # Step 7: seams (legacy parity: after_stage fires BEFORE the intent
         # record — a crash here leaves staged tmp files and NO intent, the
@@ -906,7 +946,7 @@ def _apply_write_changeset(
             seams["before_rename"]()
 
         # Step 10: _check_budget + ordered_renames
-        _check_budget(sync_latency_budget_ms)
+        _check_budget(sync_latency_budget_ms, deadline)
         _commit_protocol.ordered_renames(root, staged_entries, sha_func=hasher_fn)
 
         # Step 11: cleanup #9d
@@ -955,14 +995,17 @@ def _apply_write_changeset(
 # --- sync_latency_budget_ms enforcement (mvp-interfaces §5) -----------------
 
 
-def _check_budget(budget_ms: int) -> None:
+def _check_budget(budget_ms: int, deadline: float) -> None:
     """Raise StructuredError("gate_failure", ...) when the monotonic clock
     exceeds the budget.
 
-    The budget is checked at call sites (before lock, after snapshot,
-    before rename).  A zero budget expires on the first check.
+    The deadline is computed ONCE at the entry point of an operation and
+    passed to all checks within that operation.  A zero budget expires on
+    the first check (deadline ≈ now).
+
+    This mirrors the pattern in audit.py (_check_budget) where a single
+    monotonic deadline governs the entire operation.
     """
-    deadline = time.monotonic() + budget_ms / 1000.0
     if time.monotonic() >= deadline:
         raise StructuredError(
             "gate_failure",

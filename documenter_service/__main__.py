@@ -83,6 +83,8 @@ _HELP = ("Documenter Service MVP scaffold (Tier 0-1 read-only, Tier 2+ write): "
          "audit(), status(), delegate(preview: true). "
          "Tier 2+ write CLI flags: --delegate-write, --approve, "
          "--override-gate (operator from COUNCIL_OPERATOR_ID env, not CLI param). "
+         "Cold-start reconcile: --reconcile (exit 0; needs_attention "
+         "reported in JSON). "
          "Exit codes: 0 success; 2 structured refusal; 3 internal error. "
          "Use --mcp for MCP stdio JSON-RPC transport.")
 
@@ -357,6 +359,40 @@ class Service:
             operator_id=operator_id, audit_id=audit_id,
         )
 
+    def reconcile(self) -> dict:
+        """Cold-start reconcile of unresolved intent records.
+
+        Delegates to core.write.reconcile; returns a structured result
+        with resolutions list, needs_attention boolean, and counts.
+
+        Returns
+        -------
+        dict with keys: resolutions (list), needs_attention (bool),
+        counts (dict with reconciled / needs_attention).
+        Exit code is always 0 on success even if needs_attention is true.
+        """
+        resolutions = core_write.reconcile(
+            self.registry, self.manifest, self.root, self._data_dir)
+
+        needs_attention = any(
+            r.get("status") not in ("reconciled", "clean", "noop")
+            for r in resolutions
+        )
+        reconciled_count = sum(
+            1 for r in resolutions
+            if r.get("status") in ("reconciled", "clean", "noop")
+        )
+        attention_count = len(resolutions) - reconciled_count
+
+        return {
+            "resolutions": resolutions,
+            "needs_attention": needs_attention,
+            "counts": {
+                "reconciled": reconciled_count,
+                "needs_attention": attention_count,
+            },
+        }
+
     # -- Tier 3 pattern auto-apply (mvp-contract §4 row 4) --------------------
 
     def pattern_auto_apply(
@@ -488,6 +524,10 @@ def main(argv=None) -> int:
     mode.add_argument("--rebuild-hashes", action="store_true",
                       help="rebuild hashes.json from manifest entries "
                            "(cold-start integrity / full rescan)")
+    mode.add_argument("--reconcile", action="store_true",
+                      help="reconcile: cold-start resolution of leftover "
+                           "intent records (exit 0; needs_attention is "
+                           "reported in JSON)")
     parser.add_argument("--root", default=os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))),
                         help="repository root (default: parent of the package)")
@@ -564,6 +604,11 @@ def main(argv=None) -> int:
             else:
                 print(f"rebuilt_entries: {resp['rebuilt_entries']}")
                 print(f"path: {resp['path']}")
+            return 0
+        # --reconcile
+        if args.reconcile:
+            resp = service.reconcile()
+            _print_json(resp)
             return 0
         # --approve
         if args.approve:

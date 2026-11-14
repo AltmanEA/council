@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import fnmatch
+import hashlib
 import os
 import re
 from datetime import datetime, timezone
@@ -519,6 +520,16 @@ def _apply_pattern_item(
     if not _has_approved_diff_hash(registry, diff_hash, pattern_id):
         # Issue self-approval so apply_write finds it.
         from ..core.registry import TOKEN_RECORD, APPROVAL_ID
+
+        # Read the target file to compute source_sha256 (OCC check).
+        try:
+            with open(target_path, "rb") as fh:
+                _src_bytes_for_sha = fh.read()
+        except OSError:
+            _src_bytes_for_sha = b""
+        source_sha256 = "sha256:" + hashlib.sha256(
+            _src_bytes_for_sha).hexdigest()
+
         approval_data = {
             "token_type": APPROVAL_ID,
             "token_value": diff_hash,
@@ -533,6 +544,7 @@ def _apply_pattern_item(
             "resolved_at": registry.now(),
             "resolved_by": operator_id,
             "pattern_id": pattern_id,
+            "source_sha256": source_sha256,
         }
         registry.append(TOKEN_RECORD, approval_data)
 

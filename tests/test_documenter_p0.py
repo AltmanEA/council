@@ -8,6 +8,7 @@ Covers:
   - T5: consume_token rejects approval_id as audit_mismatch
   - T6: apply_write rejects scan_cursor as approval_id (audit_mismatch)
   - T7: Full legit cycle still green with Tier-2 policy
+  - T8: Tier 0 + budget=0 yields tier_interlock (tier gate precedes budget)
 
 Run with: python3 -m unittest tests.test_documenter_p0
 """
@@ -526,6 +527,57 @@ class TestLegitCycle(unittest.TestCase):
             self.assertTrue(result["applied"])
             self.assertEqual(result["target_id"], "alpha")
             self.assertEqual(result["next_action"], "write_applied")
+        finally:
+            shutil.rmtree(tmpdir)
+
+
+# ---------------------------------------------------------------------------
+# T8: budget check must not preempt the tier gate (plan 2b, item 8d)
+# ---------------------------------------------------------------------------
+
+class TestBudgetAfterTierGate(unittest.TestCase):
+    """Tier 0 + sync_latency_budget_ms=0 -> tier_interlock, never gate_failure."""
+
+    def test_propose_write_tier0_budget_zero_yields_tier_interlock(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            root = os.path.join(tmpdir, "corpus")
+            os.makedirs(root)
+            registry = _make_registry(tmpdir)
+            policy0 = _make_tier0_policy()
+            events = StdoutEventSink()
+            manifest = _make_manifest()
+            engine = StdDiffEngine()
+            encoded = _encode_diff(_make_diff())
+            with self.assertRaises(StructuredError) as ctx:
+                core_write.propose_write(
+                    root, manifest, registry, policy0, events, engine,
+                    target_id="alpha", change_type="update",
+                    trust_level="safe", diff_input=encoded, audit_id="aid-1",
+                    preview=False, sync_latency_budget_ms=0)
+            self.assertEqual(ctx.exception.error_category, "tier_interlock")
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_apply_write_tier0_budget_zero_yields_tier_interlock(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            root = os.path.join(tmpdir, "corpus")
+            os.makedirs(root)
+            registry = _make_registry(tmpdir)
+            policy0 = _make_tier0_policy()
+            events = StdoutEventSink()
+            manifest = _make_manifest()
+            engine = StdDiffEngine()
+            encoded = _encode_diff(_make_diff())
+            with self.assertRaises(StructuredError) as ctx:
+                core_write.apply_write(
+                    root, manifest, registry, policy0, events, engine,
+                    approval_id="app-x", operator_id="op-user1",
+                    diff_input=encoded,
+                    data_dir=os.path.join(tmpdir, "documenter"),
+                    sync_latency_budget_ms=0)
+            self.assertEqual(ctx.exception.error_category, "tier_interlock")
         finally:
             shutil.rmtree(tmpdir)
 
