@@ -1,3 +1,5 @@
+<!-- CHANGES v0.15.0: Documenter entry updated to implementation status per ADR-013; new Implementation Status section defining Operational and Dormant (implemented, not activated) status terms -->
+<!-- CHANGES v0.15.0: RU synchronization (ADR-012, post-Approve): docs/ru/glossary/index-RU.md aligned — Documenter entry status clause, new Статус реализации section mirroring Implementation Status, Version line synced. check_drift PASS (headings/hr/metadata parity), line-for-line insertion. -->
 <!-- CHANGES v0.14.0: Add terms: Drift Checker, Structural Fingerprint, Mock Regression (sess-prevention-measures) -->
 <!-- CHANGES v0.13.0: Add terms: Write-Gate, Post-Approve Auto-Dispatch, Translation Opt-Out Flag (ADR-012) -->
 <!-- CHANGES v0.12.1 (index.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->

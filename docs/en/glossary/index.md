@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.14.0
+Version: 0.15.0
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -126,7 +126,15 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **Council** The name of the AI-Agent Collaborative Design Framework project. Used as a canonical identifier and shorthand reference across all documentation (e.g., "the Council framework," "Council protocol"). Provides a stable named entity for cross-referencing without repeated use of the full title.
 
-**Documenter** (Документатор) An automated Supporting service under development that performs quality audits on project documentation and delegates write operations through the Documentation Worker skill. Provides two main interfaces: `audit()` for scanning documents and producing structured reports, and `delegate()` for applying approved changes with trust-level control and safety protocols. Unlike the Documentation Worker skill itself, Documenter adds policy enforcement, tier-based authorization, audit registries, rollback/reconciliation, and event logging. The Documenter classifier determines the effective trust level for delegated operations. Not yet implemented; the specification exists in `documenter-service/index.md`.
+**Documenter** (Документатор) An automated Supporting service that performs quality audits on project documentation and delegates write operations through the Documentation Worker skill. Provides two main interfaces: `audit()` for scanning documents and producing structured reports, and `delegate()` for applying approved changes with trust-level control and safety protocols. Unlike the Documentation Worker skill itself, Documenter adds policy enforcement, tier-based authorization, audit registries, rollback/reconciliation, and event logging. The Documenter classifier determines the effective trust level for delegated operations. Implementation status (see §Implementation Status): Tier 0–1 surface is Operational (CLI and MCP stdio implemented; the MCP server is not registered — registration is an explicit operator decision, AGENTS.md §1.7); the Tier 2+ write branch is Dormant behind the dual interlock (policy gate plus Operator Surface not built, ADR-013). The WorkerPort Layer 1 adapter is structurally absent. Specification: `documenter-service/index.md`.
+
+---
+
+## Implementation Status
+
+**Operational** (Операционный) [status] Documentation-status term: the described capability exists in code and is available to the operator in the current configuration. Does not imply the capability is registered or invoked autonomously (e.g., Documenter Tier 0–1: implemented, MCP server not registered).
+
+**Dormant (implemented, not activated)** (Реализовано, не активировано) [status] Documentation-status term: the described capability exists in code but is unreachable at runtime because a normative interlock blocks activation (e.g., Documenter Tier 2+: policy gate plus Operator Surface not built, ADR-013). Distinct from *structurally absent* (the code does not exist) and from *Operational* (reachable in the current configuration).
 
 **Documentation Worker** A reusable skill providing mechanical and structural operations on project documentation artifacts. NOT part of the Council framework itself — it is an operational instrument provided as a skill and invoked via the skill tool by the primary agent to handle updates, splits, translations, and compliance audits under defined trust levels. Full contract and capabilities are at `/.agents/skills/documentation/SKILL.md`.
 

@@ -1,7 +1,7 @@
 # Documenter Service — MVP Contract
 
 id: documenter-service-mvp-contract
-Version: 0.5.0-draft
+Version: 0.6.0-draft
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
@@ -59,7 +59,7 @@ The core is deterministic pure functions (trust classifier, severity rules, pre-
 2. **No commits.** The service never runs `git commit`. Rollback of any future change is `git restore <file>` — the property that made cryptographic tamper-evidence unnecessary (operator decision 2026-11-12).
 3. **Read-before-use.** A document read for audit is hashed; if the hash changes before a dependent computation completes, the result is discarded and the scan re-run.
 
-### 2.2 Tier 2+ (reserved; normative now, implemented later)
+### 2.2 Tier 2+ (implemented; dormant behind the dual interlock — policy gate + Operator Surface not built, ADR-013)
 
 1. **Pre-change snapshot:** capture `git status` and `HEAD` before modifications.
 2. **Advisory lock:** `fcntl.flock(LOCK_EX)` on `documenter/.delegate.lock` covering the entire changeset (target document, `index-RU.md`, changelog, `docs-manifest.yaml`). One operation-level lock replaces per-file locks and is deadlock-free by construction. If lock acquisition fails — emit `lock_conflict` with context: "Another agent holds an advisory lock on [resource]. Lock owner: [PID/IP], acquired at [timestamp]. Wait? (yes/no) — Default: no after 30s." A race control only — writers that skip the lock are caught by (3), not by the lock. Distributed cross-host locking is out of scope for MVP; deferred to Phase 2+.
@@ -104,7 +104,7 @@ Crash-injection via `kill -9` after **every** boundary of the durability sequenc
 
 ## 4. Tier 2+ Interfaces (implemented; policy-gated)
 
-Implemented per the conditions above; reachable only when **all** of: policy file with non-empty `allowed_operations`, non-null `briefing_ref` to an archived operator briefing whose file exists, and authenticated out-of-band operator ingress (`COUNCIL_OPERATOR_ID` from the environment; the Operator Surface remains the intended front). The Operator Surface spec (`operator-surface/index.md` §Documenter Integration) exists as specification; single-operator deployment is **not** a valid Tier 2+ configuration — `approver ≠ proposer` cannot be satisfied by one person with two IDs.
+Implemented per the conditions above; reachable only when **all** of: policy file with non-empty `allowed_operations`, non-null `briefing_ref` to an archived operator briefing whose file exists, authenticated out-of-band operator ingress (`COUNCIL_OPERATOR_ID` from the environment), **and an implemented Operator Surface providing that ingress** — the `operator-surface/index.md` specification is a necessary but not sufficient condition (ADR-013); until the surface exists as code, every Tier 2+ call fails closed (`tier_interlock`). Editing the policy file is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Single-operator deployment is **not** a valid Tier 2+ configuration — `approver ≠ proposer` cannot be satisfied by one person with two IDs.
 
 | Interface | Key constraints |
 |-----------|----------------|

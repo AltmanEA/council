@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.6.0-draft
+Version: 0.7.0-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -71,7 +71,7 @@ Legacy mappings: `info`→`low`, `warning`→`medium`, `error`→`high`.
 
 ## 2. `delegate(preview: true)` — Diff preview
 
-Preview only. Returns a diff without write intent; exempt from `allowed_operations` checks at all tiers. **The write branch does not exist in the MVP build.**
+Preview only. Returns a diff without write intent; exempt from `allowed_operations` checks at all tiers. **The write branch is implemented behind the dual interlock (policy gate + Operator Surface not built, ADR-013); currently unreachable.**
 
 ### Request
 

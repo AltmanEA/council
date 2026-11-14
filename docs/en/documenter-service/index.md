@@ -1,7 +1,7 @@
 # Documenter Service
 
 id: documenter-service
-Version: 0.20.0-draft
+Version: 0.21.0-draft
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -113,7 +113,7 @@ Four deployment tiers governing progressively greater write capability. Each tie
 | 2 | Confirm-per-change | No | Yes, per-item | Apply changes only after individual approve |
 | 3 | Batch approve | Pattern-based | Yes, per-batch with group summaries | Approved patterns auto-apply; critical items require per-item expanded review |
 
-Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Surface & Escalation specification defines an authenticated, out-of-band approval channel. A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field). Both conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
+Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Surface exists as code providing an authenticated, out-of-band approval channel — the `operator-surface/index.md` specification is a necessary but not sufficient condition (ADR-013). A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field), AND (c) an implemented Operator Surface providing authenticated operator ingress (ADR-013). All conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Editing the policy file (`active_tier`, `allowed_operations`, `briefing_ref`) is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
 
 ### Tier Selection Guidance
 
@@ -141,17 +141,17 @@ Rollback is symmetric: lowering `active_tier` takes effect at the next invocatio
 
 ## Quick Start
 
-<!-- STATUS: Specification only, pre-implementation. Not executable until the Moderator is built. See AGENTS.md §1.7 for tooling separation. -->
+<!-- STATUS: Implemented — Tier 0–1 operational (glossary: Operational); MCP server not registered (operator decision, AGENTS.md §1.7); Tier 2+ dormant behind the dual interlock (glossary: Dormant; ADR-013). -->
 
-<span style="color:red;font-weight:bold">⚠ SPECIFICATION ONLY — NOT EXECUTABLE UNTIL IMPLEMENTED</span> The following examples illustrate the interface contract; no MCP tools are currently callable. All sessions run in fallback mode per `AGENTS.md` §1.7.
+<span style="color:red;font-weight:bold">⚠ NOT REGISTERED — invocation outside operator-sanctioned contexts is prohibited per `AGENTS.md` §1.7.</span> The implementation exists (`python3 -m documenter_service`, CLI and MCP stdio); the examples below illustrate the interface contract.
 
-The MVP invocation path is MCP stdio. Every tool requires an explicit operator call; Tier 2+ writes are disabled (see §Trust Tiers).
+The MVP invocation path is MCP stdio. Every tool requires an explicit operator call; Tier 2+ writes stay unreachable behind the dual interlock (see §Trust Tiers, ADR-013).
 
 ```
-# Step 1 — Read-only audit (Tier 0) [NON-EXECUTABLE: illustration only]
+# Step 1 — Read-only audit (Tier 0) [illustration only — MCP call form; CLI equivalents in `documenter_service/README.md`]
 documenter.audit { "target_id": "*", "severity_min": "low" }
 
-# Step 2 — Preview a change (Tier 1, no writes) [NON-EXECUTABLE: illustration only]
+# Step 2 — Preview a change (Tier 1, no writes) [illustration only — MCP call form; CLI equivalents in `documenter_service/README.md`]
 documenter.delegate {
   "target_id": "<doc-id>",
   "change_type": "update",
@@ -161,7 +161,7 @@ documenter.delegate {
 }
 ```
 
-At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays interlocked until the Operator Surface & Escalation specification defines an out-of-band approval channel. See §Authorization Workflow and `AGENTS.md` for documentation rules this service enforces.
+At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays dormant behind the dual interlock until the Operator Surface exists as code providing an out-of-band approval channel (ADR-013). See §Authorization Workflow and `AGENTS.md` for documentation rules this service enforces.
 
 ---
 
@@ -186,7 +186,7 @@ At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ s
 
 ## Cross-References
 
-- **`documenter-service/mvp-contract.md`** — Implementation contract: stack, safety protocol, Tier 2+ reserved interfaces, testing strategy. MVP = read-only surface; write branch structurally absent.
+- **`documenter-service/mvp-contract.md`** — Implementation contract: stack, safety protocol, Tier 2+ reserved interfaces, testing strategy. Tier 0–1 read-only surface is operational; the Tier 2+ write branch is implemented but dormant behind the dual interlock (policy gate + Operator Surface not built, ADR-013).
 - **`documenter-service/mvp-interfaces.md`** — Machine-readable interface schemas: `audit()`, `delegate(preview: true)`, `documenter.status()`, error categories, `next_action` enum.
 - **`documenter-service/mvp-data-models.md`** — Runtime data structures: audit registry format, token model, policy file schema, event channel.
 - **`documenter-service/policy-reference.md`** — Policy file schema and field reference, operational tuning parameters, authorization workflow checklist

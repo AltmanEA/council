@@ -12,7 +12,7 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter Service
-    version: 0.20.0-draft
+    version: 0.21.0-draft
     status: draft
     abstraction: protocol
     has_translation: docs/ru/documenter-service/index-RU.md
@@ -32,7 +32,7 @@ documents:
   - id: documenter-service-mvp-contract
     path: docs/en/documenter-service/mvp-contract.md
     title: Documenter Service — MVP Contract
-    version: 0.5.0-draft
+    version: 0.6.0-draft
     status: draft
     abstraction: protocol
     references:
@@ -54,7 +54,7 @@ documents:
   - id: documenter-service-mvp-interfaces
     path: docs/en/documenter-service/mvp-interfaces.md
     title: Documenter Service — MVP Interfaces
-    version: 0.6.0-draft
+    version: 0.7.0-draft
     status: draft
     abstraction: format
     references:
@@ -84,7 +84,7 @@ documents:
   - id: glossary
     path: docs/en/glossary/index.md
     title: Glossary
-    version: 0.14.0
+    version: 0.15.0
     status: draft
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md
@@ -117,7 +117,7 @@ documents:
   - id: planned-architecture-decisions
     path: docs/en/planned-architecture/decisions/index.md
     title: Decisions Index
-    version: 0.7.0
+    version: 0.8.0
     status: draft
     abstraction: reference
 
