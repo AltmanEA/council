@@ -23,6 +23,15 @@ FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures",
 MANIFEST_IDS = {"alpha", "beta", "gamma"}
 
 
+def _enable_operator_surface(root):
+    """Create the ADR-013 Operator Surface readiness sentinel under root."""
+    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+    os.makedirs(os.path.dirname(sentinel), exist_ok=True)
+    with open(sentinel, "w") as f:
+        f.write("")
+    return sentinel
+
+
 def _policy(**over):
     base = {
         "documenter_policy": {
@@ -83,10 +92,10 @@ class TestCheckTier2Authorized(unittest.TestCase):
     """check_tier2_authorized: tier, briefing_ref, and file existence."""
 
     def test_tier2_with_briefing_file_ok(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as fh:
-            fh.write("briefing\n")
-            bp = fh.name
-        try:
+        with tempfile.TemporaryDirectory() as root:
+            bp = os.path.join(root, "_briefing.md")
+            with open(bp, "w") as fh:
+                fh.write("briefing\n")
             policy = _policy(
                 active_tier=2,
                 briefing_ref=bp,
@@ -94,10 +103,15 @@ class TestCheckTier2Authorized(unittest.TestCase):
                                      "trust_level": "safe", "targets": []}],
             )
             inner = policy["documenter_policy"]
+            # ADR-013: without the surface sentinel, Tier 2+ is refused...
+            with self.assertRaises(StructuredError) as ctx:
+                check_tier2_authorized(inner, root)
+            self.assertEqual(ctx.exception.error_category, "tier_interlock")
+            self.assertIn("Operator Surface not built", ctx.exception.message)
+            # ...and passes once the sentinel is present.
+            _enable_operator_surface(root)
             # Should not raise
-            check_tier2_authorized(inner, os.path.dirname(bp))
-        finally:
-            os.unlink(bp)
+            check_tier2_authorized(inner, root)
 
     def test_tier2_no_briefing_file_raises(self):
         policy = _policy(
@@ -143,37 +157,35 @@ class TestCheckTier2Authorized(unittest.TestCase):
 
 class TestCheckTier3Authorized(unittest.TestCase):
     def test_tier3_ok(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as fh:
-            fh.write("briefing\n")
-            bp = fh.name
-        try:
+        with tempfile.TemporaryDirectory() as root:
+            bp = os.path.join(root, "_briefing.md")
+            with open(bp, "w") as fh:
+                fh.write("briefing\n")
             policy = _policy(
                 active_tier=3,
                 briefing_ref=bp,
                 allowed_operations=[{"type": "operation", "change_type": "update",
                                      "trust_level": "safe", "targets": []}],
             )
-            check_tier3_authorized(policy["documenter_policy"], os.path.dirname(bp))
-        finally:
-            os.unlink(bp)
+            _enable_operator_surface(root)
+            check_tier3_authorized(policy["documenter_policy"], root)
 
     def test_tier2_fails_tier3(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as fh:
-            fh.write("briefing\n")
-            bp = fh.name
-        try:
+        with tempfile.TemporaryDirectory() as root:
+            bp = os.path.join(root, "_briefing.md")
+            with open(bp, "w") as fh:
+                fh.write("briefing\n")
             policy = _policy(
                 active_tier=2,
                 briefing_ref=bp,
                 allowed_operations=[{"type": "operation", "change_type": "update",
                                      "trust_level": "safe", "targets": []}],
             )
+            _enable_operator_surface(root)
             with self.assertRaises(StructuredError) as ctx:
-                check_tier3_authorized(policy["documenter_policy"], os.path.dirname(bp))
+                check_tier3_authorized(policy["documenter_policy"], root)
             self.assertEqual(ctx.exception.error_category, "tier_interlock")
             self.assertIn("active_tier=2 < 3", ctx.exception.message)
-        finally:
-            os.unlink(bp)
 
 
 class TestPatternValidation(unittest.TestCase):

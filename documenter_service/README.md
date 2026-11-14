@@ -1,4 +1,4 @@
-# documenter_service — Documenter Service MVP (Tier 0–1 operational; Tier 2+ implemented, policy-gated)
+# documenter_service — Documenter Service MVP (Tier 0–1 operational; Tier 2+ implemented, dormant behind the dual interlock — policy gate + Operator Surface not built, ADR-013)
 
 Stage 4 scaffold (plan `sess-doc-reliability-algo`, session
 `sess-doc-reliability-algo`). Contract documents (normative, under `docs/`):
@@ -17,17 +17,18 @@ Stage 4 scaffold (plan `sess-doc-reliability-algo`, session
 | Surface | Entry | Notes |
 | --- | --- | --- |
 | `audit()` | `python3 -m documenter_service --audit --target "*" --json` | Pure reuse of `tools/check_all.scan(root)` + `docmeta.validate` — **no rule fork** (AGENTS.md §8). Pagination via policy `rescan_batch_ceiling`; single-use `scan_cursor` bound to `(audit_id, target_id)`; partial reports carry the mandatory write-decision-impossible header. |
-| `documenter.status()` | `python3 -m documenter_service --status` | Registry health (`healthy/degraded/corrupt`), last audit + freshness, pending scan visibility, Tier interlock. Never crashes on a corrupt registry — degradation is REPORTED. |
+| `documenter.status()` | `python3 -m documenter_service --status` | Registry health (`healthy/degraded/corrupt`), last audit + freshness, `staged_files`/`override_counter` derived from registry records (unresolved intent leftovers; override_gate token count), pending scan visibility, Tier interlock. Never crashes on a corrupt registry — degradation is REPORTED. |
 | `delegate(preview: true)` | `python3 -m documenter_service --delegate-preview --target <id> --change-type update --trust-level review --diff-file -` | Canonical diff: decode base64 → normalize (CRLF→LF, trailing whitespace, final newline) → `diff_hash=sha256:<hex>` over normalized bytes → render `diff_text`. `diff_text` appears ONLY in the response — never in events or the registry. |
 | Audit registry | `documenter/audit_registry.jsonl` | Append-only JSONL, envelope `{record_type, prev_hash, data}`, `prev_hash` chain (corruption aid per conflict C5). Token records for scan cursors. Retention 10,000; truncation only with a trailing `checkpoint_record`. |
-| Events | stdout | One structured JSON line per event (`documenter.issue`, `precheck.passed/failed`) — the operator-approved MVP carrier (conflict C4). Payloads are schema-checked (VAL.001) and redacted (no document text). |
+| Events | stdout (+ persisted `documenter/corpus-audit/events.jsonl`) | One structured JSON line per event (`documenter.issue`, `precheck.passed/failed`) — the operator-approved MVP carrier (conflict C4). Payloads are schema-checked (VAL.001) and redacted (no document text). The default Service sink also appends each event as `{event_id, emitted_at, event_type, payload}` to `documenter/corpus-audit/events.jsonl` (append-only, fsynced) for operator replay per configuration-guide §Delivery Semantics; `event_id` is journal metadata, not a payload key. Callers passing an explicit sink (CLI stderr, MCP) keep the stdout/stderr-only behavior. |
+| Hash store | `documenter/hashes.json` (+ `hashes.json.bak`) | Rebuildable cache (ADR-010) per configuration-guide §Hash Store: `{version: 1, entries: {rel_path: {last_hash, last_modified, history[]}}}` — snapshot updated after each `audit()` cycle, history append-only. Self-healing: atomic write (temp+fsync+rename) + `.bak` rotation; any corruption or structural invalidity is a cache miss → rebuild-and-continue, never a crash. Rebuild on demand: `python3 -m documenter_service --rebuild-hashes --json`. |
 
 Rule coverage: deterministic rules **1, 2, 4, 6** plus naming/schema are
 covered because audit() invokes the tools checker. **Rules 3 (glossary terms)
 and 5 (abstraction consistency) are skill/AI-reserved and not implemented
 here** — this package never claims "rules 1–6" coverage (AGENTS.md §8).
 
-## Tier 2+ (implemented; the policy interlock IS the gate)
+## Tier 2+ (implemented; dormant behind the dual interlock — policy gate + Operator Surface not built)
 
 - **Write branch** — `--delegate-write` / MCP `delegate_write`: full guard
   chain (tier authorization → registry health → `audit_id` gate rules 1–5 →
@@ -35,8 +36,32 @@ here** — this package never claims "rules 1–6" coverage (AGENTS.md §8).
   bound to `(target_id, diff_hash, proposer_id)`, apply under the
   mvp-contract §2.2 sequence (`core/write.py`, `adapters/lock.py`,
   `adapters/applier.py`): fcntl advisory lock, stage+fsync in the target dir,
-  durable intent file, apply-time sha256 verification (C2), atomic rename,
+  durable intent file, pre-change git snapshot (`git status` + `HEAD`
+  captured into the intent record, fail-closed: writes outside a git
+  repository are denied — rollback safety per ADR-007), apply-time sha256
+  verification (C2), atomic rename,
   `fsync(dir)`, `intent_record` lifecycle, cold-start `reconcile()`.
+- **Multi-file commit protocol** — `adapters/commit_protocol.py` + the
+  `changeset` parameter of `core/write.propose_write`/`apply_write`
+  (index.md §Safety Protocol #9, mvp-contract §2.2.5): changesets spanning
+  document + `index-RU.md` + changelog + `docs-manifest.yaml` +
+  `documenter/hashes.json` commit through stage-all (`.tmp` in target dirs,
+  `/tmp` staging prohibited) → intent record
+  `documenter/intent/<tx_id>.json` (atomic, entries carry
+  `path/tmp_path/before_hash/after_hash`) → ordered renames (document → RU →
+  changelog → manifest → hash store; manifest last so a crash leaves
+  orphaned-but-readable files) → cleanup in #9d order with the intent record
+  deleted LAST. Non-manifest paths in a changeset are rejected with
+  `unknown` before any write. `reconcile()` implements the three-branch
+  cold-start recovery (after_hash → skip; before_hash → roll-forward from
+  staged tmp; neither → `needs_attention` without force). The core API is
+  wired for changesets; the CLI/MCP surfaces expose the single-document
+  flow (changeset wiring is a reserved follow-up).
+  Synchronous calls respect `sync_latency_budget_ms` (policy, default
+  30000): an over-budget call returns `gate_failure` instead of blocking
+  (mvp-interfaces §5); `audit()` additionally enforces read-before-use
+  (mvp-contract §2.1.3): scope-file hashes are taken before and after each
+  pass and an unstable pass is discarded and re-run.
 - **Approval** — `--approve` / MCP `approve`: out-of-band, approver ≠
   proposer, single-use (consumed on apply; second apply → `token_replay`),
   expiry per `approval_expiry_window`. `operator_id` comes from
@@ -49,12 +74,20 @@ here** — this package never claims "rules 1–6" coverage (AGENTS.md §8).
   entries, viewed-diffs metric (≥90%), quarantine (first N per-item
   approval), application limit/expiry, batch digest; every path requires
   `active_tier >= 3`.
-- **Still absent (deferred):** Multi-file Commit Protocol (one document per
-  invocation), Layer 1 `WorkerPort` adapter (`worker_stub` → interlock),
+- **Still absent (deferred):** CLI/MCP changeset surface (the commit
+  protocol is core-level; transports expose the single-document flow),
+  Layer 1 `WorkerPort` adapter (`worker_stub` → interlock),
   Layer 2 surface. With `documenter_policy.yml` at Tier 0–1 and
   `briefing_ref: null`, every non-preview call fails closed
-  (`tier_interlock`) — activation is the operator's explicit edit per
-  policy-reference §Authorization Workflow and `briefings/tier2-delegation.md`.
+  (`tier_interlock`). Per ADR-013 the runtime policy gate is only the first
+  interlock level: Tier 2+ is **not activatable** until the Operator Surface
+  exists as code providing authenticated ingress — a policy edit alone is
+  prohibited as an activation act (AGENTS.md §1.7; operator out-of-session
+  action per policy-reference §Authorization Workflow and
+  `briefings/tier2-delegation.md`). The readiness precondition is enforced
+  in `check_tier2_authorized` via the readiness sentinel
+  `documenter/.operator_surface_ready` (absent by default; created by the
+  surface installation); `status()` reports the blocking level.
 
 ## MCP stdio transport
 
@@ -121,14 +154,25 @@ returns `tier_interlock` (via `check_tier2_authorized`).
 
 ## Safety
 
-The service never runs git. Corpus mutation happens ONLY through the
-policy-gated write branch (§2.2 durability sequence, one document per
-invocation, every step recorded in the registry); every applied change is a
+The service never runs `git commit` / `git add` / any mutating git command;
+the only git invocations are the read-only `git rev-parse HEAD` and
+`git status --porcelain` inside the write branch's pre-change snapshot
+(`adapters/git_snapshot.py`, argv-list subprocess, no shell). Those are
+capture-only: they never mutate the repo or the index, and a failure to
+capture fails the write closed (no snapshot → no write — ADR-007 rollback
+relies on git). Corpus mutation happens ONLY through the
+policy-gated write branch (§2.2 durability sequence; one document per
+single-document invocation, multi-file changesets only through the
+Multi-file Commit Protocol with an intent record; every step recorded in
+the registry); every applied change is a
 plain unstaged working-tree edit reversible by `git restore`. Read-only
-operations touch nothing outside `documenter/audit_registry.jsonl` appends
-(plus creation of the `documenter/` state directory). The checkpoint-governed `truncate()` compaction path is
+operations touch nothing outside `documenter/audit_registry.jsonl` appends,
+`documenter/corpus-audit/events.jsonl` appends, and the rebuildable
+`documenter/hashes.json` cache (plus creation of the
+`documenter/` state directory). The checkpoint-governed `truncate()` compaction path is
 explicit and never runs implicitly. Imports are stdlib + PyYAML (via
-`tools/docmeta` / `yaml.safe_load`); no subprocess, no LLM clients, no
+`tools/docmeta` / `yaml.safe_load`); the only subprocess use is the
+read-only git snapshot above; no LLM clients, no
 network libraries.
 
 ## Resolved: policy validation rule 3 direction

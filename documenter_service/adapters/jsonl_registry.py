@@ -130,7 +130,8 @@ class JsonlAuditRegistry(AuditRegistry):
 
     def issue_approval(self, *, approval_id: str, target_ids: list,
                        diff_hash: str, proposer_id: str | None,
-                       audit_id: str | None) -> dict:
+                       audit_id: str | None,
+                       extra: dict | None = None) -> dict:
         """Persist an approval token_record (consumed=False).
 
         Returns the envelope data dict (same as ``consume_token`` return).
@@ -142,6 +143,11 @@ class JsonlAuditRegistry(AuditRegistry):
         len(target_ids)==1, else a comma-joined string.  Extra keys (target_ids,
         diff_hash, proposer_id, created_at, decision=None,
         resolved_at=None) ride alongside the base token_record fields.
+
+        *extra* is an optional dict of additional fields merged into the
+        approval record (used by the changeset path to carry
+        ``changeset_digest``).  Passed through as-is; the caller is
+        responsible for correctness.
         """
         if not isinstance(approval_id, str) or not approval_id:
             raise StructuredError(
@@ -168,6 +174,8 @@ class JsonlAuditRegistry(AuditRegistry):
             "decision": None,
             "resolved_at": None,
         }
+        if extra:
+            data.update(extra)
         return self.append(reg.TOKEN_RECORD, data)["data"]
 
     def find_approval(self, approval_id: str):

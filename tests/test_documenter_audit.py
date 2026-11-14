@@ -43,6 +43,13 @@ def _corpus_copy():
 
 
 def _service(root, events=None):
+    # The corpus is copied when it is the checked-in fixture: audit() now
+    # mutates state under root/documenter/ (hash store) — the fixture must
+    # stay pristine. Registry state lives in its own temp dir as before.
+    if os.path.abspath(root) == os.path.abspath(FIXTURE_CORPUS):
+        base = tempfile.mkdtemp()
+        root = os.path.join(base, "corpus")
+        shutil.copytree(FIXTURE_CORPUS, root)
     tmp = tempfile.mkdtemp()
     return Service(root,
                    registry=JsonlAuditRegistry(os.path.join(tmp, "state")),
@@ -346,3 +353,261 @@ class TestCliCoreParity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# Read-before-use & sync-latency-budget tests (mvp-contract §2.1.3,
+# mvp-interfaces §5)
+# ---------------------------------------------------------------------------
+
+
+class TestReadBeforeUse(unittest.TestCase):
+    """mvp-contract §2.1.3: read-before-use hash stability loop."""
+
+    def _build_service(self, root):
+        """Minimal Service over *root* with in-memory events."""
+        tmp = tempfile.mkdtemp()
+        return Service(root,
+                       registry=JsonlAuditRegistry(
+                           os.path.join(tmp, "state")),
+                       events=StdoutEventSink(io.StringIO()))
+
+    def _record_audit_count(self, root):
+        """Return the number of audit records in the registry."""
+        # The Service creates its own temp registry, so read the file
+        # directly from the temp dir we track.
+        return 0  # placeholder — see individual tests below
+
+    def test_stable_corpus_persists_one_record(self):
+        """No file changes during scan → first pass stable → findings persisted.
+        """
+        from unittest.mock import patch
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+
+            # Patch _raw_findings to verify it gets called exactly once
+            from documenter_service.core import audit as audit_mod
+            original_raw = audit_mod._raw_findings
+            call_count = [0]
+
+            def patched_raw(_root):
+                call_count[0] += 1
+                return original_raw(_root)
+
+            with patch.object(audit_mod, '_raw_findings', patched_raw):
+                resp = svc.audit(target_id="*")
+                self.assertFalse(resp["has_remaining"])
+                self.assertEqual(resp["coverage"]["status"], "complete")
+                self.assertEqual(call_count[0], 1)
+
+            # Verify exactly one audit record in the registry.
+            records, status = svc.registry.read_all()
+            audit_records = [r["data"] for r in records
+                             if r["record_type"] == "audit_record"]
+            self.assertEqual(len(audit_records), 1)
+            self.assertEqual(audit_records[0]["scope"], "*")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_hash_change_discards_first_pass_and_retries(self):
+        """A file is modified between scan and hash-check → first pass
+        discarded, second pass stable → findings from second pass persisted,
+        exactly one audit_record."""
+        from unittest.mock import patch
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+            target_file = os.path.join(root, "docs", "en", "alpha",
+                                       "index.md")
+
+            from documenter_service.core import audit as audit_mod
+            original_raw = audit_mod._raw_findings
+            first_call = [True]
+
+            def patched_raw(_root):
+                if first_call[0]:
+                    first_call[0] = False
+                    # Mutate the file during the "scan" (first call): drop the
+                    # changelog-path line → deterministic changelog-path-missing
+                    # finding for alpha in the re-scan.
+                    with open(target_file, encoding="utf-8") as f:
+                        text = f.read()
+                    text = "\n".join(
+                        ln for ln in text.splitlines()
+                        if not ln.startswith("changelog-path:")) + "\n"
+                    with open(target_file, "w", encoding="utf-8") as f:
+                        f.write(text)
+                return original_raw(_root)
+
+            with patch.object(audit_mod, '_raw_findings', patched_raw):
+                resp = svc.audit(target_id="*")
+                self.assertFalse(resp["has_remaining"])
+
+            # Verify exactly one audit record was persisted (from second pass).
+            records, _ = svc.registry.read_all()
+            audit_records = [r["data"] for r in records
+                             if r["record_type"] == "audit_record"]
+            self.assertEqual(len(audit_records), 1,
+                             f"expected 1 record, got {len(audit_records)}")
+
+            # The second pass re-scans after the mutation, so the findings
+            # must carry the changelog-path-missing finding for alpha.
+            finding_ids = [f["subject_id"]
+                           for f in audit_records[0]["findings"]]
+            self.assertIn("alpha", finding_ids)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_repeated_hash_change_raises_structured_error(self):
+        """File changes on every pass → 2 passes exhaust → StructuredError
+        with error_category=hash_mismatch, next_action=rerun_audit."""
+        from unittest.mock import patch
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+            target_file = os.path.join(root, "docs", "en", "alpha",
+                                       "index.md")
+
+            from documenter_service.core import audit as audit_mod
+            original_raw = audit_mod._raw_findings
+            call_count = [0]
+
+            def patched_raw(_root):
+                call_count[0] += 1
+                # Mutate the file on EVERY call (including retries).
+                with open(target_file, "a", encoding="utf-8") as f:
+                    f.write(f"\n# drift-{call_count[0]}\n")
+                return original_raw(_root)
+
+            with patch.object(audit_mod, '_raw_findings', patched_raw):
+                with self.assertRaises(StructuredError) as ctx:
+                    svc.audit(target_id="*")
+                self.assertEqual(ctx.exception.error_category, "hash_mismatch")
+                self.assertEqual(ctx.exception.next_action, "rerun_audit")
+                self.assertIn("corpus changed repeatedly",
+                              ctx.exception.message.lower())
+                # Zero records persisted (the failing pass is discarded).
+                self.assertEqual(call_count[0], 2)
+
+            records, _ = svc.registry.read_all()
+            audit_records = [r["data"] for r in records
+                             if r["record_type"] == "audit_record"]
+            self.assertEqual(len(audit_records), 0)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestSyncLatencyBudget(unittest.TestCase):
+    """mvp-interfaces §5: sync_latency_budget_ms enforcement."""
+
+    def test_audit_budget_exceeded_raises_gate_failure(self):
+        """sync_latency_budget_ms=0 → deadline already past → StructuredError
+        with error_category=gate_failure and 'sync_latency_budget_ms' in
+        the message."""
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+            with self.assertRaises(StructuredError) as ctx:
+                svc.audit(target_id="*", sync_latency_budget_ms=0)
+            self.assertEqual(ctx.exception.error_category, "gate_failure")
+            self.assertIn("sync_latency_budget_ms=0", ctx.exception.message)
+            self.assertEqual(ctx.exception.next_action, "rerun_audit")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_audit_default_budget_works(self):
+        """Default sync_latency_budget_ms=30000 should allow audit to
+        complete on a small fixture corpus."""
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+            resp = svc.audit(target_id="*")
+            self.assertFalse(resp["has_remaining"])
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_delegate_preview_budget_exceeded(self):
+        """sync_latency_budget_ms=0 on delegate_preview → gate_failure at
+        the first budget check (before scope resolution)."""
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+            import base64
+            diff = base64.b64encode(
+                b"--- a/docs/en/alpha/index.md\n"
+                b"+++ b/docs/en/alpha/index.md\n"
+                b"@@ -1 +1 @@\n"
+                b"-old\n"
+                b"+new\n").decode()
+            with self.assertRaises(StructuredError) as ctx:
+                svc.delegate(
+                    target_id="alpha",
+                    change_type="update",
+                    trust_level="review",
+                    diff_input=diff,
+                    preview=True,
+                    sync_latency_budget_ms=0)
+            self.assertEqual(ctx.exception.error_category, "gate_failure")
+            self.assertIn("sync_latency_budget_ms=0", ctx.exception.message)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_delegate_preview_default_budget_works(self):
+        """Default budget should allow delegate_preview to complete."""
+        _, root = _corpus_copy()
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            svc = Service(root,
+                          registry=JsonlAuditRegistry(
+                              os.path.join(tmp_dir, "state")),
+                          events=StdoutEventSink(io.StringIO()))
+            import base64
+            diff = base64.b64encode(
+                b"--- a/docs/en/alpha/index.md\n"
+                b"+++ b/docs/en/alpha/index.md\n"
+                b"@@ -1 +1 @@\n"
+                b"-old\n"
+                b"+new\n").decode()
+            resp = svc.delegate(
+                target_id="alpha",
+                change_type="update",
+                trust_level="review",
+                diff_input=diff,
+                preview=True)
+            self.assertEqual(resp["next_action"], "preview_only")
+            self.assertIn("diff_hash", resp)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+

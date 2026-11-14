@@ -92,6 +92,33 @@ def _make_corpus(tmpdir):
     os.makedirs(os.path.join(corpus, "CHANGELOGS"))
     with open(os.path.join(corpus, "CHANGELOGS", "alpha.changes.md"), "w") as f:
         f.write("<!-- CHANGES 1.0.0: initial -->\n")
+    # ADR-013: surface-readiness sentinel — Tier 2+ CLI paths require it;
+    # tier < 2 refusal tests still refuse at the first interlock level.
+    sentinel = os.path.join(corpus, "documenter", ".operator_surface_ready")
+    os.makedirs(os.path.dirname(sentinel), exist_ok=True)
+    with open(sentinel, "w") as f:
+        f.write("")
+    # Initialize git repo for the pre-change git snapshot guard.
+    subprocess.run(
+        ["git", "init", "-q", corpus],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "config", "user.email", "test@council.local"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "config", "user.name", "Test"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "add", "-A"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "commit", "-q", "-m", "fixture baseline"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
     return corpus
 
 

@@ -18,6 +18,7 @@ import base64
 import json
 import os
 import signal
+import subprocess
 import sys
 import time
 
@@ -122,9 +123,37 @@ def main():
     corpus = os.path.join(tmpdir, "corpus")
     os.makedirs(os.path.join(corpus, "docs", "en", "alpha"), exist_ok=True)
 
+    # ADR-013: Tier 2+ requires the Operator Surface readiness sentinel.
+    sentinel = os.path.join(corpus, "documenter", ".operator_surface_ready")
+    os.makedirs(os.path.dirname(sentinel), exist_ok=True)
+    with open(sentinel, "w") as f:
+        f.write("")
+
     alpha_path = os.path.join(corpus, "docs", "en", "alpha", "index.md")
     with open(alpha_path, "w") as f:
         f.write(_make_doc_text())
+
+    # Initialize git repo for the pre-change git snapshot guard.
+    subprocess.run(
+        ["git", "init", "-q", corpus],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "config", "user.email", "test@council.local"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "config", "user.name", "Test"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "add", "-A"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", corpus, "commit", "-q", "-m", "fixture baseline"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
 
     briefing_path = os.path.join(tmpdir, "_briefing.md")
     with open(briefing_path, "w") as f:

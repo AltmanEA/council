@@ -36,8 +36,19 @@ def _registry(tmp, clock=None):
     return JsonlAuditRegistry(os.path.join(tmp, "state"), clock=clock)
 
 
+def _copy_if_fixture(root):
+    """Copy the checked-in fixture corpus: audit() now writes state under
+    root/documenter/ (hash store) — the fixture must stay pristine."""
+    if os.path.abspath(root) == os.path.abspath(FIXTURE_CORPUS):
+        base = tempfile.mkdtemp()
+        work = os.path.join(base, "corpus")
+        shutil.copytree(FIXTURE_CORPUS, work)
+        return work
+    return root
+
+
 def _service(tmp, clock=None, root=FIXTURE_CORPUS, events=None):
-    return Service(root,
+    return Service(_copy_if_fixture(root),
                    registry=_registry(tmp, clock),
                    events=events or StdoutEventSink(io.StringIO()))
 
@@ -157,7 +168,8 @@ class TestCorruptRegistryStatus(unittest.TestCase):
         try:
             out = io.StringIO()
             with redirect_stdout(out):
-                rc = main(["--root", FIXTURE_CORPUS, "--status", "--json"])
+                rc = main(["--root", _copy_if_fixture(FIXTURE_CORPUS),
+                           "--status", "--json"])
         finally:
             os.environ.pop("DOCUMENTER_DATA_DIR", None)
         # exit 0: status answers despite corruption (the service must not go
@@ -251,7 +263,7 @@ class TestClockInjection(unittest.TestCase):
 
     def test_fresh_and_stale_boundaries(self):
         reg_r = _registry(self.tmp, clock=lambda: self.now[0])
-        svc = Service(FIXTURE_CORPUS, registry=reg_r,
+        svc = Service(_copy_if_fixture(FIXTURE_CORPUS), registry=reg_r,
                       events=StdoutEventSink(io.StringIO()))
         svc.audit(target_id="alpha")
         # exactly at the boundary (30 min) → fresh (age <= window)

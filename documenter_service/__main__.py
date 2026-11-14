@@ -66,7 +66,9 @@ from .adapters.diff_engine import MAX_DIFF_BYTES_DEFAULT, StdDiffEngine
 from .adapters.fs_manifest import FsManifestSource
 from .adapters.jsonl_registry import JsonlAuditRegistry
 from .adapters.stdout_events import StdoutEventSink
+from .adapters.file_events import FileEventSink
 from .adapters.worker_stub import InterlockedWorkerStub
+from .adapters.hash_store import HashStore
 from .core.audit import audit, delegate_preview
 from .core.errors import StructuredError
 from .core.override import override_gate as _override_gate_core  # Tier 2+
@@ -141,9 +143,17 @@ class Service:
         self._data_dir = data_dir
         self.registry = registry or JsonlAuditRegistry(data_dir)
         self.manifest = manifest or FsManifestSource(self.root)
-        self.events = events or StdoutEventSink()
+        if events is not None:
+            # Caller provided an explicit events sink (e.g. MCP path); use it.
+            self.events = events
+        else:
+            # Default: file persistence in corpus-audit + stdout (mvp-contract
+            # §1 — MVP carrier is stdout JSON; file adds durable replay).
+            self.events = FileEventSink(
+                os.path.join(data_dir, "corpus-audit"))
         self.engine = StdDiffEngine()
         self.worker = InterlockedWorkerStub()  # Tier 2+ stub, always locked
+        self.hash_store = HashStore(data_dir, self.root)
 
     # -- policy (degradation-tolerant: audit/status never blocked by it) ----
 
@@ -167,23 +177,47 @@ class Service:
         if self.registry.status() == "corrupt":
             raise StructuredError(
                 "gate_failure",
-                "audit registry is corrupt — audit_record persistence is "
+                "audit registry is corrupt \u2014 audit_record persistence is "
                 "impossible, so audit() fails closed (restore the registry "
-                "from git; mvp-data-models §1). status() reports details.")
+                "from git; mvp-data-models \u00a71). status() reports details.")
         policy, _ = self.load_policy_safe()
         ceiling = kwargs.pop(
             "rescan_batch_ceiling",
             int(policy.get("rescan_batch_ceiling")) if policy else 50)
-        return audit(self.root, self.registry, self.manifest, self.events,
-                     rescan_batch_ceiling=ceiling, **kwargs)
+        # sync_latency_budget_ms from policy unless caller overrides.
+        budget_ms = kwargs.pop(
+            "sync_latency_budget_ms",
+            int(policy.get("sync_latency_budget_ms")) if policy else 30000)
+        resp = audit(self.root, self.registry, self.manifest, self.events,
+                      rescan_batch_ceiling=ceiling,
+                      sync_latency_budget_ms=budget_ms, **kwargs)
+        # Update hash store for scanned IDs (only after successful audit).
+        try:
+            entries_list = self.manifest.entries()
+            if kwargs.get("target_id") == "*":
+                scope_ids = [e["id"] for e in entries_list]
+            else:
+                tid = kwargs.get("target_id", "*")
+                manifest_ids = {e["id"] for e in entries_list}
+                scope_ids = [tid] if tid in manifest_ids else []
+            if scope_ids:
+                self.hash_store.update(self.manifest, scope_ids)
+        except Exception:
+            pass  # hash store failure is non-blocking (rebuildable cache)
+        return resp
 
     def status(self, target_id=None) -> dict:
         policy, _ = self.load_policy_safe()
-        return status_core(self.registry, policy, target_id=target_id)
+        return status_core(self.registry, policy, target_id=target_id,
+                           root=self.root)
 
     def delegate(self, *, target_id, change_type, trust_level, diff_input,
-                 preview, audit_id=None, approval_id=None) -> dict:
+                 preview, audit_id=None, approval_id=None,
+                 sync_latency_budget_ms=None) -> dict:
         """delegate(preview: true|false) — preview and write branch.
+
+        ``sync_latency_budget_ms`` (mvp-interfaces §5): explicit caller
+        override; None means take the policy value (default 30000).
 
         With preview=True: existing delegate_preview flow (unchanged).
         With preview=False (write branch, Tier 2+):
@@ -217,13 +251,18 @@ class Service:
                       file=sys.stderr)
             cap = int(policy.get("max_diff_bytes")) if policy else MAX_DIFF_BYTES_DEFAULT
             freshness = (int(policy.get("audit_freshness")) if policy else 30)
+            budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms
+                         is not None else
+                         int(policy.get("sync_latency_budget_ms")) if policy
+                         else 30000)
             return delegate_preview(self.root, self.manifest,
                                     target_id=target_id, change_type=change_type,
                                     trust_level=trust_level, diff_input=diff_input,
                                     preview=preview, engine=self.engine,
                                     max_diff_bytes=cap,
                                     audit_id=audit_id, registry=self.registry,
-                                    audit_freshness_min=freshness)
+                                    audit_freshness_min=freshness,
+                                    sync_latency_budget_ms=budget_ms)
 
         # --- write branch (preview=False) ------------------------------------
         policy, policy_err = self.load_policy_safe()
@@ -250,11 +289,20 @@ class Service:
                     "apply requires authenticated operator ingress: set "
                     "COUNCIL_OPERATOR_ID (operator-surface §AuthN); "
                     "this is a deployment defect, not operator action")
+            budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms
+                         is not None else
+                         int(policy.get("sync_latency_budget_ms"))
+                         if policy else 30000)
             return self.apply(approval_id, operator_id, diff_input,
-                              max_diff_bytes=cap)
+                              max_diff_bytes=cap,
+                              sync_latency_budget_ms=budget_ms)
 
         # propose_write (full guard chain, see core/write.py)
         operator_id = self._env.get("COUNCIL_OPERATOR_ID")
+        budget_ms = (sync_latency_budget_ms if sync_latency_budget_ms
+                     is not None else
+                     int(policy.get("sync_latency_budget_ms"))
+                     if policy else 30000)
         return core_write.propose_write(
             self.root, self.manifest, self.registry, policy, self.events,
             self.engine,
@@ -263,6 +311,7 @@ class Service:
             audit_id=audit_id,
             proposer_id=operator_id,
             max_diff_bytes=cap,
+            sync_latency_budget_ms=budget_ms,
         )
 
     def approve(self, approval_id: str, operator_id: str) -> dict:
@@ -275,7 +324,8 @@ class Service:
                                   approval_id=approval_id, operator_id=operator_id)
 
     def apply(self, approval_id: str, operator_id: str, diff_input: str,
-              *, max_diff_bytes: int = 524288) -> dict:
+              *, max_diff_bytes: int = 524288,
+              sync_latency_budget_ms: int = 30000) -> dict:
         """Apply an approved write (Tier 2+, called after approve).
 
         Invokes apply_write with the same diff_input for hash verification.
@@ -288,6 +338,7 @@ class Service:
             diff_input=diff_input,
             max_diff_bytes=max_diff_bytes,
             data_dir=self._data_dir,
+            sync_latency_budget_ms=sync_latency_budget_ms,
         )
 
     def override_gate(self, *, target_id, diff_hash, reason, operator_id,
@@ -433,6 +484,9 @@ def main(argv=None) -> int:
     mode.add_argument("--mcp", action="store_true",
                       help="MCP stdio JSON-RPC transport (stdout=RPC, "
                            "stderr=events)")
+    mode.add_argument("--rebuild-hashes", action="store_true",
+                      help="rebuild hashes.json from manifest entries "
+                           "(cold-start integrity / full rescan)")
     parser.add_argument("--root", default=os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))),
                         help="repository root (default: parent of the package)")
@@ -498,6 +552,17 @@ def main(argv=None) -> int:
                 _print_json(resp)
             else:
                 _print_audit_human(resp)
+            return 0
+        # --rebuild-hashes
+        if args.rebuild_hashes:
+            rebuilt = service.hash_store.rebuild(service.manifest)
+            resp = {"rebuilt_entries": len(rebuilt.get("entries", {})),
+                    "path": service.hash_store._path}
+            if args.json_mode:
+                _print_json(resp)
+            else:
+                print(f"rebuilt_entries: {resp['rebuilt_entries']}")
+                print(f"path: {resp['path']}")
             return 0
         # --approve
         if args.approve:

@@ -25,8 +25,10 @@ report on the first pass — pagination cannot hide manifest drift.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -224,17 +226,102 @@ def _resolve_scope(manifest, target_id: str) -> tuple:
     return entries, [target_id]
 
 
+# ---------------------------------------------------------------------------
+# Read-before-use (§2.1.3, mvp-contract)
+# ---------------------------------------------------------------------------
+
+def _hash_scope_files(root: str, entries: list) -> dict:
+    """Hash every tracked file referenced by the manifest.
+
+    For each entry: the primary file (entry["path"]), the Russian translation
+    (entry["has_translation"], if present), and the manifest file itself.
+    Returns {abs_path: "sha256:<hex>"} for all EXISTING files; absent files
+    are simply omitted (their absence is a separate scan finding).
+
+    mvp-contract §2.1.3: "A document read for audit is hashed; if the hash
+    changes before a dependent computation completes, the result is discarded
+    and the scan re-run."
+    """
+    result: dict = {}
+    # Always include the manifest file itself.
+    manifest_path = os.path.join(root, "docs-manifest.yaml")
+    if os.path.isfile(manifest_path):
+        result[manifest_path] = _sha256_file(manifest_path)
+    for entry in entries:
+        abs_path = os.path.join(root, entry["path"])
+        if os.path.isfile(abs_path):
+            result[abs_path] = _sha256_file(abs_path)
+        ru_path = entry.get("has_translation")
+        if ru_path:
+            abs_ru = os.path.join(root, ru_path)
+            if os.path.isfile(abs_ru):
+                result[abs_ru] = _sha256_file(abs_ru)
+    return result
+
+
+def _sha256_file(path: str) -> str:
+    """Return 'sha256:<hex>' for the file at *path*."""
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return f"sha256:{h.hexdigest()}"
+
+
+def _hashes_stable(before: dict, after: dict) -> bool:
+    """True when the file hash set is unchanged between two snapshots.
+
+    Compares the union of all keys from both snapshots; a file that appeared
+    or disappeared counts as a change.
+    """
+    all_keys = set(before) | set(after)
+    return all(before.get(k) == after.get(k) for k in all_keys)
+
+
+# ---------------------------------------------------------------------------
+# Sync-latency budget (mvp-interfaces §5)
+# ---------------------------------------------------------------------------
+
+def _check_budget(deadline: float, budget_ms: int) -> None:
+    """Raise StructuredError("gate_failure") when the budget is exceeded.
+
+    mvp-interfaces §5: "A synchronous call that cannot finish inside the
+    budget returns a structured timeout error rather than blocking
+    indefinitely."
+    """
+    if time.monotonic() > deadline:
+        raise StructuredError(
+            "gate_failure",
+            f"call exceeded sync_latency_budget_ms={budget_ms} — "
+            "re-invoke with a narrower scope or scan_cursor",
+            next_action="rerun_audit")
+
+
+# ---------------------------------------------------------------------------
+# audit() — read-before-use loop with sync-latency budget
+# ---------------------------------------------------------------------------
+
 def audit(root: str, registry, manifest, events, *,
           target_id: str = "*", severity_min: str = "low",
           pre_check: bool = False, scan_cursor: str | None = None,
-          rescan_batch_ceiling: int = 50) -> dict:
+          rescan_batch_ceiling: int = 50,
+          sync_latency_budget_ms: int = 30000) -> dict:
     """Execute one audit invocation (fresh or resumed); persist to registry.
+
+    Read-before-use (mvp-contract §2.1.3): files are hashed before the scan,
+    then rehashed after dependent computation; any change discards the pass
+    and retries exactly once. On repeated instability a StructuredError is
+    raised.
+
+    Sync-latency budget (mvp-interfaces §5): a monotonic-clock deadline is
+    checked at two guard points; excess raises StructuredError("gate_failure").
 
     Returns the mvp-interfaces §1 response:
     {audit_id, report: {header, findings}, has_remaining, scan_cursor,
      coverage: {scanned_count, total_count, status}}.
-    Raises StructuredError for an off-manifest target (unknown/escalate),
-    an unknown/replayed/mis-bound scan_cursor, or a bad severity_min.
+    Raises StructuredError for an off-manifest target, unknown/replayed/mis-
+    bound scan_cursor, bad severity_min, repeated corpus instability, or
+    budget exhaustion.
     """
     if severity_min not in SEVERITY_ENUM:
         raise StructuredError(
@@ -261,17 +348,92 @@ def audit(root: str, registry, manifest, events, *,
     batch_ids = scope_ids[offset:offset + rescan_batch_ceiling]
     has_remaining = offset + len(batch_ids) < len(scope_ids)
 
-    # -- ONE tools-layer scan; report pagination only (never a rule fork) -----
-    raw = _raw_findings(root)
-    if target_id == "*":
-        batch = _findings_for_batch(raw, path_to_id,
-                                    batch_set=set(batch_ids), min_rank=min_rank)
-    else:
-        batch = [m for m in _findings_for_batch(raw, path_to_id,
-                                                min_rank=min_rank)
-                 if m["subject_id"] == target_id]
+    # Sync-latency deadline (mvp-interfaces §5).
+    deadline = time.monotonic() + sync_latency_budget_ms / 1000.0
 
-    new_findings = [_finding_public(m) for m in batch]
+    def _one_pass():
+        """Execute a single scan pass; return (pre_hash, findings, ...).
+
+        Hashes files before the scan, then the scan + computation run.
+        The caller is responsible for re-hashing and comparing stability.
+        """
+        pre_hash = _hash_scope_files(root, entries)
+        _check_budget(deadline, sync_latency_budget_ms)
+
+        # Tools-layer scan + dependent computation.
+        raw = _raw_findings(root)
+        if target_id == "*":
+            batch = _findings_for_batch(raw, path_to_id,
+                                        batch_set=set(batch_ids),
+                                        min_rank=min_rank)
+        else:
+            batch = [m for m in _findings_for_batch(raw, path_to_id,
+                                                    min_rank=min_rank)
+                     if m["subject_id"] == target_id]
+
+        new_findings = [_finding_public(m) for m in batch]
+        all_findings = carried + new_findings
+        all_scanned = scanned_ids + batch_ids
+        scan_cursor_out = None
+        if has_remaining:
+            scan_cursor_out = new_token()
+            registry.issue_token("scan_cursor", scan_cursor_out,
+                                 {"audit_id": audit_id,
+                                  "target_id": target_id})
+
+        audit_record = {
+            "audit_id": audit_id,
+            "issued_at": registry.now(),
+            "scope": target_id,
+            "findings": all_findings,
+            "scanned_ids": all_scanned,
+            "has_remaining": has_remaining,
+            "scan_cursor": scan_cursor_out,
+        }
+        return (pre_hash, new_findings, all_findings, all_scanned,
+                scan_cursor_out, audit_record)
+
+    # Read-before-use loop (mvp-contract §2.1.3, max 2 iterations).
+    new_findings = []
+    all_findings = []
+    all_scanned = []
+    scan_cursor_out = None
+    audit_record = None
+    max_passes = 2
+    for _pass in range(max_passes):
+        pre_hash, pass_new, pass_findings, pass_scanned, \
+            pass_cursor, pass_record = _one_pass()
+
+        # Verify corpus stability: re-hash and compare.
+        post_hash = _hash_scope_files(root, entries)
+        _check_budget(deadline, sync_latency_budget_ms)
+
+        if _hashes_stable(pre_hash, post_hash):
+            # Stable — persist.
+            new_findings = pass_new
+            all_findings = pass_findings
+            all_scanned = pass_scanned
+            scan_cursor_out = pass_cursor
+            audit_record = pass_record
+            break
+        # Hash changed: discard this pass. If it's the first pass, retry once.
+        if _pass == 0:
+            # Discard: reset emitted events and findings from the first pass.
+            new_findings = []
+            all_findings = []
+            all_scanned = []
+            scan_cursor_out = None
+            audit_record = None
+            # Retry (carried and scanned_ids are preserved for resumed scans).
+            continue
+        # Second pass also unstable → fail.
+        raise StructuredError(
+            "hash_mismatch",
+            "corpus changed repeatedly during scan — result discarded, "
+            "re-invoke audit()",
+            next_action="rerun_audit")
+
+    # Emulate events only for the stable pass (mvp-contract §2.1.3).
     for f in new_findings:
         events.emit("documenter.issue", {
             "audit_id": audit_id,
@@ -280,23 +442,8 @@ def audit(root: str, registry, manifest, events, *,
             "description": f["description"],
         })
 
-    all_findings = carried + new_findings
-    all_scanned = scanned_ids + batch_ids
-    scan_cursor_out = None
-    if has_remaining:
-        scan_cursor_out = new_token()
-        registry.issue_token("scan_cursor", scan_cursor_out,
-                             {"audit_id": audit_id, "target_id": target_id})
-
-    registry.append(reg.AUDIT_RECORD, {
-        "audit_id": audit_id,
-        "issued_at": registry.now(),
-        "scope": target_id,
-        "findings": all_findings,
-        "scanned_ids": all_scanned,
-        "has_remaining": has_remaining,
-        "scan_cursor": scan_cursor_out,
-    })
+    # Persist the stable audit record.
+    registry.append(reg.AUDIT_RECORD, audit_record)
 
     coverage_status = "partial" if has_remaining else "complete"
     header = PARTIAL_WRITE_DECISION_NOTE if coverage_status == "partial" \
@@ -330,7 +477,8 @@ def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
                      trust_level: str, diff_input: str, preview, engine,
                      max_diff_bytes: int = MAX_DIFF_BYTES_DEFAULT,
                      audit_id: str | None = None, registry=None,
-                     audit_freshness_min: int = 30) -> dict:
+                     audit_freshness_min: int = 30,
+                     sync_latency_budget_ms: int = 30000) -> dict:
     """delegate(preview: true) — minimal MVP preview contour (no write branch).
 
     Flow (mvp-interfaces §2): preview MUST be exactly true (false/absent →
@@ -352,13 +500,22 @@ def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
     branch only — preview is exempt by contract when no audit_id is supplied;
     when audit_id is provided, the 5 gate rules run verbatim.
     The trust derivation now uses the normalized diff for dynamic classification.
+
+    Sync-latency budget (mvp-interfaces §5): a monotonic-clock deadline is
+    checked before the corpus scan and before returning; excess raises
+    StructuredError("gate_failure").
     """
+    # Sync-latency deadline (mvp-interfaces §5).
+    deadline = time.monotonic() + sync_latency_budget_ms / 1000.0
+
     if preview is not True:
         raise StructuredError(
             "tier_interlock",
             "delegate() write intent is refused in the MVP build: the write "
             "branch is structurally absent (mvp-contract §MVP boundary). "
             "Invoke with preview: true.")
+    _check_budget(deadline, sync_latency_budget_ms)
+
     entries, _ = _resolve_scope(manifest, target_id)
     path_to_id = {e["path"]: e["id"] for e in entries}
     # Pre-audit gate: only when caller supplies audit_id.
@@ -380,6 +537,7 @@ def delegate_preview(root: str, manifest, *, target_id: str, change_type: str,
     diff_hash = engine.diff_hash(normalized)
     diff_text = engine.render(normalized)
     findings = _findings_for_target(_raw_findings(root), path_to_id, target_id)
+    _check_budget(deadline, sync_latency_budget_ms)
     resp = {
         "diff_hash": diff_hash,
         "diff_text": diff_text,

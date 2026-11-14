@@ -173,6 +173,14 @@ def _make_override_setup(tmpdir, target_id="alpha", audit_id="aid-1",
     reg_obj._manifest_for_override = manifest
     reg_obj._root_for_override = root or tmpdir
 
+    # ADR-013: override_gate runs check_tier2_authorized against root — the
+    # surface-readiness sentinel must exist for Tier 2+ override paths.
+    r = root or tmpdir
+    sentinel = os.path.join(r, "documenter", ".operator_surface_ready")
+    os.makedirs(os.path.dirname(sentinel), exist_ok=True)
+    with open(sentinel, "w") as f:
+        f.write("")
+
     return reg_obj, policy, events, manifest, tmpdir
 
 

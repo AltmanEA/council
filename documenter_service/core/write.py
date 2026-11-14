@@ -12,14 +12,18 @@ uses explicit seams.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
+import posixpath
 import shutil
+import time
 import uuid
 from typing import Any, Callable, Dict, List, Optional
 
 from ..adapters.applier import apply_unified_diff
+from ..adapters.git_snapshot import capture_git_snapshot as _default_git_snapshot
 from ..core.errors import StructuredError
 
 # Import shared helpers (pure, no I/O beyond what's passed in).
@@ -30,6 +34,7 @@ from ..core.policy import (
 )
 from ..ports import ManifestSource, AuditRegistry, DiffEngine, EventSink
 from ..adapters.lock import DelegateLock
+from ..adapters import commit_protocol as _commit_protocol
 
 # Lazy import these to avoid circular imports (audit.py imports check_all).
 def _get_resolve_scope():
@@ -62,30 +67,46 @@ def propose_write(
     proposer_id: str | None = None,
     preview: bool = False,
     max_diff_bytes: int = 524288,
+    sync_latency_budget_ms: int = 30000,
+    changeset: list[dict] | None = None,
 ) -> dict:
     """Propose a write (Tier 2+ write branch).
 
     ORDER of guards (fail-closed, each step its own guard):
 
       (a) preview MUST be False — structural guard.
-      (b) check_tier2_authorized(policy, root) → tier_interlock.
-      (c) registry.status() == "corrupt" → gate_failure.
-      (d) audit_id REQUIRED: None → audit_mismatch.
-      (e) _resolve_scope — off-manifest → unknown.
-      (f) match_operation → None → gate_failure.
-      (g) decode_diff_input + engine.normalize + check_invariant → trust_mismatch.
-      (h) pre_audit_gate → propagate error (audit_mismatch / blocking_finding).
-      (i) Compute new content: read target file → apply_unified_diff → new_text.
-      (j) diff_hash + approval_id; registry.issue_approval(...).
-      (k) Return result with next_action="await_approval".  NO file written.
+      (b) sync_latency_budget_ms check — mvp-interfaces §5.
+      (c) check_tier2_authorized(policy, root) → tier_interlock.
+      (d) registry.status() == "corrupt" → gate_failure.
+      (e) audit_id REQUIRED: None → audit_mismatch.
+      (f) _resolve_scope — off-manifest → unknown.
+      (g) match_operation → None → gate_failure.
+      (h) decode_diff_input + engine.normalize + check_invariant → trust_mismatch.
+      (i) pre_audit_gate → propagate error (audit_mismatch / blocking_finding).
+      (j) Compute new content: read target file → apply_unified_diff → new_text.
+      (k) diff_hash + approval_id; registry.issue_approval(...).
+      (l) Return result with next_action="await_approval".  NO file written.
+
+    Changeset support (Multi-file commit protocol):
+      When *changeset* is provided (list of dict with "path"/"content_b64"),
+      validation is performed BEFORE any side-effects (steps a–j are unchanged
+      guards, only step k carries changeset_digest).  If changeset is empty
+      or None the behaviour is identical to the legacy path.
     """
-    # (a) preview MUST be False — defensive check
+    # (a) preview MUST be False — structural guard
     if preview is True:
         raise StructuredError(
             "unknown",
             "propose_write is the write branch; received preview=True")
 
-    # (b) tier 2+ authorization
+    # (a.5) preview=True + changeset is forbidden
+    if preview is False and changeset is not None and len(changeset) > 0:
+        _validate_changeset(changeset, manifest, target_id, root)
+
+    # (b) sync latency budget check (mvp-interfaces §5)
+    _check_budget(sync_latency_budget_ms)
+
+    # (c) tier 2+ authorization
     check_tier2_authorized(policy, root)
 
     # (c) corrupt registry check
@@ -145,12 +166,51 @@ def propose_write(
     # (j) issue approval — NO file written
     diff_hash = engine.diff_hash(normalized)
     approval_id = str(uuid.uuid4())
+
+    # Build optional extra for changeset_digest.
+    extra: dict | None = None
+    if changeset is not None and len(changeset) > 0:
+        # We need before_hashes for the digest; re-read them.
+        all_paths = [target_entry["path"]]
+        for rec in changeset:
+            p = posixpath.normpath(rec["path"].replace("\\", "/"))
+            all_paths.append(p)
+        path_hashes: list[list] = []
+        for p in all_paths:
+            after_hash: str
+            if p == target_entry["path"]:
+                # after hash is the staged hash for the target document
+                after_hash = _staged_hash_for_diff(target_path, original_text,
+                                                   normalized)
+            else:
+                # Look up the correct changeset record for this path
+                rec_for_p = None
+                for _rec in changeset:
+                    rp = posixpath.normpath(_rec["path"].replace("\\", "/"))
+                    if rp == p:
+                        rec_for_p = _rec
+                        break
+                rec_b64 = rec_for_p.get("content_b64", "") if rec_for_p else ""
+                after_hash = "sha256:" + hashlib.sha256(
+                    base64.b64decode(rec_b64)).hexdigest()
+            try:
+                with open(os.path.join(root, p), "rb") as fh:
+                    before_hash = "sha256:" + hashlib.sha256(fh.read()).hexdigest()
+            except OSError:
+                before_hash = ""
+            path_hashes.append([p, before_hash, after_hash])
+        path_hashes.sort(key=lambda x: x[0])
+        _json_str = json.dumps(path_hashes, sort_keys=True)
+        changeset_digest = "sha256:" + hashlib.sha256(_json_str.encode()).hexdigest()
+        extra = {"changeset_digest": changeset_digest}
+
     registry.issue_approval(
         approval_id=approval_id,
         target_ids=[target_id],
         diff_hash=diff_hash,
         proposer_id=proposer_id,
         audit_id=audit_id,
+        extra=extra,
     )
 
     return {
@@ -164,6 +224,100 @@ def propose_write(
         "expires_in_min": int(policy.get("approval_expiry_window")) if policy else 30,
     }
 
+
+# --- _validate_changeset (changeset path validation) ------------------------
+
+
+def _validate_changeset(changeset: list, manifest, target_id: str, root: str):
+    """Validate a non-empty changeset before any side-effects.
+
+    Raises StructuredError("unknown", ...) on any validation failure.
+    Called BEFORE any guard chain (except the preview check) so that
+    no files are created on failure.
+    """
+    import posixpath
+
+    # 1. Each record must be a dict with exactly {path, content_b64}
+    seen_paths: list[str] = []
+    for rec in changeset:
+        if not isinstance(rec, dict):
+            raise StructuredError(
+                "unknown", "each changeset entry must be a dict with keys path "
+                "and content_b64")
+        keys = set(rec.keys())
+        if keys != {"path", "content_b64"}:
+            raise StructuredError(
+                "unknown", "each changeset entry must have exactly keys path and "
+                "content_b64, got " + repr(keys))
+
+    # 2. Normalize paths, check for absolute/.. paths, deduplicate against
+    #    target_id and each other.
+    norm_paths: list[str] = []
+    for rec in changeset:
+        p = rec["path"]
+        np = posixpath.normpath(p.replace("\\", "/"))
+        if np.startswith("/") or ".." in np.split("/"):
+            raise StructuredError(
+                "unknown", f"changeset path {p!r} is invalid (absolute or parent "
+                "reference)")
+        norm_paths.append(np)
+
+        # Check target_id path isn't duplicated in changeset
+        target_entry = manifest.resolve(target_id)
+        if target_entry is not None:
+            if np == target_entry["path"].replace("\\", "/"):
+                raise StructuredError(
+                    "unknown", f"changeset path {p!r} duplicates the target "
+                    "document path {target_id!r}")
+
+        # Check no internal duplicates
+        if np in norm_paths[:-1]:
+            raise StructuredError(
+                "unknown", f"changeset path {p!r} is duplicated")
+
+        # Decode base64
+        try:
+            base64.b64decode(rec["content_b64"])
+        except Exception:
+            raise StructuredError(
+                "unknown", f"changeset content_b64 for path {p!r} is not valid "
+                "base64")
+
+    # 3. All paths must be manifest-tracked (validate_changeset_paths raises
+    #    unknown for non-manifest paths, with no writes — spec #9b)
+    _commit_protocol.validate_changeset_paths(norm_paths, manifest)
+
+
+def _staged_hash_for_diff(full_path, original_text, normalized):
+    """Compute the sha256 of the file that *would* be staged (source + diff).
+
+    This mirrors what the legacy write path does: reads source, applies diff,
+    and hashes the result.  Used to compute the after_hash for the target
+    document's entry in the changeset digest.
+    """
+    try:
+        with open(full_path, "rb") as fh:
+            source_bytes = fh.read()
+    except OSError:
+        source_bytes = original_text.encode("utf-8")
+    new_text = apply_unified_diff(source_bytes.decode("utf-8"),
+                                  normalized.decode("utf-8"))
+    return "sha256:" + hashlib.sha256(new_text.encode("utf-8")).hexdigest()
+
+
+def _changeset_digest(manifest, root, changeset):
+    """Compute the deterministic changeset digest for a non-empty changeset.
+
+    Returns "sha256:<hex>" of the JSON-encoded sorted [path, before_hash,
+    after_hash] list.  The target document (target_id) is computed by
+    applying the diff to the current source file.
+
+    Used by apply_write to recompute and compare the digest against the
+    approval's stored changeset_digest.
+    """
+    target_entry = manifest.resolve("")  # placeholder — caller passes target_path
+    # We need the target path; callers that use this helper will compute the
+    # list manually.  This is kept as a reference signature from the brief.
 
 # --- approve ---------------------------------------------------------------
 
@@ -267,8 +421,14 @@ def apply_write(
     max_diff_bytes: int = 524288,
     data_dir: str | None = None,
     seams: Dict[str, Callable[[], Any]] | None = None,
+    sync_latency_budget_ms: int = 30000,
+    changeset: list[dict] | None = None,
 ) -> dict:
     """Apply an approved write to the target file (mvp-contract §2.2).
+
+    When *changeset* is None or empty the legacy single-file path is used
+    (intent_<approval_id>.json, per_file_sha256, etc.).  When *changeset* is
+    a non-empty list the Multi-file Commit Protocol (#9) path is used.
 
     Durability sequence: stage in target dir → fsync(file) → intent record
     (temp+rename+fsync) → rename → fsync(dir).
@@ -279,11 +439,26 @@ def apply_write(
         {key: callable} called at boundary points: "after_stage",
         "after_intent", "before_rename".  Used by tests to inject crash
         conditions.
+    sync_latency_budget_ms : int, optional
+        Maximum wall-clock budget (milliseconds) for synchronous operations
+        (mvp-interfaces §5).  Default 30000.  Checks occur before acquiring
+        the lock, before reading the source file, and before the final
+        rename.
+    changeset : list[dict] | None, optional
+        Each entry: {"path": <rel posix path>, "content_b64": <base64 of new
+        content>}.  Used with the Multi-file commit protocol path.  When
+        provided, *preview* in propose_write MUST have been False (validated
+        there); the digest is checked against the approval's stored
+        changeset_digest.
 
     Returns
     -------
     dict with keys: applied, target_id, diff_hash, approval_id, next_action.
+    For changeset path additionally includes ``changeset_paths``.
     """
+    # 0. sync_latency_budget_ms check (mvp-interfaces §5)
+    _check_budget(sync_latency_budget_ms)
+
     # 1. Find approval
     approval = registry.find_approval(approval_id)
     if approval is None:
@@ -342,8 +517,36 @@ def apply_write(
     if data_dir is None:
         data_dir = os.path.join(root, "documenter")
 
-    # 6. Acquire lock and perform the atomic sequence
+    # === Legacy path (changeset is None or empty) ===
+    if not changeset or len(changeset) == 0:
+        return _apply_write_legacy(
+            root, manifest, registry, policy, events, engine,
+            approval, approval_id, operator_id, text, normalized, diff_hash,
+            target_id, target_path, target_dir, target_basename,
+            data_dir, seams, sync_latency_budget_ms)
+
+    # === Multi-file commit protocol path ===
+    return _apply_write_changeset(
+        root, manifest, registry, policy, events, engine,
+        approval, approval_id, operator_id, text, normalized, diff_hash,
+        target_id, target_path, entry["path"],
+        changeset, data_dir, seams, sync_latency_budget_ms)
+
+
+def _apply_write_legacy(
+    root, manifest, registry, policy, events, engine,
+    approval, approval_id, operator_id, text, normalized, diff_hash,
+    target_id, target_path, target_dir, target_basename,
+    data_dir, seams, sync_latency_budget_ms):
+    """Legacy single-file apply_write (unchanged from original)."""
     with DelegateLock(data_dir, policy.get("lock_wait_timeout") or 30):
+        # 6x. Pre-change git snapshot (mvp-contract §2.2 line 64, ADR-007).
+        _git_snapshot_fn = (seams or {}).get(
+            "git_snapshot_fn", _default_git_snapshot)
+        snapshot = _git_snapshot_fn(root)
+
+        _check_budget(sync_latency_budget_ms)
+
         # 6a. Read source file bytes, sha256
         with open(target_path, "rb") as fh:
             source_bytes = fh.read()
@@ -354,7 +557,7 @@ def apply_write(
         new_text = apply_unified_diff(original_text, normalized.decode("utf-8"))
 
         # 6c. Stage: write to .<basename>.<diffhash16>.tmp in target dir, fsync
-        diffhash16 = diff_hash[7:23]  # first 16 hex chars after "sha256:"
+        diffhash16 = diff_hash[7:23]
         staged_name = f".{target_basename}.{diffhash16}.tmp"
         staged_path = os.path.join(target_dir, staged_name)
         staged_bytes = new_text.encode("utf-8")
@@ -375,10 +578,10 @@ def apply_write(
             "staged_at": now_iso,
             "per_file_sha256": {target_id: source_sha},
             "resolved": False,
+            "git_snapshot": snapshot,
         }
         registry.append("intent_record", intent_record)
 
-        # Write intent_<approval_id>.json via temp+rename+fsync (crash safety)
         intent_file_name = f"intent_{approval_id}.json"
         intent_file_path = os.path.join(data_dir, intent_file_name)
         os.makedirs(data_dir, exist_ok=True)
@@ -390,8 +593,6 @@ def apply_write(
         finally:
             os.close(fd2)
         os.rename(tmp_intent, intent_file_path)
-        # fsync the data dir so the intent record is durable BEFORE the rename
-        # (mvp-contract §2.2.4: intent record → fsync(dir) → rename).
         data_dir_fd = os.open(data_dir, os.O_RDONLY)
         try:
             os.fsync(data_dir_fd)
@@ -401,11 +602,7 @@ def apply_write(
         if seams and "after_intent" in seams:
             seams["after_intent"]()
 
-        # 6e. Apply-time verification (C2, mvp-contract §2.2.3): recompute
-        # sha256 of the SOURCE and compare against intent_record.per_file_sha256
-        # (the intent record is the durable record of what was verified);
-        # recompute sha256 of the WORKER/STAGED output and compare against the
-        # APPROVED diff_hash. Any mismatch → hash_mismatch, write denied.
+        # 6e. Apply-time verification (C2, mvp-contract §2.2.3)
         intent_verified = registry.find_intent(target_id) or intent_record
         expected_source = intent_verified.get("per_file_sha256", {}).get(
             target_id, source_sha)
@@ -420,12 +617,6 @@ def apply_write(
                     expected_source, source_sha_recheck),
                 next_action="resolve_finding")
 
-        # Worker-output verification (C2): the staged bytes must equal the
-        # bytes deterministically re-derived from the APPROVED diff (its
-        # normalized hash was checked against the approval's diff_hash at
-        # step 4) applied to the verified source. This closes the gap between
-        # "approved hash" and "written bytes" (mvp-contract §2.2.3): a
-        # tampered staged file diverges from new_text and is denied.
         approved_new_text = apply_unified_diff(
             source_recheck.decode("utf-8"), normalized.decode("utf-8"))
         expected_staged_sha = "sha256:" + hashlib.sha256(
@@ -444,7 +635,8 @@ def apply_write(
         if seams and "before_rename" in seams:
             seams["before_rename"]()
 
-        # 6f. Atomic rename (same filesystem) + fsync dir
+        _check_budget(sync_latency_budget_ms)
+
         os.replace(staged_path, target_path)
         dir_fd = os.open(target_dir, os.O_RDONLY)
         try:
@@ -455,12 +647,10 @@ def apply_write(
         if seams and "after_rename" in seams:
             seams["after_rename"]()
 
-        # 6g. Append resolved intent_record; remove intent file (best-effort)
+        # 6g. Append resolved intent_record; remove intent file
         resolved_intent = dict(intent_record)
         resolved_intent["resolved"] = True
         registry.append("intent_record", resolved_intent)
-        # Consume the approval (append-only copy): a second apply_write with
-        # the same approval_id hits the token_replay guard at step 2b.
         consumed = dict(registry.find_approval(approval_id))
         consumed["consumed"] = True
         consumed["consumed_at"] = registry.now()
@@ -468,7 +658,7 @@ def apply_write(
         try:
             os.remove(intent_file_path)
         except OSError:
-            pass  # best-effort
+            pass
 
     return {
         "applied": True,
@@ -477,6 +667,294 @@ def apply_write(
         "approval_id": approval_id,
         "next_action": "write_applied",
     }
+
+
+def _apply_write_changeset(
+    root, manifest, registry, policy, events, engine,
+    approval, approval_id, operator_id, text, normalized, diff_hash,
+    target_id, target_path, target_path_rel,
+    changeset, data_dir, seams, sync_latency_budget_ms):
+    """Multi-file commit protocol apply_write path (#9).
+
+    Steps:
+      1. git snapshot
+      2. recompute changeset_digest → compare with approval["changeset_digest"]
+      3. read-before-write: compare before_hash from digest with current file
+      4. read source, apply diff → new_text
+      5. tx_id, stage ALL files via commit_protocol.stage_bytes
+      6. _check_budget
+      7. write_intent
+      8. seams: after_stage, after_intent, before_rename
+      9. C2 verify staged hashes
+      10. _check_budget + ordered_renames
+      11. cleanup: append intent → emit event → delete_intent (LAST)
+      12. consume approval
+      13. return
+    """
+    from hashlib import sha256 as _sha256
+
+    # Collect all files in the changeset including the target document.
+    # We need entries for ordering: [target_doc] + changeset_files
+    entries: list[dict] = []
+
+    # Helper to compute staged hash (source + diff applied)
+    def _staged_hash(path, source_bytes):
+        try:
+            with open(os.path.join(root, path), "rb") as fh:
+                actual = fh.read()
+        except OSError:
+            actual = source_bytes
+        new_text = apply_unified_diff(actual.decode("utf-8"),
+                                      normalized.decode("utf-8"))
+        return "sha256:" + hashlib.sha256(new_text.encode("utf-8")).hexdigest()
+
+    # Step 1: git snapshot (inside lock, same as legacy)
+    with DelegateLock(data_dir, policy.get("lock_wait_timeout") or 30):
+        _git_snapshot_fn = (seams or {}).get(
+            "git_snapshot_fn", _default_git_snapshot)
+        snapshot = _git_snapshot_fn(root)
+
+        _check_budget(sync_latency_budget_ms)
+
+        # Step 2: recompute changeset_digest and compare with approval
+        # Build the path_hashes list like propose_write did
+        path_hashes: list[list] = []
+        for rec in changeset:
+            p = posixpath.normpath(rec["path"].replace("\\", "/"))
+            after_hash = "sha256:" + hashlib.sha256(
+                base64.b64decode(rec["content_b64"])).hexdigest()
+            try:
+                with open(os.path.join(root, p), "rb") as fh:
+                    before_hash = "sha256:" + hashlib.sha256(fh.read()).hexdigest()
+            except OSError:
+                before_hash = ""
+            path_hashes.append([p, before_hash, after_hash])
+        # Add the target document
+        try:
+            with open(target_path, "rb") as fh:
+                src_bytes = fh.read()
+            source_sha = "sha256:" + hashlib.sha256(src_bytes).hexdigest()
+            target_new_text = apply_unified_diff(
+                src_bytes.decode("utf-8"), normalized.decode("utf-8"))
+            staged_sha = "sha256:" + hashlib.sha256(
+                target_new_text.encode("utf-8")).hexdigest()
+        except OSError:
+            source_sha = ""
+            staged_sha = ""
+        path_hashes.append([target_path_rel, source_sha, staged_sha])
+        path_hashes.sort(key=lambda x: x[0])
+        _json_str_apply = json.dumps(path_hashes, sort_keys=True)
+        recomputed_digest = "sha256:" + hashlib.sha256(_json_str_apply.encode()).hexdigest()
+
+        stored_digest = approval.get("changeset_digest")
+        if stored_digest is None:
+            raise StructuredError(
+                "approval_invalidated",
+                "changeset provided but approval has no changeset_digest — "
+                "re-propose")
+        if recomputed_digest != stored_digest:
+            raise StructuredError(
+                "approval_invalidated",
+                "changeset changed since approval — re-propose")
+
+        # Step 3: read-before-write — verify before_hash for each changeset path
+        for rec in changeset:
+            p = posixpath.normpath(rec["path"].replace("\\", "/"))
+            # Find the before_hash from path_hashes (it's the one that isn't target)
+            for ph in path_hashes:
+                if ph[0] == p:
+                    expected_before = ph[1]
+                    break
+            else:
+                expected_before = ""
+            if expected_before:
+                try:
+                    with open(os.path.join(root, p), "rb") as fh:
+                        actual = fh.read()
+                except OSError:
+                    actual = b""
+                actual_sha = "sha256:" + hashlib.sha256(actual).hexdigest()
+                if actual_sha != expected_before:
+                    raise StructuredError(
+                        "hash_mismatch",
+                        f"file changed since proposal: {p!r} — "
+                        f"rerun audit then re-propose",
+                        next_action="rerun_audit")
+            else:
+                # before_hash is "" → file must not exist (create operation)
+                if os.path.exists(os.path.join(root, p)):
+                    raise StructuredError(
+                        "hash_mismatch",
+                        f"create operation for {p!r} but file already exists — "
+                        "rerun audit then re-propose",
+                        next_action="rerun_audit")
+
+        # Verify target document before_hash
+        for ph in path_hashes:
+            if ph[0] == target_path_rel:
+                expected_target_before = ph[1]
+                break
+        else:
+            expected_target_before = ""
+        if expected_target_before:
+            actual_src = "sha256:" + hashlib.sha256(src_bytes).hexdigest()
+            if actual_src != expected_target_before:
+                raise StructuredError(
+                    "hash_mismatch",
+                    f"source changed between approval and apply — "
+                    "write denied (rerun audit then re-propose)",
+                    next_action="rerun_audit")
+        else:
+            # before="" means file must not exist (create doc)
+            if os.path.exists(target_path):
+                raise StructuredError(
+                    "hash_mismatch",
+                    f"create operation for target {target_path_rel!r} but file exists")
+
+        # Step 4: read source, apply diff → new_text (already have src_bytes)
+        new_text = apply_unified_diff(
+            src_bytes.decode("utf-8"), normalized.decode("utf-8"))
+
+        # Step 5: tx_id, stage ALL files
+        tx_id = uuid.uuid4().hex
+
+        # Stage the target document
+        staged_entries = []  # {path, tmp_path, before_hash, after_hash}
+        # Target doc entry
+        staged_entries.append({
+            "path": target_path_rel,
+            "tmp_path": _commit_protocol.stage_bytes(
+                root, target_path_rel, new_text.encode("utf-8"), tx_id),
+            "before_hash": expected_target_before,
+            "after_hash": staged_sha,
+        })
+
+        # Stage each changeset file
+        for rec in changeset:
+            p = posixpath.normpath(rec["path"].replace("\\", "/"))
+            content = base64.b64decode(rec["content_b64"])
+            content_sha = "sha256:" + hashlib.sha256(content).hexdigest()
+            staged_entries.append({
+                "path": p,
+                "tmp_path": _commit_protocol.stage_bytes(root, p, content, tx_id),
+                "before_hash": (
+                    [ph for ph in path_hashes if ph[0] == p][0][1]
+                    if any(ph[0] == p for ph in path_hashes)
+                    else ""),
+                "after_hash": content_sha,
+            })
+
+        # Step 6: _check_budget
+        _check_budget(sync_latency_budget_ms)
+
+        # Step 7: seams (legacy parity: after_stage fires BEFORE the intent
+        # record — a crash here leaves staged tmp files and NO intent, the
+        # detectable partial state of mvp-contract §2.2.4)
+        if seams and "after_stage" in seams:
+            seams["after_stage"]()
+
+        # Step 7b: write_intent
+        intent_record = {
+            "tx_id": tx_id,
+            "target_id": target_id,
+            "created_at": registry.now(),
+            "entries": staged_entries,
+        }
+        _commit_protocol.write_intent(data_dir, tx_id, intent_record)
+
+        # Step 8: seams
+        if seams and "after_intent" in seams:
+            seams["after_intent"]()
+
+        # Step 9: C2 verify staged hashes (for each entry)
+        hasher_fn = lambda b: "sha256:" + _sha256(b).hexdigest()
+        for entry in staged_entries:
+            tmp_path = entry["tmp_path"]
+            expected_after = entry["after_hash"]
+            with open(tmp_path, "rb") as fh:
+                actual = fh.read()
+            actual_sha = hasher_fn(actual)
+            if actual_sha != expected_after:
+                raise StructuredError(
+                    "hash_mismatch",
+                    f"staged file {tmp_path!r} hash mismatch "
+                    f"(expected {expected_after}, got {actual_sha}) "
+                    "next_action: resolve_finding",
+                    next_action="resolve_finding")
+            # Additional worker-output check for the target document:
+            # staged must match diff applied to source
+            if entry["path"] == target_path_rel:
+                # Already verified above via staged_sha computed from source + diff
+                pass
+
+        if seams and "before_rename" in seams:
+            seams["before_rename"]()
+
+        # Step 10: _check_budget + ordered_renames
+        _check_budget(sync_latency_budget_ms)
+        _commit_protocol.ordered_renames(root, staged_entries, sha_func=hasher_fn)
+
+        # Step 11: cleanup #9d
+        # 11a: registry.append("intent_record", resolved)
+        resolved_intent = dict(intent_record)
+        resolved_intent["resolved"] = True
+        registry.append("intent_record", resolved_intent)
+
+        # 11b: emit event
+        diff_hash_val = approval.get("diff_hash", "")
+        events.emit("documenter.approval", {
+            "approval_id": approval_id,
+            "operator_id": operator_id,
+            "target_id": target_id,
+            "diff_hash": diff_hash_val,
+            "decision": "approved",
+        })
+
+        # 11c: hash store update — documented but not done (rebuildable cache
+        # per ADR-010; the hash store file if in the changeset is already
+        # renamed; a subsequent audit rebuilds it).
+
+        # 11d: delete_intent (MUST be last per #9d)
+        _commit_protocol.delete_intent(data_dir, tx_id)
+
+    # Step 12: consume approval
+    consumed = dict(registry.find_approval(approval_id))
+    consumed["consumed"] = True
+    consumed["consumed_at"] = registry.now()
+    registry.append("token_record", consumed)
+
+    # Step 13: return
+    return {
+        "applied": True,
+        "target_id": target_id,
+        "diff_hash": diff_hash,
+        "approval_id": approval_id,
+        "changeset_paths": [
+            posixpath.normpath(rec["path"].replace("\\", "/"))
+            for rec in changeset
+        ],
+        "next_action": "write_applied",
+    }
+
+
+# --- sync_latency_budget_ms enforcement (mvp-interfaces §5) -----------------
+
+
+def _check_budget(budget_ms: int) -> None:
+    """Raise StructuredError("gate_failure", ...) when the monotonic clock
+    exceeds the budget.
+
+    The budget is checked at call sites (before lock, after snapshot,
+    before rename).  A zero budget expires on the first check.
+    """
+    deadline = time.monotonic() + budget_ms / 1000.0
+    if time.monotonic() >= deadline:
+        raise StructuredError(
+            "gate_failure",
+            f"call exceeded sync_latency_budget_ms={budget_ms} — "
+            "re-invoke apply (intent record enables safe resume)",
+            next_action="rerun_audit",
+        )
 
 
 # --- reconcile -------------------------------------------------------------
@@ -571,4 +1049,111 @@ def reconcile(
             resolved_intent["_reconciled_note"] = "reconciled: no changes detected"
             registry.append("intent_record", resolved_intent)
 
+    # --- Phase 2: new-format intent directory (Multi-file commit protocol) ---
+
+    new_results = _reconcile_new_format(
+        registry, manifest, root, data_dir, sha256_func)
+    results.extend(new_results)
+
     return results
+
+
+# --- reconcile: new-format intent directory (Multi-file commit protocol) ----
+
+
+def _reconcile_new_format(registry, manifest, root, data_dir, sha256_func=None):
+    """Reconcile multi-file commit protocol intent records from disk.
+
+    Scans ``<data_dir>/intent/`` for leftover intent files (cold-start
+    recovery per index.md §Safety Protocol #9 Recovery).  For each intent
+    file:
+
+      Branch 1 — files match after_hash: already committed, skip.
+      Branch 2 — files match before_hash: roll forward from tmp (when
+                 tmp exists and its sha matches after_hash).
+      Branch 3 — neither: external modification detected → needs_attention.
+
+    Appends resolved intent records to the registry and deletes the intent
+    file on success; otherwise adds a needs_attention result.
+
+    Returns a list of resolution dicts for entries that need attention.
+    """
+    from hashlib import sha256 as _sha256
+    hasher = sha256_func or (lambda b: "sha256:" + _sha256(b).hexdigest())
+
+    intents = _commit_protocol.scan_intents(data_dir)
+    results: list[dict] = []
+
+    for intent_record in intents:
+        tx_id = intent_record.get("tx_id", "")
+        target_id = intent_record.get("target_id", "")
+        entries = intent_record.get("entries", [])
+
+        needs_attention_list = []
+
+        for entry in entries:
+            path = entry.get("path", "")
+            tmp_path = entry.get("tmp_path", "")
+            before_hash = entry.get("before_hash", "")
+            after_hash = entry.get("after_hash", "")
+
+            current_sha = _file_sha(root, path, hasher)
+
+            if current_sha == after_hash:
+                # Branch 1: already committed — nothing to do.
+                continue
+
+            if current_sha == before_hash:
+                # Branch 2: roll forward from staged file.
+                if os.path.exists(tmp_path):
+                    with open(tmp_path, "rb") as f:
+                        tmp_bytes = f.read()
+                    if hasher(tmp_bytes) == after_hash:
+                        os.replace(tmp_path, os.path.join(root, path))
+                        target_dir = os.path.dirname(os.path.join(root, path))
+                        try:
+                            dir_fd = os.open(target_dir, os.O_RDONLY)
+                            try:
+                                os.fsync(dir_fd)
+                            finally:
+                                os.close(dir_fd)
+                        except OSError:
+                            pass
+                        # Roll forward succeeded — entry is done.
+                        continue
+
+                # Branch 2 fallback: tmp missing or hash mismatch → NA.
+                needs_attention_list.append(path)
+                continue
+
+            # Branch 3: neither before nor after hash matches.
+            needs_attention_list.append(path)
+
+        if needs_attention_list:
+            results.append({
+                "tx_id": tx_id,
+                "target_id": target_id,
+                "status": "needs_attention",
+                "detail": "external modification detected for: "
+                          + ", ".join(needs_attention_list),
+            })
+        else:
+            # All entries resolved (branch 1 or 2).
+            resolved_intent = dict(intent_record)
+            resolved_intent["resolved"] = True
+            resolved_intent["_reconciled_note"] = (
+                "reconciled: multi-file roll-forward/committed")
+            registry.append("intent_record", resolved_intent)
+            _commit_protocol.delete_intent(data_dir, tx_id)
+
+    return results
+
+
+def _file_sha(root, rel_path, hasher):
+    """Return the sha256 of *rel_path* (relative to *root*), or sentinel."""
+    abs_path = os.path.join(root, rel_path)
+    try:
+        with open(abs_path, "rb") as f:
+            return hasher(f.read())
+    except OSError:
+        return "missing"

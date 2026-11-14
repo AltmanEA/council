@@ -7,6 +7,7 @@ scope discipline and trust invariants over the fixture corpus.
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -29,6 +30,15 @@ CORPUS = os.path.join(FIXTURES, "corpus")
 MANIFEST_IDS = {"alpha", "beta", "gamma"}
 
 
+def _copy_corpus():
+    # audit() writes state under root/documenter/ (hash store) — work on a
+    # copy so the checked-in fixture stays pristine.
+    base = tempfile.mkdtemp()
+    work = os.path.join(base, "corpus")
+    shutil.copytree(CORPUS, work)
+    return work
+
+
 def _policy(**over):
     base = {
         "documenter_policy": {
@@ -43,7 +53,9 @@ def _policy(**over):
     return base
 
 
-def _service(root=CORPUS):
+def _service(root=None):
+    if root is None:
+        root = _copy_corpus()
     tmp = tempfile.mkdtemp()
     return Service(root,
                    registry=JsonlAuditRegistry(os.path.join(tmp, "state")),

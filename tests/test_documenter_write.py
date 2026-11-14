@@ -16,6 +16,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -120,6 +121,48 @@ def _make_briefing(tmpdir):
     with open(path, "w") as f:
         f.write("# Briefing\n\nAuthorised operational context.\n")
     return path
+
+
+def _enable_operator_surface(root):
+    """Create the ADR-013 Operator Surface readiness sentinel under root.
+
+    Tier 2+ test corpora must opt into surface-readiness explicitly:
+    check_tier2_authorized refuses (tier_interlock) while the sentinel is
+    absent. Tests asserting the second interlock level omit this call.
+    """
+    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+    os.makedirs(os.path.dirname(sentinel), exist_ok=True)
+    with open(sentinel, "w") as f:
+        f.write("")
+    return sentinel
+
+
+def _init_git_repo(root: str) -> None:
+    """Initialise ``root`` as a git repo (quietly).
+
+    Called by tests that exercise the apply_write path so that the
+    pre-change git snapshot guard passes.
+    """
+    subprocess.run(
+        ["git", "init", "-q", root],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", root, "config", "user.email", "test@council.local"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", root, "config", "user.name", "Test"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", root, "add", "-A"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
+    subprocess.run(
+        ["git", "-C", root, "commit", "-q", "-m", "fixture baseline"],
+        capture_output=True, text=True, timeout=10, shell=False,
+    )
 
 
 def _make_diff(change_type="update", trust_level="safe",
@@ -489,6 +532,7 @@ class TestProposeWrite(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
+        _enable_operator_surface(self.corpus)
         alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")
         with open(alpha_path, "w") as f:
             f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
@@ -949,9 +993,11 @@ class TestApplyWrite(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
+        _enable_operator_surface(self.corpus)
         alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")
         with open(alpha_path, "w") as f:
             f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
+        _init_git_repo(self.corpus)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -1264,8 +1310,10 @@ class TestReconcile(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
+        _enable_operator_surface(self.corpus)
         with open(os.path.join(self.corpus, "docs", "en", "alpha", "index.md"), "w") as f:
             f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
+        _init_git_repo(self.corpus)
         self.data_dir = os.path.join(self.tmpdir, "documenter")
         self.manifest = _make_manifest()
         self.registry = _make_registry(self.tmpdir)
@@ -1380,9 +1428,11 @@ class TestServiceWriteBranch(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
+        _enable_operator_surface(self.corpus)
         with open(os.path.join(self.corpus, "docs", "en", "alpha",
                                "index.md"), "w") as f:
             f.write(self.DOC)
+        _init_git_repo(self.corpus)
         self.data_dir = os.path.join(self.tmpdir, "state")
         self.policy_path = os.path.join(self.tmpdir, "pol.yml")
         self.briefing = _make_briefing(self.tmpdir)
