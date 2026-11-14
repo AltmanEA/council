@@ -183,18 +183,34 @@ def _check_list_markers(en_lines, ru_lines, findings, ru_file):
 
 
 def _check_inline_code(en_lines, ru_lines, findings, ru_file):
-    """Rule 5: inline-code span count and identity."""
+    """Rule 5: inline-code span count and identity.
+    Extracted per-line, only OUTSIDE code fences (fences are structural
+    and must not contribute pseudo-spans from joined text)."""
     inline_re = re.compile(r'`([^`]+)`')
 
-    en_spans = set(inline_re.findall("".join(en_lines)))
-    ru_spans = set(inline_re.findall("".join(ru_lines)))
+    def collect(lines):
+        spans = []
+        in_fence = False
+        for line in lines:
+            s = _strip_nl(line)
+            if s.lstrip().startswith('```') or s.lstrip().startswith('~~~'):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            spans.extend(inline_re.findall(s))
+        return spans
+
+    en_spans = collect(en_lines)
+    ru_spans = collect(ru_lines)
+    en_set, ru_set = set(en_spans), set(ru_spans)
 
     if len(en_spans) != len(ru_spans):
         _add(findings, "inline-code-count", ru_file,
              f"inline code spans: EN={len(en_spans)}, RU={len(ru_spans)}")
 
-    diff_missing = en_spans - ru_spans
-    diff_extra = ru_spans - en_spans
+    diff_missing = en_set - ru_set
+    diff_extra = ru_set - en_set
     if diff_missing or diff_extra:
         parts = []
         if diff_missing:
@@ -259,11 +275,18 @@ def _check_metadata(en_lines, ru_lines, known_keys, findings, ru_file):
 
 
 def _check_en_leakage(ru_lines, known_keys, findings, ru_file):
-    """Rule 8: EN-leakage — body lines in RU with no Cyrillic characters."""
+    """Rule 8: EN-leakage — body lines in RU with no Cyrillic characters.
+    Lines inside code fences are structural content and are exempt."""
     has_cyrillic = re.compile(r'[\u0400-\u04FF\u0500-\u052F]')
+    in_fence = False
 
     for i, line in enumerate(ru_lines):
         s = _strip_nl(line).strip()
+        if s.startswith('```') or s.startswith('~~~'):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         if not s:
             continue
         if _is_structural(line):

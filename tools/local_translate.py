@@ -23,7 +23,7 @@ def _deadline_remaining():
 
 
 # E-003 (hint style), E-004 (temperature), E-006 (codeguard): see tools/EXPERIMENTS.md
-PROMPT_VERSION = "2026.11-r2"  # r2: headings translated (restore_heading_prefix), table separators skipped, identifier-safe glossary regex
+PROMPT_VERSION = "2026.11-r3"  # r3: span-restore (identifiers in inline code), single-line fallback collapse, identifier-only lines count as skip not FAIL
 
 SYSTEM_PROMPT = ("You are a translator. Translate only the text between === markers. "
                  "Keep markdown formatting intact: **bold**, `code`, and list markers.")
@@ -331,6 +331,7 @@ def restore_paths(translated, src_line):
 
 
 _global_gloss_replacements = 0
+_global_span_restores = 0
 
 
 def enforce_glossary(text, term_keys):
@@ -603,13 +604,58 @@ def translate_block(block_text, term_keys, model_name):
     return [l for l in out_lines]
 
 
+def restore_code_spans(translated, src_line):
+    """Invariant: inline-code spans are identifiers — the model must not
+    translate them (e.g. `awaiting-operator` -> `заблокированная-эскалация`).
+    If both lines have the same span count, restore EN spans by position.
+    Mismatched counts are left to check_drift (structural gate)."""
+    rx = re.compile(r'`([^`]+)`')
+    src_spans = rx.findall(src_line)
+    tr_spans = rx.findall(translated)
+    if not src_spans or len(src_spans) != len(tr_spans) or src_spans == tr_spans:
+        return translated
+    global _global_span_restores
+    n = 0
+    def repl(m, _it=iter(src_spans)):
+        nonlocal n
+        ru = m.group(1); en = next(_it)
+        if ru != en:
+            n += 1
+            log(f"[span-restore] `{'' if len(ru)>20 else ru}` -> `{en}`")
+        return f"`{en}`"
+    out = rx.sub(repl, translated)
+    _global_span_restores += n
+    return out
+
+
+def _is_translatable_content(line):
+    """True if the line contains ordinary Latin words a translation must
+    change; identifiers (snake_case, CamelCase, ALLCAPS), inline code, URLs
+    and paths do not count."""
+    s = re.sub(r'`[^`]+`', ' ', line)
+    s = re.sub(r'https?://\S+', ' ', s)
+    s = re.sub(r'\S*/\S+\.\S+', ' ', s)
+    for w in re.findall(r'[A-Za-z][A-Za-z0-9]*', s):
+        if '_' in w or re.search(r'[a-z][A-Z]', w) or w.isupper():
+            continue
+        if len(w) >= 3:
+            return True
+    return False
+
+
 def translate_line_fallback(line_text, term_keys, model_name):
     cl = line_text.strip()
     if not cl:
         return ""
     user_prompt = (f"{build_glossary_hint(term_keys)}"
                    f"Translate from English to Russian:\n===\n{cl}\n===\nTranslation:")
-    return call_model(user_prompt, model_name)
+    t = call_model(user_prompt, model_name)
+    if t is None:
+        return None
+    # single-line contract: the fallback serves ONE source line; collapse any
+    # internal newlines the model emitted, preserving line-count parity
+    collapsed = re.sub(r'\s*\n\s*', ' ', t).strip()
+    return collapsed if collapsed else None
 
 
 def clean_response(raw):
@@ -710,6 +756,8 @@ def main():
     # Reset global counter per invocation
     global _global_gloss_replacements
     _global_gloss_replacements = 0
+    global _global_span_restores
+    _global_span_restores = 0
 
     input_lines = input_text.split('\n')
     output_lines = [None] * len(input_lines)
@@ -742,6 +790,7 @@ def main():
             if line_out and line_out.strip() != input_lines[i].strip():
                 line_out = restore_list_marker(input_lines[i], line_out)
                 line_out = restore_heading_prefix(input_lines[i], line_out)
+                line_out = restore_code_spans(line_out, input_lines[i])
                 line_out = restore_paths(line_out, input_lines[i])
                 line_out = fix_known_terms(line_out)
                 line_out = enforce_glossary(line_out, term_keys)
@@ -749,8 +798,13 @@ def main():
                 stats_ok += 1
             else:
                 output_lines[i] = input_lines[i]
-                stats_fail += 1
-                log(f"[FAIL] L{i+1} — fallback")
+                if _is_translatable_content(input_lines[i]):
+                    stats_fail += 1
+                    log(f"[FAIL] L{i+1} — fallback")
+                else:
+                    # line consists only of identifiers/code/URLs — keeping it
+                    # verbatim is correct, not a translation failure
+                    stats_skip += 1
 
     log(f"\nDone: {stats_ok} ok, {stats_skip} skip, {stats_fail} fail")
     final_output = '\n'.join(l if l is not None else '' for l in output_lines)
@@ -776,6 +830,7 @@ def main():
             "model": model,
             "prompt_version": PROMPT_VERSION,
             "gloss_applied": _global_gloss_replacements,
+            "span_restores": _global_span_restores,
         }
         print(json.dumps(summary), file=sys.stderr, flush=True)
 
@@ -792,6 +847,7 @@ def main():
             "fail": stats_fail,
             "exit_reason": exit_reason,
             "gloss_applied": _global_gloss_replacements,
+            "span_restores": _global_span_restores,
             "input_lines": len(input_lines),
         }
         try:
