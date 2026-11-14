@@ -1,0 +1,1 @@
+{"timestamp": "2026-11-14T04:05:05+0000", "backend": "cloud", "model": "Qwen3.6-35B-A3B-NVFP4", "prompt_version": "2026.11-r2", "ok": 53, "skip": 57, "fail": 0, "exit_reason": "ok", "gloss_applied": 2, "input_lines": 110}
