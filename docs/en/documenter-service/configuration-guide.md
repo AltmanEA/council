@@ -1,7 +1,7 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.17.0-draft
+Version: 0.18.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -179,6 +179,15 @@ Emitted when `audit()` or `delegate()` finds issues. `event_type: documenter.iss
 ### Approval Payload Schema
 
 Emitted by Tier 3 approval rate computation or by an explicit `documenter.approve()` invocation. `event_type: documenter.approval`. Fields not listed below replace the corresponding issue-payload fields within the same envelope.
+
+**MVP-emitted payload (authoritative subset).** The MVP emitter closes the
+payload to exactly `{approval_id, operator_id, target_id, diff_hash, decision}`
+(mvp-data-models §3 Event Channel; `adapters/stdout_events.py` `EVENT_SCHEMAS`).
+Emission is validated against this closed key set; any other key is rejected.
+`decision` is `approved` on both MVP emit paths (explicit approval and apply of
+an approved write). The wider table below describes the target envelope for
+later layers (Tier 3 auto-approve, reject, decision timestamps); it is NOT
+emitted by the MVP build.
 
 | Field | Type | Description |
 |-------|------|-------------|

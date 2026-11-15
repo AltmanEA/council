@@ -1,3 +1,4 @@
+<!-- CHANGES v0.5.0-draft: §3 Event Channel: documenter.approval payload lists decision, matching EVENT_SCHEMAS and the emitter (drift fix). -->
 <!-- CHANGES v0.4.0-draft: DOCUMENTER_LOG_LEVEL: stderr warning filter wording (transport contract preserved), per fix plan p.12 -->
 <!-- CHANGES v0.3.2-draft: Correct validation rule 3 direction: allowed_operations non-empty (not empty) while active_tier < 2 fails load, per policy-reference validator rule (sess-doc-reliability-algo) -->
 <!-- CHANGES v0.3.1-draft (mvp-data-models.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->

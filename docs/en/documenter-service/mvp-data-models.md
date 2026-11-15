@@ -1,7 +1,7 @@
 # Documenter Service — MVP Data Models
 
 id: documenter-service-mvp-data-models
-Version: 0.4.0-draft
+Version: 0.5.0-draft
 Status: draft
 Abstraction: reference
 references: [documenter-service-mvp-interfaces, service-contract]
@@ -122,7 +122,7 @@ Documenter events are types inside the unified `EventEnvelope` (`service-contrac
 | Event Type | Emitted when | Payload (redacted) |
 |------------|--------------|--------------------|
 | `documenter.issue` | `audit()` produces a finding | `audit_id`, `subject_id`, `severity`, `description` |
-| `documenter.approval` | approve succeeds (Tier 2+) | `approval_id`, `operator_id`, `target_id`, `diff_hash` |
+| `documenter.approval` | approve succeeds (Tier 2+) | `approval_id`, `operator_id`, `target_id`, `diff_hash`, `decision` |
 | `documenter.override_gate` | override invoked (Tier 2+) | `reason`, `operator_id`, `target_id` |
 | `precheck.passed` | `pre_check` audit, no blocking findings | `audit_id`, `target_id` |
 | `precheck.failed` | `pre_check` audit, high/critical findings | `audit_id`, `target_id`, `blocking_severities` |

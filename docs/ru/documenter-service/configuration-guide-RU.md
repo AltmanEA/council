@@ -1,7 +1,7 @@
 # Руководство по настройке Документатора
 
 id: documenter-service-configuration-guide
-Version: 0.17.0-draft
+Version: 0.18.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -179,6 +179,15 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 ### Схема полезной нагрузки для одобрения
 
 Генерируется при вычислении уровня одобрения для уровня 3 или при явном вызове `documenter.approve()`. `event_type: documenter.approval`. Поля, не указанные ниже, заменяют соответствующие поля полезной нагрузки проблемы в том же envelope.
+
+**Полезная нагрузка, эмитируемая MVP (авторитетное подмножество).** Эмиттер MVP замыкает
+нагрузку ровно на `{approval_id, operator_id, target_id, diff_hash, decision}`
+(mvp-data-models §3 Event Channel; `adapters/stdout_events.py` `EVENT_SCHEMAS`).
+Эмиссия проверяется по этому закрытому набору ключей; любой другой ключ отклоняется.
+`decision` равен `approved` на обоих путях эмиссии MVP (явное одобрение и применение
+одобренной записи). Более широкая таблица ниже описывает целевой конверт для
+последующих слоёв (автоодобрение по Ступени 3, отклонение, метки времени решения); она НЕ
+эмитируется сборкой MVP.
 
 | Поле | Тип | Описание |
 |-------|------|-------------|

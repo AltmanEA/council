@@ -1,3 +1,4 @@
+<!-- CHANGES v0.18.0-draft: §Event Schema/Approval Payload: documented the closed MVP-emitted subset; wider table reframed as target envelope for later layers (drift fix). -->
 <!-- CHANGES v0.17.0-draft: Audit Registry: append-only audit_registry.jsonl envelope + .registry.lock; Event Schema: closed MVP documenter.issue payload; Hash Store: --rebuild-hashes + .bak load fallback (fix plan stage 4 pp.26) -->
 <!-- CHANGES v0.16.0-draft: Add changelog-path row to Manifest Field Provenance table (fix plan decision A, stage 2a) -->
 <!-- CHANGES v0.15.1-draft: Fixed broken EventEnvelope cross-reference (../docs/service-contract/index.md → ../../service-contract/index.md); markdown-correct relative path, anchor #event-envelope verified. Resolves sole medium check_all finding (rule-4). -->
