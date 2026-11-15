@@ -1,7 +1,7 @@
 # Protocol Core
 id: protocol-core
-Version: 0.5.6
-Status: draft
+Version: 0.6.0
+Status: active
 Abstraction: protocol
 has_translation: docs/ru/protocol-core/index-RU.md
 changelog-path: CHANGELOGS/protocol-core.changes.md
