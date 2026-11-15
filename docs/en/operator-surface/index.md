@@ -1,7 +1,7 @@
 # Operator Surface & Escalation
 
 id: operator-surface
-Version: 0.1.6
+Version: 0.2.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-surface/index-RU.md
@@ -97,8 +97,10 @@ The `pre_check` gate is an integrity check on documentation artifacts before pro
 |-----------|---------|--------|
 | No `high`/`critical` findings for target scope | `pass` | Proceed with transition |
 | Any `high` or `critical` finding present | `fail` | Block transition; emit `precheck.failed` event |
-| Documenter is unavailable (network error, timeout, service down) | `unavailable` | Block transition; emit `precheck.unavailable` event (see Override mode below) |
+| Documenter is unavailable (timeout, service down) | `unavailable` | Timeout-and-continue: proceed with the transition, emit `precheck.unavailable` warning event synchronously (roadmap decision 3); the action applies to timeout-induced unavailability only, not to registry-integrity `fail` |
 | Documenter audit registry is absent/corrupted/unreadable | `fail` | Block transition (fail-closed per C-03) |
+
+The gate timeout is a boot-time constant: default 5 seconds, overridable once at startup via the `PRE_CHECK_TIMEOUT` environment variable; it is immutable for the process lifetime. Exceeding the timeout produces the `unavailable` verdict. A `precheck.running` event is emitted when the gate starts, so observers can distinguish an in-progress check from a stalled surface. (Operator Surface MVP plan p3, ADR-015.)
 
 ### Documenter Unavailable — Override Mode
 

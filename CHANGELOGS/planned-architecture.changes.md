@@ -1,3 +1,4 @@
+<!-- CHANGES v0.11.0: Register ADR-015 (Operator Surface MVP build parameters) from p3-operator-surface-impl-plan -->
 <!-- CHANGES v0.10.0: ADR-012 normative-content column retargeted to documentation-rules §3.3 (AGENTS.md router split) -->
 <!-- CHANGES v0.9.0: ADR-014 external translation project boundary (sess-translation-extraction) -->
 <!-- CHANGES v0.8.0: Registered ADR-013: Documenter Tier 2+ dual interlock amending ADR-007, with provenance paragraph -->

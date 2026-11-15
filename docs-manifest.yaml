@@ -111,7 +111,7 @@ documents:
   - id: operator-surface
     path: docs/en/operator-surface/index.md
     title: Operator Surface & Escalation
-    version: 0.1.6
+    version: 0.2.0
     status: draft
     abstraction: protocol
     has_translation: docs/ru/operator-surface/index-RU.md
@@ -138,7 +138,7 @@ documents:
   - id: planned-architecture-decisions
     path: docs/en/planned-architecture/decisions/index.md
     title: Decisions Index
-    version: 0.10.0
+    version: 0.11.0
     status: draft
     abstraction: reference
     changelog-path: CHANGELOGS/planned-architecture.changes.md

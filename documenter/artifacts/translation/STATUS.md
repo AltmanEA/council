@@ -10,7 +10,7 @@
 | documenter-service-policy-reference | missing |  |  |  | runs/ |
 | execution-runtime | missing |  |  |  | runs/ |
 | glossary | missing |  |  |  | runs/ |
-| operator-surface | missing |  |  |  | runs/ |
+| operator-surface | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T10:33:42+0000 | runs/ |
 | planned-architecture | missing |  |  |  | runs/ |
 | planned-architecture-layer-0 | missing |  |  |  | runs/ |
 | planned-architecture-layer-1 | missing |  |  |  | runs/ |
