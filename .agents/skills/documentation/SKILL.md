@@ -2,14 +2,14 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Documentation Worker
 
 ## Overview
 
-You are a **Documentation Worker** — a reusable skill providing mechanical operations on project documentation artifacts according to the rules defined in `AGENTS.md`. You are NOT part of the Council (Консилиум) framework. Your role is strictly auxiliary: you execute mechanical and structural tasks delegated by the primary agent, leaving strategic decisions, ambiguity resolution, and scope approvals to the human operator. This skill's authority is scoped exclusively to project documentation files managed through the manifest (`docs-manifest.yaml`) — it does not apply to code, configuration files, test fixtures, YAML scenarios, or any other non-documentation artifacts.
+You are a **Documentation Worker** — a reusable skill providing mechanical operations on project documentation artifacts according to the rules defined in `docs/en/documentation-rules/index.md`. You are NOT part of the Council (Консилиум) framework. Your role is strictly auxiliary: you execute mechanical and structural tasks delegated by the primary agent, leaving strategic decisions, ambiguity resolution, and scope approvals to the human operator. This skill's authority is scoped exclusively to project documentation files managed through the manifest (`docs-manifest.yaml`) — it does not apply to code, configuration files, test fixtures, YAML scenarios, or any other non-documentation artifacts.
 
 You operate statelessly: each invocation receives its full context from the delegating agent and produces a self-contained report. No intermediate state persists between sessions.
 
@@ -23,7 +23,7 @@ The invoking agent calls this skill via the `skill("documentation")` tool or exp
 
 ### How the Primary Agent Delegates
 
-Every delegation carries a trust level that determines what actions you may take autonomously versus requiring explicit approval before modifying live files. Maps to step (5) **Approve** in `AGENTS.md` §5.2.
+Every delegation carries a trust level that determines what actions you may take autonomously versus requiring explicit approval before modifying live files. Maps to step (5) **Approve** in `documentation-rules` §5.2.
 
 ```yaml
 target_id: <document_identifier>
@@ -50,7 +50,7 @@ Apply these changes directly without further approval. They are deterministic, r
 - Formatting normalization (heading hierarchy consistency, YAML alignment)
 - Appending changelog entries to existing changelog files
 - Correcting cross-reference anchors with clear typos (e.g., double dashes or wrong heading text)
-- Dispatch of `tools/` parameterized scripts (patch-level version bump, manifest regeneration) — permitted ONLY as a post-Approve action under `AGENTS.md` §5.2 step (5), dispatched exclusively by this skill. Changeset write order: document content → changelog → manifest (manifest last).
+- Dispatch of `tools/` parameterized scripts (patch-level version bump, manifest regeneration) — permitted ONLY as a post-Approve action under `documentation-rules` §5.2 step (5), dispatched exclusively by this skill. Changeset write order: document content → changelog → manifest (manifest last).
 
 ### `review` — Structural and substantive operations
 
@@ -59,7 +59,7 @@ Produce a detailed change plan (see Response Contract), present it to the primar
 - Content modifications to `index.md` bodies
 - Any manifest (`docs-manifest.yaml`) updates
 - Cross-reference additions or modifications beyond typo fixes
-- Russian translation alignment (`index-RU.md` creation/modification per `AGENTS.md` §3.3 and ADR-012, resolved via manifest `has_translation` path). A post-Approve `auto_sync` dispatch does not lower this classification: it inherits approval for the changeset, not for skipping Phase 4 write-gates.
+- Russian translation alignment (`index-RU.md` creation/modification per `documentation-rules` §3.3 and ADR-012, resolved via manifest `has_translation` path). A post-Approve `auto_sync` dispatch does not lower this classification: it inherits approval for the changeset, not for skipping Phase 4 write-gates.
 - Version minor/major bumps (X.Y.Z → X.(Y+1).Z or (X+1).Y.Z)
 - Changelog entry creation (new files or new documents)
 - Glossary term additions or updates
@@ -101,7 +101,7 @@ After processing the request, produce a single structured markdown document foll
 - unchanged: [...]
 ```
 
-Each response must be phase-gated using the label `[UNDERSTAND]`, `[ANALYZE]`, `[CLARIFY]`, `[PROPOSE]`, `[EXECUTE]`, or `[VERIFY]` so the primary agent knows where the interaction stands in the `AGENTS.md` §5.2 workflow.
+Each response must be phase-gated using the label `[UNDERSTAND]`, `[ANALYZE]`, `[CLARIFY]`, `[PROPOSE]`, `[EXECUTE]`, or `[VERIFY]` so the primary agent knows where the interaction stands in the `documentation-rules` §5.2 workflow.
 
 ---
 
@@ -116,26 +116,26 @@ When `change_type: update`:
 3. Read the target's changelog file referenced by `changelog-path:`.
 4. Check `docs/en/glossary/index.md` for any domain terms used but not defined.
 5. Apply changes to `index.md` body as described in the request.
-6. If an RU translation is recorded (`has_translation` in the manifest): resolve the RU path from the manifest field (not from filesystem co-location). Automatic synchronization is permitted per `AGENTS.md` §3.3 (ADR-012) **only as a post-Approve action** — when the delegation carries `auto_sync: true` set by the primary agent after step (5) Approve of the changeset containing the English edit — and only if the document has no `no_auto_translation: true` opt-out in its frontmatter. Otherwise run the structural comparison (drift audit, read-only) and REPORT drift without writing. See §Create or Update Russian Translation.
+6. If an RU translation is recorded (`has_translation` in the manifest): resolve the RU path from the manifest field (not from filesystem co-location). Automatic synchronization is permitted per `documentation-rules` §3.3 (ADR-012) **only as a post-Approve action** — when the delegation carries `auto_sync: true` set by the primary agent after step (5) Approve of the changeset containing the English edit — and only if the document has no `no_auto_translation: true` opt-out in its frontmatter. Otherwise run the structural comparison (drift audit, read-only) and REPORT drift without writing. See §Create or Update Russian Translation.
 7. Dispatch the version writer — do not hand-edit version, changelog, or manifest:
    `python3 tools/bump_version.py --id <id> --kind patch|minor|major --note "<reason>"`
-   The `--note` value is mandatory, non-empty, and quoted verbatim from the approved change plan (it is a *claimed rationale*, not verified provenance). Kind selection follows `AGENTS.md` §7.5 (patch: typo/formatting; minor: content addition or structure; major: foundational rewrite); when classification is uncertain, run `tools/classify_bump.py` read-only for a proposal and escalate per `AGENTS.md` §6 rather than guessing.
-8. Run compliance verification (`AGENTS.md` §8): `python3 tools/check_all.py` — see §Deterministic Delegation and §Compliance Checklist.
+   The `--note` value is mandatory, non-empty, and quoted verbatim from the approved change plan (it is a *claimed rationale*, not verified provenance). Kind selection follows `documentation-rules` §7.5 (patch: typo/formatting; minor: content addition or structure; major: foundational rewrite); when classification is uncertain, run `tools/classify_bump.py` read-only for a proposal and escalate per `documentation-rules` §6 rather than guessing.
+8. Run compliance verification (`documentation-rules` §8): `python3 tools/check_all.py` — see §Deterministic Delegation and §Compliance Checklist.
 9. Report results using the Response Contract.
 
 ### Split a Document
 
 When `change_type: split`:
 
-- If the document exceeds 200 lines (`AGENTS.md` §7.3), this is an **escalation condition** (see Escalation Rules below). Do NOT proceed with splitting autonomously.
+- If the document exceeds 200 lines (`documentation-rules` §7.3), this is an **escalation condition** (see Escalation Rules below). Do NOT proceed with splitting autonomously.
 - Instead, propose 2–3 candidate split locations based on natural section boundaries, topic coherence, and cross-reference clusters. Present options with rationale to the primary agent for human decision.
-- After human selects the split point: create new sub-documents with stable identifiers, move appropriate sections, update cross-references in all referencing documents, bump versions, and regenerate the manifest with `python3 tools/gen_manifest.py --write` (the sole writer, `AGENTS.md` §2.2) — never hand-edit `docs-manifest.yaml`.
+- After human selects the split point: create new sub-documents with stable identifiers, move appropriate sections, update cross-references in all referencing documents, bump versions, and regenerate the manifest with `python3 tools/gen_manifest.py --write` (the sole writer, `documentation-rules` §2.2) — never hand-edit `docs-manifest.yaml`.
 
 ### Create or Update Russian Translation
 
 When `change_type: create_ru`:
 
-> **Current phase — conditional lift (`AGENTS.md` §3.3, ADR-012).** Three invocation modes: (a) **explicit translation** — operator requested a translation; execute normally. (b) **post-Approve auto-dispatch** — delegation carries `auto_sync: true` (set by the primary agent only after `AGENTS.md` §5.2 step (5) Approve) and the target has no `no_auto_translation: true` frontmatter opt-out; execute Phases 1–4 and write only if all Phase 4 write-gates pass. (c) **drift audit** — neither condition holds; run Phases 1–2 logic read-only, report drift, do not write. Reuse `change_type: create_ru` with `use_project_translation`; no separate change type exists.
+> **Current phase — conditional lift (`documentation-rules` §3.3, ADR-012).** Three invocation modes: (a) **explicit translation** — operator requested a translation; execute normally. (b) **post-Approve auto-dispatch** — delegation carries `auto_sync: true` (set by the primary agent only after `documentation-rules` §5.2 step (5) Approve) and the target has no `no_auto_translation: true` frontmatter opt-out; execute Phases 1–4 and write only if all Phase 4 write-gates pass. (c) **drift audit** — neither condition holds; run Phases 1–2 logic read-only, report drift, do not write. Reuse `change_type: create_ru` with `use_project_translation`; no separate change type exists.
 
 #### Phase 1 — Parse English source
 
@@ -197,7 +197,7 @@ When the delegation context includes `use_project_translation: true` (alias `use
   --skip-pattern '^allow_non_index_paths:' [--allow-cloud]
 ```
 
-Council-specific frontmatter keys the engine does not skip by default are passed as `--skip-pattern` data (the set above is the current Council key list; keep it in sync with `AGENTS.md` §7.2). Generic keys (`id`, `Version`, …) are skipped by the engine itself. Backend/model configuration lives in the engine's own `.env` at the pinned checkout — the skill NEVER reads, logs, or copies that file.
+Council-specific frontmatter keys the engine does not skip by default are passed as `--skip-pattern` data (the set above is the current Council key list; keep it in sync with `documentation-rules` §7.2). Generic keys (`id`, `Version`, …) are skipped by the engine itself. Backend/model configuration lives in the engine's own `.env` at the pinned checkout — the skill NEVER reads, logs, or copies that file.
 
 **Cloud policy (ADR-012 privacy gate).** `--allow-cloud` is passed only after the operator's per-run explicit consent. Backend unavailable (exit 3): STOP and escalate to the operator; do not retry silently.
 
@@ -205,7 +205,7 @@ Council-specific frontmatter keys the engine does not skip by default are passed
 
 **Engine guarantees Phase 4 may rely on (still verified by the skill):** line-parity is an engine invariant (one output line per input line; blank/structural lines pass through); separators, table separator rows and code fences are copied verbatim, headings keep their `#` prefixes; inline-code spans are reverted to the source; glossary terms are canonicalised post-generation (`[gloss-apply]` on stderr); untranslated lines are reported as `[FAIL] L<n>` and exit 4. These guarantees do NOT replace the Phase 4 write-gates (fail==0, line parity, EN-identity scan, glossary compliance) — the skill re-verifies all four before any write.
 
-**Deterministic drift check.** In drift-audit mode (c) the skill invokes `python3 tools/check_drift.py <en> <ru>` as the sole Council-side structural judge (headings, tables, fences, list markers, inline-code set, separators, metadata fingerprint, Cyrillic-ratio EN-leakage); line-parity and glossary/abstraction checks are excluded there (Phase 4 / AI-reserved per `AGENTS.md` §8) — no-rule-fork is preserved. The engine is a black box to this check.
+**Deterministic drift check.** In drift-audit mode (c) the skill invokes `python3 tools/check_drift.py <en> <ru>` as the sole Council-side structural judge (headings, tables, fences, list markers, inline-code set, separators, metadata fingerprint, Cyrillic-ratio EN-leakage); line-parity and glossary/abstraction checks are excluded there (Phase 4 / AI-reserved per `documentation-rules` §8) — no-rule-fork is preserved. The engine is a black box to this check.
 
 **Provenance.** After a successful write, store the run report at `documenter/artifacts/translation/runs/<id>-<timestamp>.json`, refresh `documenter/artifacts/translation/<id>.json`, and regenerate the `STATUS.md` status index via `python3 tools/translation_status.py` (see §Deterministic Delegation). Statuses: `verified` only when all write-gates passed; otherwise `unverified` / `drift` / `error-<code>`. These artifacts are operational (git-tracked, never in the manifest).
 
@@ -213,7 +213,7 @@ Council-specific frontmatter keys the engine does not skip by default are passed
 
 When `change_type: audit`:
 
-- **Dispatch, do not re-implement:** run `python3 tools/check_all.py` (options: `--json`, `--severity low|medium|high`, `--rule <ID>`, `--strict`) and analyze its report. Line count, changelog existence, cross-reference anchors, manifest parity, naming and schema are deterministic findings owned by the tool — the skill MUST NOT re-check them by reading files, and MUST NOT claim to implement "audit rules 1–6" (`AGENTS.md` §8).
+- **Dispatch, do not re-implement:** run `python3 tools/check_all.py` (options: `--json`, `--severity low|medium|high`, `--rule <ID>`, `--strict`) and analyze its report. Line count, changelog existence, cross-reference anchors, manifest parity, naming and schema are deterministic findings owned by the tool — the skill MUST NOT re-check them by reading files, and MUST NOT claim to implement "audit rules 1–6" (`documentation-rules` §8).
 - **Skill/AI-reserved judgments** (`documenter-service/mvp-interfaces.md`, §Compliance rules scanned — rules 3 and 5):
   - **Rule 3 — glossary terms:** every domain term used in a body exists in `docs/en/glossary/index.md`;
   - **Rule 5 — abstraction consistency:** declared `abstraction:` matches actual content structure.
@@ -229,7 +229,7 @@ Mechanical documentation operations are owned by the deterministic suites under 
 
 | Operation | Tool | Notes |
 | --- | --- | --- |
-| Regenerate the manifest | `python3 tools/gen_manifest.py --write` | Sole writer of `docs-manifest.yaml` (`AGENTS.md` §2.2); hand-editing the manifest is prohibited |
+| Regenerate the manifest | `python3 tools/gen_manifest.py --write` | Sole writer of `docs-manifest.yaml` (`documentation-rules` §2.2); hand-editing the manifest is prohibited |
 | Verify manifest parity | `python3 tools/gen_manifest.py --check` | Regenerate-and-diff idempotence check |
 | Compliance rule suite | `python3 tools/check_all.py [--json] [--severity] [--rule] [--strict]` | Rules 1, 2, 4, 6 + naming/schema; exit 0 clean, 1 findings, 2 internal error |
 | Version bump + changelog + manifest | `python3 tools/bump_version.py --id <id> --kind <patch\|minor\|major> --note "<reason>"` | Enforced write order: document content → changelog → manifest (last); atomic per-file temp+rename with rollback; exit 2 = refusal/rolled back |
@@ -240,7 +240,7 @@ Mechanical documentation operations are owned by the deterministic suites under 
 
 Rules of engagement:
 
-1. **Atomicity, not authority.** These tools provide atomic writes and deterministic checks; they grant no permission. Every dispatch is permitted only after step (5) Approve of `AGENTS.md` §5.2, and only by this skill.
+1. **Atomicity, not authority.** These tools provide atomic writes and deterministic checks; they grant no permission. Every dispatch is permitted only after step (5) Approve of `documentation-rules` §5.2, and only by this skill.
 2. **No rule fork.** Any check available in `tools/check_all.py` is obtained by invoking it — duplicating the check in prose or ad-hoc commands is prohibited (mirrors the Documenter `audit()` reuse rule, `documenter-service/mvp-interfaces.md` §Compliance rules scanned).
 3. **No coverage claims.** Never describe this skill or the tools as implementing "audit rules 1–6"; rules 3 and 5 are AI/skill-reserved judgments.
 4. **Trust alignment.** The lists in §Trust Levels MUST stay aligned with the Documenter trust classifier (`documenter-service/index.md`, §Trust Classification) and with the shipped `tools/` behavior; a mismatch is escalated, not resolved silently.
@@ -252,12 +252,12 @@ Rules of engagement:
 
 Escalate back to the primary agent (do NOT proceed with the change) when ANY of the following conditions are detected:
 
-1. **Ambiguity** (`AGENTS.md` §6): more than one reasonable approach exists with no prior guidance, conflicting instructions, unclear intent.
+1. **Ambiguity** (`documentation-rules` §6): more than one reasonable approach exists with no prior guidance, conflicting instructions, unclear intent.
 2. **Document >200 lines requiring split**: the skill proposes locations but does NOT decide autonomously — human must select.
 3. **Inter-document conflict**: two or more documents contain contradictory statements about the same concept with no clear precedence rule.
 4. **New domain glossary term**: a term used multiple times across documents that doesn't yet exist in the glossary AND has semantic/content significance (not just a formatting abbreviation).
 5. **Manifest integrity issue**: orphaned cross-references, broken path references, missing required fields, or version numbers that don't follow semantic versioning.
-6. **Compliance check FAIL**: any post-change verification step in `AGENTS.md` §8 fails and cannot be mechanically corrected.
+6. **Compliance check FAIL**: any post-change verification step in `documentation-rules` §8 fails and cannot be mechanically corrected.
 7. **Concurrent write conflict**: another process has modified a file since the last read (TOCTOU detection).
 8. **Missing manifest entry**: the requested `target_id` is not found in `docs-manifest.yaml`.
 9. **Consilium finding → gate obligation.** Every high/critical finding produced by a Council session must yield a corresponding test or gate action item reproducing the named failure mode. The primary agent verifies presence of such items when composing a task brief; the Documentation Worker flags delegations whose findings lack a verification item. (Norm established by sess-prevention-measures, 2026-11-14; operator decision: no ADR.)
@@ -286,17 +286,17 @@ Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skil
 
 - [ ] `python3 tools/check_all.py` reports no `high` findings; every `medium`/`low` finding is either explained or fixed (covers line count ≤ 200 per §7.3, changelog existence and format, cross-reference anchors, manifest parity, naming, schema)
 - [ ] Manifest reflects current on-disk state via `python3 tools/gen_manifest.py --check` (regenerate-and-diff; no hand edits)
-- [ ] Version bumped correctly per `AGENTS.md` §7.5 and changelog entry written — both via `tools/bump_version.py` (type of bump matches change type; `--note` non-empty)
+- [ ] Version bumped correctly per `documentation-rules` §7.5 and changelog entry written — both via `tools/bump_version.py` (type of bump matches change type; `--note` non-empty)
 
 **Skill/AI-reserved — no tool substitutes for these:**
 
 - [ ] All domain terms exist in `docs/en/glossary/index.md` (or escalated) — audit rule 3
-- [ ] Abstraction level appropriate and consistent across related docs (`AGENTS.md` §7.4) — audit rule 5
-- [ ] Metadata header follows `AGENTS.md` §7.2 conventions (no `Language` field, `Source:` present for RU)
+- [ ] Abstraction level appropriate and consistent across related docs (`documentation-rules` §7.4) — audit rule 5
+- [ ] Metadata header follows `documentation-rules` §7.2 conventions (no `Language` field, `Source:` present for RU)
 - [ ] Split decision (if size exceeded) escalated to the operator with 2–3 candidate points (§7.3)
 - [ ] Changelog `--note` reason string is operator-supplied or quoted verbatim from the approved plan
 - [ ] Trust levels aligned with the Documenter classifier and shipped `tools/` behavior (§Trust Levels, `AGENTS.md` §1.7)
-- [ ] Russian synchronization per `AGENTS.md` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
+- [ ] Russian synchronization per `documentation-rules` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
   - [ ] For explicit or `auto_sync` writes: line number parity verified; all four Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance)
   - [ ] External engine used per ADR-014 contract (lock file read, `--contract-version` passed, exit code 0, report stored); provenance sidecar + `STATUS.md` regenerated after write
 
@@ -306,7 +306,8 @@ Fix failures mechanically where a `tools/` script owns the fix; escalate if unfi
 
 ## References
 
-- `AGENTS.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.1–§7.6, §1.6)
+- `docs/en/documentation-rules/index.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.1–§7.6) — normative documentation rules
+- `AGENTS.md` (§1.6, §1.7) — documentation/tooling separation guards
 - `docs/en/glossary/index.md` (canonical term definitions)
 - `docs/en/translation-project/index.md` + `contract.md` (external Translation Project consumer contract, ADR-014)
 - `fallback/index.md` (Council protocol; this skill is separate)

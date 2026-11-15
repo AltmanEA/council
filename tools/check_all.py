@@ -24,7 +24,7 @@ ONLY the deterministic side:
                                           "orphan" (docs/en file absent from
                                           generated entries, not covered by an
                                           allow_non_index_paths parent index)
-  naming  AGENTS.md §7.1       high    kebab-case folders under docs/en,
+  naming  documentation-rules §7.1       high    kebab-case folders under docs/en,
                                           index.md convention unless
                                           allow_non_index_paths
   schema  docmeta.validate     native   frontmatter schema, version-format,
@@ -92,7 +92,7 @@ from docmeta import DocMetaError  # noqa: E402
 
 __all__ = ["Finding", "scan", "main"]
 
-#: Maximum content lines per document (AGENTS.md §7.3).
+#: Maximum content lines per document (documentation-rules §7.3).
 LINE_LIMIT = 200
 
 #: --rule group tokens -> concrete finding-rule names they enable.
@@ -665,7 +665,7 @@ def _visible_lines(lines: list) -> list:
 # ---------------------------------------------------------------------------
 
 def check_rule1_line_count(corpus: _Corpus) -> list:
-    """rule-1 line-count (high): content lines <= 200, AGENTS.md §7.3."""
+    """rule-1 line-count (high): content lines <= 200, documentation-rules §7.3."""
     findings = []
     for rel in corpus.docs:
         n = tests_helpers.content_line_count(corpus.texts[rel])
@@ -673,7 +673,7 @@ def check_rule1_line_count(corpus: _Corpus) -> list:
             findings.append(_finding(
                 "line-count", "high", rel,
                 f"rule-1 line-count: {n} content lines exceed the {LINE_LIMIT}-line "
-                f"limit (AGENTS.md §7.3) — split or condense"))
+                f"limit (documentation-rules §7.3) — split or condense"))
     return findings
 
 
@@ -812,7 +812,7 @@ def check_rule6_manifest_parity(corpus: _Corpus) -> list:
                 f"`python3 tools/gen_manifest.py --write`"))
 
     # Orphan detection: docs/en .md files absent from generated entries and
-    # not covered by an allow_non_index_paths parent index (AGENTS.md §2.1).
+    # not covered by an allow_non_index_paths parent index (documentation-rules §2.1).
     listed = {e["path"] for e in entries}
     for rel in corpus.docs:
         if rel in listed:
@@ -830,7 +830,7 @@ def check_rule6_manifest_parity(corpus: _Corpus) -> list:
 
 
 def check_naming(corpus: _Corpus) -> list:
-    """naming/schema (AGENTS.md §7.1): kebab-case folders, index.md convention."""
+    """naming/schema (documentation-rules §7.1): kebab-case folders, index.md convention."""
     findings = []
     bad_dirs = set()
     for rel in corpus.docs:
@@ -842,7 +842,7 @@ def check_naming(corpus: _Corpus) -> list:
                 bad_dirs.add(seg)
                 findings.append(_finding(
                     "naming", "high", rel,
-                    f"naming (AGENTS.md §7.1): folder segment {seg!r} under docs/en "
+                    f"naming (documentation-rules §7.1): folder segment {seg!r} under docs/en "
                     f"is not kebab-case (^[a-z0-9]+(-[a-z0-9]+)*$)"))
     for rel in corpus.docs:
         parent_index = os.path.dirname(rel) + "/index.md"
@@ -852,7 +852,7 @@ def check_naming(corpus: _Corpus) -> list:
         if parent is None or parent.fields.get("allow_non_index_paths") is not True:
             findings.append(_finding(
                 "naming", "high", rel,
-                "naming (AGENTS.md §7.1): non-index document in a folder without an "
+                "naming (documentation-rules §7.1): non-index document in a folder without an "
                 "index.md carrying allow_non_index_paths: true"))
     return findings
 

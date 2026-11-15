@@ -1,3 +1,5 @@
+<!-- CHANGES v0.18.2-draft: Rule references (§2.1, §3.3) and Cross-References AGENTS.md entry retargeted to documentation-rules -->
+<!-- CHANGES v0.18.2-draft (configuration-guide-RU.md): RU aligned — §2.1 reference retargeted, §3.3 translation clause restored from pre-existing truncation (full ADR-014/provenance text), Cross-References entry retargeted; check_drift clean. -->
 <!-- CHANGES v0.18.1-draft: RU alignment: external translation CLI + provenance artifacts (ADR-014) -->
 <!-- CHANGES v0.18.0-draft: §Event Schema/Approval Payload: documented the closed MVP-emitted subset; wider table reframed as target envelope for later layers (drift fix). -->
 <!-- CHANGES v0.17.0-draft: Audit Registry: append-only audit_registry.jsonl envelope + .registry.lock; Event Schema: closed MVP documenter.issue payload; Hash Store: --rebuild-hashes + .bak load fallback (fix plan stage 4 pp.26) -->

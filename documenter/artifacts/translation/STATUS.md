@@ -4,6 +4,7 @@
 
 | id | status | model | prompt_version | timestamp | report_ref |
 |---|---|---|---|---|---|
+| documentation-rules | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T07:49:39+0000 | runs/ |
 | documenter-service | missing |  |  |  | runs/ |
 | documenter-service-configuration-guide | missing |  |  |  | runs/ |
 | documenter-service-policy-reference | missing |  |  |  | runs/ |

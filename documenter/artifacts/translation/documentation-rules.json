@@ -1,0 +1,20 @@
+{
+  "ok": 72,
+  "skip": 85,
+  "fail": 0,
+  "backend": "cloud",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 1,
+  "source_sha256": "851a0c7dfecd5a70ad1ea0d920b9d9bece7eff97f80fd255904b2d0f47b5c175",
+  "output_sha256": "5f7a84d3d7d66c519c4b63ed0e18a83088c3d3b68ca3c7acb0898e91e798d8c7",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-15T07:49:39+0000",
+  "message": "ok",
+  "target_id": "documentation-rules",
+  "ru_path": "docs/ru/documentation-rules/index-RU.md",
+  "en_sha256_at_commit": "851a0c7dfecd5a70ad1ea0d920b9d9bece7eff97f80fd255904b2d0f47b5c175",
+  "status": "unverified",
+  "note": "RU bytes differ from run output"
+}

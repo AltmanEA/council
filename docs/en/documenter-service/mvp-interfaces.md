@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.7.0-draft
+Version: 0.7.1-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -47,14 +47,14 @@ Read-only. Touches no write path. Scans documents against compliance rules using
 
 ### Compliance rules scanned
 
-1. **Line count** ≤ 200 content lines per `AGENTS.md` §7.3.
+1. **Line count** ≤ 200 content lines per `docs/en/documentation-rules/index.md` §7.3.
 2. **Changelog existence** — `changelog-path:` resolves to an existing `CHANGELOGS/<id>.changes.md`.
 3. **Glossary terms** — every domain term in the body exists in `docs/en/glossary/index.md`.
 4. **Cross-reference resolution** — every reference resolves to an existing heading anchor.
 5. **Abstraction consistency** — declared `abstraction:` matches actual content structure.
 6. **Manifest parity** — manifest-to-frontmatter parity is enforced by regenerate-and-diff against the generator (`tools/gen_manifest.py --check`); orphan detection compares on-disk `docs/en/` files against the generated manifest entries.
 
-Rules 3 (glossary terms) and 5 (abstraction consistency) remain skill/AI-reserved judgments; rules 1, 2, 4, 6 and the naming/schema checks are deterministic (see `AGENTS.md` §8).
+Rules 3 (glossary terms) and 5 (abstraction consistency) remain skill/AI-reserved judgments; rules 1, 2, 4, 6 and the naming/schema checks are deterministic (see `docs/en/documentation-rules/index.md` §8).
 
 ### Severity semantics
 

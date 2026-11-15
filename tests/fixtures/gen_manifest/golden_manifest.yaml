@@ -9,7 +9,7 @@
 # Schema change v0.3: entries carry changelog-path when the frontmatter
 # declares it (fix plan sess-documenter-fixes, 2026-11-14, decision A).
 
-# GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see AGENTS.md §2.2)
+# GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see documentation-rules §2.2)
 documents:
   - id: alpha
     path: docs/en/alpha/index.md

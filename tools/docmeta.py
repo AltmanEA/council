@@ -2,7 +2,7 @@
 """Document header (frontmatter) parser and validator for Council docs.
 
 Pure functions only: stdlib + PyYAML, no side effects, no filesystem writes.
-Canonical header format (AGENTS.md §2.2, configuration-guide §Manifest Field
+Canonical header format (documentation-rules §2.2, configuration-guide §Manifest Field
 Provenance): first `# ` H1 line, then a contiguous block of `Key: value`
 lines (no blank lines inside the block) parseable via yaml.safe_load as a
 single mapping. Blank lines between H1 and the block are tolerated.
@@ -175,7 +175,7 @@ def validate(header: HeaderData, file: str = "<unknown>", root: str = ".") -> li
                 f"changelog-path {cl!r} does not resolve to an existing file under {root}"))
 
     # references: non-empty targets allowed only when allow_non_index_paths
-    # is true OR the file is the canonical docs/en/<id>/index.md (AGENTS.md §2.1
+    # is true OR the file is the canonical docs/en/<id>/index.md (documentation-rules §2.1
     # multi-doc exception rule).
     refs = fields.get("references")
     if refs:
@@ -186,7 +186,7 @@ def validate(header: HeaderData, file: str = "<unknown>", root: str = ".") -> li
             findings.append(_finding(
                 "references-non-index", "high", file,
                 "non-empty references requires allow_non_index_paths: true unless the "
-                f"file is the canonical docs/en/{doc_id}/index.md (AGENTS.md §2.1)"))
+                f"file is the canonical docs/en/{doc_id}/index.md (documentation-rules §2.1)"))
 
     # Unknown keys: tolerated, reported low. Last Modified: deprecated warning.
     for key in fields:

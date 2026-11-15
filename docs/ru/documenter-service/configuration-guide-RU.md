@@ -1,7 +1,7 @@
 # Руководство по настройке Документатора
 
 id: documenter-service-configuration-guide
-Version: 0.18.0-draft
+Version: 0.18.2-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -34,7 +34,7 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
 Правила:
 
-- Не пустые `references` / `allow_non_index_paths` разрешены только для зарегистрированных многодокументных исключений (AGENTS.md §2.1); валидатор помечает остальные как высокий Уровень серьёзности.
+- Не пустые `references` / `allow_non_index_paths` разрешены только для зарегистрированных многодокументных исключений (docs/en/documentation-rules/index.md §2.1); валидатор помечает остальные как высокий Уровень серьёзности.
 - Записи отсортированы по `id`.
 - Сгенерированный файл содержит маркер `GENERATED — DO NOT EDIT`.
 - Заголовочные комментарии исторического манифеста сохраняются генератором как фиксированная константа преамбулы.
@@ -236,7 +236,7 @@ approval_rate = count(decision = approved) / (count(decision = approved) + count
 
 ## Выравнивание русской версии
 
-Авто-исправление запрещено на всех уровнях во время MVP. При включении (уровень 3+): вызывается `change_type: create_ru` с сохранением чётности строк согласно §3.3 файла AGENTS.md.
+Авто-исправление запрещено на всех уровнях во время MVP. При включении (уровень 3+): вызывается Translation Project CLI в соответствии с потребительским контрактом (`translation-project/index.md`, ADR-014) с `change_type: create_ru` и проверкой чётности строк согласно documentation-rules §3.3. Артефакты происхождения (sidecar, `STATUS.md`, отчёты запусков) хранятся в `documenter/artifacts/translation/` (отслеживаемые git операционные файлы, вне области манифеста); статусы поддерживаются в Индексе статусов (`documenter/artifacts/translation/STATUS.md`).
 
 ---
 
@@ -244,7 +244,7 @@ approval_rate = count(decision = approved) / (count(decision = approved) + count
 
 - **§Документатор Сервис (index.md)** — Основная спецификация: назначение, интерфейсы, уровни доверия, протокол безопасности (включая Протокол Многофайловой Коммита #9)
 - **§Документатор Справочник Политики** (`documenter-service/policy-reference.md`) — Схема файла политики, справочник полей, операционная настройка, рабочий процесс авторизации
-- `AGENTS.md` — Все правила документации, которые соблюдает этот сервис
+- `docs/en/documentation-rules/index.md` — Все правила документации, которые соблюдает этот сервис
 - `glossary/index.md` — Канонические определения терминов для проверки соответствия
 - `.agents/skills/documentation/SKILL.md` — Навык Работника по документации (вызывается через delegate())
 

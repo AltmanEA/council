@@ -16,7 +16,7 @@ Stage 4 scaffold (plan `sess-doc-reliability-algo`, session
 
 | Surface | Entry | Notes |
 | --- | --- | --- |
-| `audit()` | `python3 -m documenter_service --audit --target "*" --json` | Pure reuse of `tools/check_all.scan(root)` + `docmeta.validate` — **no rule fork** (AGENTS.md §8). Pagination via policy `rescan_batch_ceiling`; single-use `scan_cursor` bound to `(audit_id, target_id)`; partial reports carry the mandatory write-decision-impossible header. |
+| `audit()` | `python3 -m documenter_service --audit --target "*" --json` | Pure reuse of `tools/check_all.scan(root)` + `docmeta.validate` — **no rule fork** (documentation-rules §8). Pagination via policy `rescan_batch_ceiling`; single-use `scan_cursor` bound to `(audit_id, target_id)`; partial reports carry the mandatory write-decision-impossible header. |
 | `documenter.status()` | `python3 -m documenter_service --status` | Registry health (`healthy/degraded/corrupt`), last audit + freshness, `staged_files`/`override_counter` derived from registry records (unresolved intent leftovers; override_gate token count), pending scan visibility, Tier interlock. Never crashes on a corrupt registry — degradation is REPORTED. |
 | `delegate(preview: true)` | `python3 -m documenter_service --delegate-preview --target <id> --change-type update --trust-level review --diff-file -` | Canonical diff: decode base64 → normalize (CRLF→LF, trailing whitespace, final newline) → `diff_hash=sha256:<hex>` over normalized bytes → render `diff_text`. `diff_text` appears ONLY in the response — never in events or the registry. |
 | Audit registry | `documenter/audit_registry.jsonl` | Append-only JSONL, envelope `{record_type, prev_hash, data}`, `prev_hash` chain (corruption aid per conflict C5). Token records for scan cursors. Retention 10,000; truncation only with a trailing `checkpoint_record`. |
@@ -26,7 +26,7 @@ Stage 4 scaffold (plan `sess-doc-reliability-algo`, session
 Rule coverage: deterministic rules **1, 2, 4, 6** plus naming/schema are
 covered because audit() invokes the tools checker. **Rules 3 (glossary terms)
 and 5 (abstraction consistency) are skill/AI-reserved and not implemented
-here** — this package never claims "rules 1–6" coverage (AGENTS.md §8).
+here** — this package never claims "rules 1–6" coverage (documentation-rules §8).
 
 ## Tier 2+ (implemented; dormant behind the dual interlock — policy gate + Operator Surface not built)
 
@@ -104,7 +104,7 @@ only). Stdout carries ONLY JSON-RPC messages (one per line); the Service's
 event sink writes to stderr so events and logs never interleave with RPC
 output.
 
-**Not registered in workspace config.** Per AGENTS.md §7.5 (prohibition),
+**Not registered in workspace config.** Per AGENTS.md §1.7 (prohibition),
 the Documenter is NOT registered as an MCP server in the workspace
 configuration — registration is an explicit operator decision, out of
 scope for this MVP build.

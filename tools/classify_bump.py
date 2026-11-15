@@ -14,8 +14,8 @@ Classifier per consensus sess-doc-reliability-algo (SUBJ-003): first rule
 match wins, top-down: major (external-heading-removed / required-key-removed /
 abstraction-changed) -> patch (token-overlap-patch) -> minor
 (structural-minor) -> ambiguous-default-minor. Ambiguous defaults to minor
-with an explicit warning citing AGENTS.md §7.5 ("never silent patch").
-Escalated outcomes (major or ambiguous) are printed in the AGENTS.md §6
+with an explicit warning citing documentation-rules §7.5 ("never silent patch").
+Escalated outcomes (major or ambiguous) are printed in the documentation-rules §6
 format (options + recommendation). The --report gate enforces the HCD metric:
 escalation rate > ESCALATION_RATE_MAX => "classifier requires redesign".
 
@@ -290,7 +290,7 @@ def _classify_verdict(opcodes, disk_text: str, candidate_text: str) -> tuple:
         return "patch", ["token-overlap-patch"], False, []
     if patch_clean and has_insdel:
         return "minor", ["structural-minor"], False, []
-    warning = ("ambiguous diff: defaulting to minor per AGENTS.md §7.5 "
+    warning = ("ambiguous diff: defaulting to minor per documentation-rules §7.5 "
                "(never silent patch) — operator must confirm the kind")
     return "minor", ["ambiguous-default-minor"], True, [warning]
 
@@ -449,7 +449,7 @@ def _print_human(result: dict) -> None:
     for w in result["warnings"]:
         print(f"warning: {w}")
     if result["escalation"] is not None:
-        print("ESCALATION (AGENTS.md §6 format):")
+        print("ESCALATION (documentation-rules §6 format):")
         for option in result["escalation"]["options"]:
             print(f"  {option}")
         print(f"  recommendation: {result['escalation']['recommendation']}")

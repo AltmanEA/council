@@ -1,7 +1,7 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.18.1-draft
+Version: 0.18.2-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -34,7 +34,7 @@ This document defines runtime data structures and their integrity rules: hash st
 
 Rules:
 
-- Non-empty `references` / `allow_non_index_paths` are permitted only for registered multi-document exceptions (AGENTS.md §2.1); the validator flags others as high severity.
+- Non-empty `references` / `allow_non_index_paths` are permitted only for registered multi-document exceptions (docs/en/documentation-rules/index.md §2.1); the validator flags others as high severity.
 - Entries are sorted by `id`.
 - The generated file carries a `GENERATED — DO NOT EDIT` marker.
 - Historical manifest header comments are preserved by the generator as a fixed preamble constant.
@@ -236,7 +236,7 @@ Controlled by `glossary_enforcement` (policy: `draft` or `active`). Staleness gu
 
 ## Russian Translation Alignment
 
-Auto-fix banned in all tiers during MVP. When enabled (Tier 3+): invokes the Translation Project CLI per the consumer contract (`translation-project/index.md`, ADR-014) with `change_type: create_ru` and line parity check per AGENTS.md §3.3. Provenance artifacts (sidecar, `STATUS.md`, run reports) are stored under `documenter/artifacts/translation/` (git-tracked operational files, outside manifest scope); statuses are maintained in the Status Index (`documenter/artifacts/translation/STATUS.md`).
+Auto-fix banned in all tiers during MVP. When enabled (Tier 3+): invokes the Translation Project CLI per the consumer contract (`translation-project/index.md`, ADR-014) with `change_type: create_ru` and line parity check per documentation-rules §3.3. Provenance artifacts (sidecar, `STATUS.md`, run reports) are stored under `documenter/artifacts/translation/` (git-tracked operational files, outside manifest scope); statuses are maintained in the Status Index (`documenter/artifacts/translation/STATUS.md`).
 
 ---
 
@@ -244,7 +244,7 @@ Auto-fix banned in all tiers during MVP. When enabled (Tier 3+): invokes the Tra
 
 - **§Documenter Service (index.md)** — Main specification: purpose, interfaces, trust tiers, safety protocol (including Multi-file Commit Protocol #9)
 - **§Documenter Policy Reference** (`documenter-service/policy-reference.md`) — Policy file schema, field reference, operational tuning, authorization workflow
-- `AGENTS.md` — All documentation rules this service enforces
+- `docs/en/documentation-rules/index.md` — All documentation rules this service enforces
 - `glossary/index.md` — Canonical term definitions for compliance verification
 - `.agents/skills/documentation/SKILL.md` — Documentation Worker skill (invoked by delegate())
 

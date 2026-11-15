@@ -1,7 +1,7 @@
 # Documenter Policy Reference
 
 id: documenter-service-policy-reference
-Version: 0.7.1-draft
+Version: 0.7.2-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/policy-reference-RU.md
@@ -147,7 +147,7 @@ Procedure for advancing write capability. Each step is a discrete operator actio
 
 - **§Documenter Service (index.md)** — Main specification: interface contracts, trust tiers, safety protocol, trust classification floor
 - **§Configuration Guide** — Hash store, intent record schema, event schema, glossary compliance, RU alignment
-- `AGENTS.md` — All documentation rules this service enforces
+- `docs/en/documentation-rules/index.md` — All documentation rules this service enforces
 - `glossary/index.md` — Canonical term definitions for compliance verification
 
 ---

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Manifest generator (Stage A, plan sess-doc-reliability-algo).
 
-Sole writer of docs-manifest.yaml (AGENTS.md §2.2): frontmatter is the truth,
+Sole writer of docs-manifest.yaml (documentation-rules §2.2): frontmatter is the truth,
 the manifest is its printout. Walks docs/en/**/*.md under --root, parses each
 document header via tools/docmeta.py, and emits a deterministic YAML
 manifest: preserved preamble comments + GENERATED marker + `documents` list
@@ -46,7 +46,7 @@ GEN_PREAMBLE = (
     "\n"
 )
 
-GEN_MARKER = "# GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see AGENTS.md §2.2)\n"
+GEN_MARKER = "# GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see documentation-rules §2.2)\n"
 
 
 class _Dumper(yaml.SafeDumper):
