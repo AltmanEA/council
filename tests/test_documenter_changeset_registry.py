@@ -332,7 +332,8 @@ class TestChangesetRegistry(unittest.TestCase):
     # -- T-c: legacy-intent читается find_intent как раньше -----------------
 
     def test_t_c_legacy_intent_read_compat(self):
-        """Legacy intent_record still readable by find_intent (no regression)."""
+        """Legacy intent_record stays readable in the log; after success the
+        resolved copy masks it in find_intent (idempotent cold-start)."""
         self._setup()
         result, approval_id, encoded = _full_cycle(
             changeset=None, data_dir=self.data_dir,
@@ -341,19 +342,25 @@ class TestChangesetRegistry(unittest.TestCase):
             policy=self.policy, events=self.events, engine=self.engine)
         self.assertTrue(result["applied"])
 
-        # Legacy intent should be found by find_intent
+        # After a successful apply the resolved copy is the latest record for
+        # this intent, so find_intent returns None (the resolved copy masks
+        # the original unresolved record).
         intent = self.registry.find_intent("alpha")
-        self.assertIsNotNone(intent, "legacy intent should be found by find_intent")
-        self.assertIn("target_ids", intent)
-        self.assertIn("tx_id", intent)
-        self.assertIn("entries", intent)
-        self.assertIsNone(intent["entries"],
-                          "legacy intent should have entries=None")
+        self.assertIsNone(intent)
 
-        # Verify a resolved intent_record also exists after success.
+        # The original legacy record is still in the append-only log and keeps
+        # its shape (tx_id, entries=None) — only its visibility is masked.
         records, _ = self.registry.read_all()
         intent_records = [r["data"] for r in records
                           if r["record_type"] == "intent_record"]
+        legacy = [r for r in intent_records
+                  if r.get("tx_id") == approval_id]
+        self.assertTrue(legacy, "legacy intent_record must remain in the log")
+        self.assertIn("target_ids", legacy[0])
+        self.assertIsNone(legacy[0]["entries"],
+                          "legacy intent should have entries=None")
+
+        # Verify a resolved intent_record also exists after success.
         resolved = [r for r in intent_records if r.get("resolved") is True]
         self.assertTrue(len(resolved) >= 1,
                         f"should have at least one resolved intent_record, got {len(resolved)}")

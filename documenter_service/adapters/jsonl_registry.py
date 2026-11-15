@@ -51,6 +51,28 @@ def new_token() -> str:
     return base64.b64encode(secrets.token_bytes(TOKEN_BYTES)).decode("ascii")
 
 
+def _latest_unresolved(records) -> list:
+    """Unresolved logical intents, latest record per intent first.
+
+    Only the latest record per logical intent counts: a resolved copy
+    appended after the staging record hides the original, so a second
+    cold-start reconcile does not re-resolve the same intent forever.
+    """
+    seen = set()
+    result = []
+    for rec in reversed(records):
+        if rec["record_type"] != reg.INTENT_RECORD:
+            continue
+        data = rec["data"]
+        key = reg.intent_key(data)
+        if key in seen:
+            continue
+        seen.add(key)
+        if not data.get("resolved", False):
+            result.append(data)
+    return result
+
+
 class JsonlAuditRegistry(AuditRegistry):
     """Filesystem-backed registry. Writes: append only (see module docstring)."""
 
@@ -293,30 +315,33 @@ class JsonlAuditRegistry(AuditRegistry):
     # -- intent helpers (Tier 2+ read; W2 writes via generic append()) ---------
 
     def find_intent(self, target_id: str):
-        """Latest unresolved intent_record whose target_ids contain ``target_id``,
-        or None."""
+        """Latest logical intent containing ``target_id`` that is unresolved,
+        or None. A later resolved copy of the same intent masks the original."""
         records, _ = self.read_all()
-        found = None
-        for rec in records:
-            if rec["record_type"] == reg.INTENT_RECORD:
-                data = rec["data"]
-                if data.get("resolved", False):
-                    continue
-                tids = data.get("target_ids", [])
-                if isinstance(tids, list) and target_id in tids:
-                    found = data
-        return found
+        seen = set()
+        for rec in reversed(records):
+            if rec["record_type"] != reg.INTENT_RECORD:
+                continue
+            data = rec["data"]
+            key = reg.intent_key(data)
+            if key in seen:
+                continue
+            seen.add(key)
+            if data.get("resolved", False):
+                continue
+            tids = data.get("target_ids", [])
+            if isinstance(tids, list) and target_id in tids:
+                return data
+        return None
 
     def unresolved_intents(self) -> list:
-        """All unresolved intent_record data dicts (latest first)."""
+        """All unresolved logical intents (latest first).
+
+        Latest record per logical intent wins, so a resolved copy masks the
+        staging record that produced it.
+        """
         records, _ = self.read_all()
-        result = []
-        for rec in reversed(records):
-            if rec["record_type"] == reg.INTENT_RECORD:
-                data = rec["data"]
-                if not data.get("resolved", False):
-                    result.append(data)
-        return result
+        return _latest_unresolved(records)
 
     # -- metrics (mvp-interfaces §3 — do NOT change status() shape) -------------
 
@@ -340,11 +365,7 @@ class JsonlAuditRegistry(AuditRegistry):
         for data in latest_approval.values():
             if data.get("decision") is None:
                 pending += 1
-        for rec in records:
-            if rec["record_type"] == reg.INTENT_RECORD:
-                data = rec["data"]
-                if not data.get("resolved", False):
-                    intents += 1
+        intents = len(_latest_unresolved(records))
         return {"pending_approvals": pending, "unresolved_intents": intents}
 
     # -- token lifecycle (mvp-data-models §1 Token model) ---------------------

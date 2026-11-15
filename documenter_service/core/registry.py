@@ -37,6 +37,7 @@ __all__ = [
     "record_hash",
     "make_envelope",
     "parse_line",
+    "intent_key",
     "verify_chain",
     "segment_hash",
     "make_checkpoint_data",
@@ -128,6 +129,27 @@ def parse_line(raw: str) -> dict:
             and all(c in _HEX64 for c in ph)):
         raise ValueError(f"prev_hash is not null or 64-char lowercase hex: {ph!r}")
     return obj
+
+
+def intent_key(data: dict) -> tuple:
+    """Stable identity of a logical intent_record.
+
+    An append-only registry records the resolution of an intent by appending
+    a copy with ``resolved=True``; both records describe the same staging
+    operation and must collapse to one logical intent on read. New-format
+    (changeset) intents carry ``tx_id``; legacy intents are identified by
+    their target set, staging timestamp, and per-file source hashes.
+    """
+    tx_id = data.get("tx_id")
+    if tx_id:
+        return ("tx_id", tx_id)
+    per_file = data.get("per_file_sha256") or {}
+    return (
+        "legacy",
+        tuple(data.get("target_ids") or ()),
+        data.get("staged_at"),
+        tuple(sorted(per_file.items())),
+    )
 
 
 def _is_sha_hex(value) -> bool:

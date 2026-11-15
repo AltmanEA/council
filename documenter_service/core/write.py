@@ -120,8 +120,9 @@ def propose_write(
             "unknown",
             "propose_write is the write branch; received preview=True")
 
-    # (a.5) preview=True + changeset is forbidden
-    if preview is False and changeset is not None and len(changeset) > 0:
+    # (a.5) Validate the changeset before any side-effects. preview=True was
+    # already rejected above, so this branch is the write path only.
+    if changeset is not None and len(changeset) > 0:
         _validate_changeset(changeset, manifest, target_id, root)
 
     # (b) tier 2+ authorization (MUST precede budget so Tier 0 always yields
@@ -864,7 +865,9 @@ def _apply_write_changeset(
                         f"create operation for {p!r} but file already exists — "
                         "rerun audit then re-propose",
                         next_action="rerun_audit")
-            elif expected_before:
+            else:
+                # _before_hash_of returns BEFORE_HASH_MISSING or a sha256;
+                # the empty-string legacy form cannot occur.
                 try:
                     with open(os.path.join(root, p), "rb") as fh:
                         actual = fh.read()
@@ -876,14 +879,6 @@ def _apply_write_changeset(
                         "hash_mismatch",
                         f"file changed since proposal: {p!r} — "
                         f"rerun audit then re-propose",
-                        next_action="rerun_audit")
-            else:
-                # before_hash is "" → legacy compatibility: file must not exist.
-                if os.path.exists(os.path.join(root, p)):
-                    raise StructuredError(
-                        "hash_mismatch",
-                        f"create operation for {p!r} but file already exists — "
-                        "rerun audit then re-propose",
                         next_action="rerun_audit")
 
         # Verify target document before_hash
@@ -899,7 +894,7 @@ def _apply_write_changeset(
                 raise StructuredError(
                     "hash_mismatch",
                     f"create operation for target {target_path_rel!r} but file exists")
-        elif expected_target_before:
+        else:
             actual_src = "sha256:" + hashlib.sha256(src_bytes).hexdigest()
             if actual_src != expected_target_before:
                 raise StructuredError(
@@ -907,12 +902,6 @@ def _apply_write_changeset(
                     f"source changed between approval and apply — "
                     "write denied (rerun audit then re-propose)",
                     next_action="rerun_audit")
-        else:
-            # before="" means file must not exist (legacy compat).
-            if os.path.exists(target_path):
-                raise StructuredError(
-                    "hash_mismatch",
-                    f"create operation for target {target_path_rel!r} but file exists")
 
         # Step 4: read source, apply diff → new_text (already have src_bytes)
         new_text = apply_unified_diff(
@@ -1027,9 +1016,9 @@ def _apply_write_changeset(
             "decision": "approved",
         })
 
-        # 11c: hash store update — documented but not done (rebuildable cache
-        # per ADR-010; the hash store file if in the changeset is already
-        # renamed; a subsequent audit rebuilds it).
+        # 11c: hash store update intentionally deferred — the hash store is a
+        # rebuildable cache per ADR-010 (the file, if in the changeset, is
+        # already renamed; a subsequent audit rebuilds it on demand).
 
         # 11d: delete_intent (MUST be last per #9d)
         _commit_protocol.delete_intent(data_dir, tx_id)
@@ -1086,6 +1075,7 @@ def reconcile(
     root: str,
     data_dir: str,
     sha256_func=None,
+    include_resolved: bool = False,
 ) -> list:
     """Cold-start reconciliation of unresolved intent records.
 
@@ -1095,6 +1085,10 @@ def reconcile(
         note "reconciled: no changes detected".
       - If hash mismatch → append {"target_id", "status": "needs_attention",
         "detail"} to the results list.
+
+    When ``include_resolved`` is True, a ``status="reconciled"`` entry is
+    appended for each intent that was resolved cleanly; the default False
+    keeps the historical contract (only needs_attention entries).
 
     Returns the list of resolution dicts.
     """
@@ -1173,11 +1167,18 @@ def reconcile(
             resolved_intent["resolved"] = True
             resolved_intent["_reconciled_note"] = "reconciled: no changes detected"
             registry.append("intent_record", resolved_intent)
+            if include_resolved:
+                results.append({
+                    "target_id": target_ids[0] if target_ids else "",
+                    "status": "reconciled",
+                    "detail": "reconciled: no changes detected",
+                })
 
     # --- Phase 2: new-format intent directory (Multi-file commit protocol) ---
 
     new_results = _reconcile_new_format(
-        registry, manifest, root, data_dir, sha256_func)
+        registry, manifest, root, data_dir, sha256_func,
+        include_resolved=include_resolved)
     results.extend(new_results)
 
     return results
@@ -1186,7 +1187,8 @@ def reconcile(
 # --- reconcile: new-format intent directory (Multi-file commit protocol) ----
 
 
-def _reconcile_new_format(registry, manifest, root, data_dir, sha256_func=None):
+def _reconcile_new_format(registry, manifest, root, data_dir,
+                          sha256_func=None, include_resolved=False):
     """Reconcile multi-file commit protocol intent records from disk.
 
     Scans ``<data_dir>/intent/`` for leftover intent files (cold-start
@@ -1270,6 +1272,14 @@ def _reconcile_new_format(registry, manifest, root, data_dir, sha256_func=None):
                 "reconciled: multi-file roll-forward/committed")
             registry.append("intent_record", resolved_intent)
             _commit_protocol.delete_intent(data_dir, tx_id)
+
+            if include_resolved:
+                results.append({
+                    "tx_id": tx_id,
+                    "target_id": target_id,
+                    "status": "reconciled",
+                    "detail": "reconciled: multi-file roll-forward/committed",
+                })
 
     return results
 

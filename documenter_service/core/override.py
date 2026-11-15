@@ -30,6 +30,7 @@ import os
 import re
 import shutil
 import uuid
+from datetime import datetime, timezone
 
 from .errors import StructuredError
 
@@ -290,7 +291,7 @@ def write_post_mortem(data_dir, *, audit_id, findings, reason, operator_id):
         "findings": redacted_findings,
         "reason": reason,
         "operator_id": operator_id,
-        "created_at": registry_now(data_dir),
+        "created_at": registry_now(),
     }
 
     # temp+rename+fsync (mvp-contract §2.2.4 durability sequence).
@@ -338,15 +339,6 @@ def list_post_mortems(data_dir):
     return result
 
 
-def registry_now(data_dir):
-    """Get a UTC ISO 8601 timestamp.  Uses registry adapter when available.
-
-    Falls back to datetime.now() if no registry is available at data_dir.
-    """
-    # Try to import registry helper from data_dir
-    try:
-        from datetime import datetime, timezone
-        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    except ImportError:
-        from datetime import datetime, timezone
-        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+def registry_now():
+    """Get a UTC ISO 8601 timestamp."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

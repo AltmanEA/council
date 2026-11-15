@@ -135,6 +135,8 @@ python3 -m documenter_service --delegate-write --target <id> --change-type updat
     --trust-level review --diff-file - --audit-id <id> --approval-id <id>  # apply
 python3 -m documenter_service --override-gate --target <id> \
     --diff-hash sha256:<hex> --reason "..."                                 # gated
+python3 -m documenter_service --reconcile                                   # cold-start recovery, exit 0
+python3 -m documenter_service --rebuild-hashes --json                       # rebuild hash cache
 ```
 
 Exit codes (also in the `__main__` docstring):
@@ -145,12 +147,12 @@ on stderr — a bug, not operator action).
 
 Configuration (ENV, mvp-data-models §5): `DOCUMENTER_POLICY_PATH` (default
 `documenter_policy.yml`), `DOCUMENTER_DATA_DIR` (default `documenter/`),
-`DOCUMENTER_LOG_LEVEL`. The policy loader is fail-closed (7 rules of
-mvp-data-models §2); a broken policy never blocks audit()/status() and never
-blocks `preview: true` (preview exemption) — it only downgrades
-`max_diff_bytes` to the documented 512 KiB default with a stderr warning. A
-missing/unreadable policy at Tier 2+ fails closed: every non-preview call
-returns `tier_interlock` (via `check_tier2_authorized`).
+`DOCUMENTER_LOG_LEVEL` (stderr warning filter). The policy loader is
+fail-closed (7 rules of mvp-data-models §2); a broken policy never blocks
+audit()/status() and never blocks `preview: true` (preview exemption) — it
+only downgrades `max_diff_bytes` to the documented 512 KiB default with a
+stderr warning. A missing/unreadable policy at Tier 2+ fails closed: every
+non-preview call returns `tier_interlock` (via `check_tier2_authorized`).
 
 ## Safety
 

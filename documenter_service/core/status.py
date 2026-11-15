@@ -110,20 +110,22 @@ def status(registry, policy=None, *, target_id: str | None = None,
 
     # -- staged_files & override_counter (mvp-interfaces §3 table fields) ----
     # staged_files: unresolved intent_record leftovers from interrupted writes.
-    # Source: all unresolved intent_record data dicts (both legacy format with
-    # per_file_sha256 and changeset format with tx_id/entries); readers
-    # (find_intent, unresolved_intents) unify on target_ids + resolved=False.
-    # Deduplication keeps only the latest per target (forward iteration, last wins).
-    _staged_map: dict = {}
-    for rec in records:  # forward: later record overwrites earlier (last per target wins)
+    # Source: logical intents (both legacy format with per_file_sha256 and
+    # changeset format with tx_id/entries); only the latest record per intent
+    # counts, so a resolved copy masks the staging record it resolves.
+    # Deduplication keeps only the latest unresolved intent per target.
+    _latest_intent: dict = {}
+    for rec in records:
         if rec["record_type"] == reg.INTENT_RECORD:
-            data = rec["data"]
-            if data.get("resolved") is False:
-                for tid in data.get("target_ids", []):
-                    _staged_map[tid] = {
-                        "target_id": tid,
-                        "staged_at": data.get("staged_at"),
-                    }
+            _latest_intent[reg.intent_key(rec["data"])] = rec["data"]
+    _staged_map: dict = {}
+    for data in _latest_intent.values():
+        if data.get("resolved") is False:
+            for tid in data.get("target_ids", []):
+                _staged_map[tid] = {
+                    "target_id": tid,
+                    "staged_at": data.get("staged_at"),
+                }
     staged_files = list(_staged_map.values())
 
     # override_counter: count of token_record entries with token_type=override_gate.

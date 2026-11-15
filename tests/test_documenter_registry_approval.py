@@ -273,10 +273,13 @@ class TestApprovalLifecycle(unittest.TestCase):
         r.append(reg.INTENT_RECORD, {"target_ids": ["beta"], "resolved": False})
         r.append(reg.INTENT_RECORD, {"target_ids": ["alpha"], "resolved": True})
         result = r.unresolved_intents()
-        self.assertEqual(len(result), 2)
-        # latest first: beta is newer, then alpha
+        # The resolved copy is the latest record for the alpha intent, so the
+        # original unresolved record no longer counts (append-only lifecycle).
+        self.assertEqual(len(result), 1)
         self.assertIn("beta", result[0]["target_ids"])
-        self.assertIn("alpha", result[1]["target_ids"])
+        # find_intent() applies the same latest-per-intent rule.
+        self.assertIsNone(r.find_intent("alpha"))
+        self.assertIsNotNone(r.find_intent("beta"))
 
     def test_find_intent(self):
         r = self.r

@@ -40,14 +40,6 @@ __all__ = [
     "apply_pattern_batch",
 ]
 
-# MVP event types (subset of stdout_events MVP_EVENT_TYPES) — checked
-# before emitting; event emission is best-effort (digest stays in result
-# regardless).
-_MVP_EVENT_TYPES = ("documenter.issue", "precheck.passed", "precheck.failed",
-                    "notice.documenter_tier2_interlock",
-                    "documenter.approval", "documenter.override_gate",
-                    "documenter.apply")
-
 # -- Window constants --------------------------------------------------------
 
 #: Default lookback window in minutes (14 days * 24h * 60m).
@@ -226,6 +218,9 @@ def apply_pattern_batch(
     proposals : list[dict]
         Each item: {target_id, change_type, trust_level, diff_input(base64),
         audit_id, diff_hash(optional)}.
+    events : EventSink
+        Accepted for interface compatibility; batch application emits no
+        event (the digest is returned in the result).
     seams : dict, optional
         Passed through to apply_write on failure injection.
 
@@ -251,9 +246,9 @@ def apply_pattern_batch(
       - "failed" — trust_mismatch or blocking high/critical finding.
 
     batch_digest: deterministic sha256:... over the set of applied
-    (target_id, diff_hash) pairs, computed after the loop. Emits
-    "documenter.apply" event if the schema permits (digest present in
-    result regardless).
+    (target_id, diff_hash) pairs, computed after the loop and returned in
+    the result. No event is emitted for it: the MVP EVENT_SCHEMAS does not
+    declare a documenter.apply type.
     """
     from ..core.policy import check_tier3_authorized, match_pattern, PolicyError
     from ..adapters.lock import DelegateLock
@@ -358,19 +353,6 @@ def apply_pattern_batch(
         "next_action": next_action,
         "batch_digest": batch_digest,
     }
-
-    # Emit documenter.apply event if batch was applied (mvp-contract §4).
-    if batch_digest and "documenter.apply" in _MVP_EVENT_TYPES:
-        try:
-            events.emit("documenter.apply", {
-                "pattern_id": pattern_id,
-                "applied_count": applied_count,
-                "batch_digest": batch_digest,
-            })
-        except StructuredError:
-            # MVP EVENT_SCHEMAS may not accept documenter.apply yet —
-            # digest is still present in the result dict.
-            pass
 
     return result
 
@@ -774,14 +756,3 @@ def _find_approved_token(registry, diff_hash: str, pattern_id: str):
             continue
         best = data
     return best
-
-
-def _has_approved_diff_hash(registry, diff_hash: str, pattern_id: str) -> bool:
-    """Check if there is a resolved-approved out-of-band token for this diff_hash.
-
-    Looks through approval token_records: finds one with the matching diff_hash
-    and a ``pattern_id`` field, where the token was issued by an operator
-    (proposer != resolver), and the token_value is a UUID (out-of-band),
-    NOT the diff_hash itself.
-    """
-    return _find_approved_token(registry, diff_hash, pattern_id) is not None

@@ -553,6 +553,7 @@ class TestReconcileCli(unittest.TestCase):
             # dicts produced for silently-resolved intents).
             self.assertFalse(resp["needs_attention"])
             self.assertEqual(resp["counts"]["needs_attention"], 0)
+            self.assertEqual(resp["counts"]["reconciled"], 1)
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -586,17 +587,15 @@ class TestReconcileCli(unittest.TestCase):
                               })
             self.assertEqual(rc1, 0)
 
-            # Second reconcile → the subprocess finds no unresolved intents
-            # (the first reconcile's resolved record is the latest intent,
-            #  and the old unresolved intent's data may or may not match
-            #  the current file hash).  Regardless, counts should be zero.
+            # Second reconcile → the first run appended a resolved copy of the
+            # intent; latest-per-intent selection masks the original record,
+            # so there is nothing left to resolve and counts are all zero.
             resp2, rc2 = _run_cli(["--reconcile", "--root", corpus, "--json"],
                                    env_extra={
                                        "DOCUMENTER_POLICY_PATH": policy_path,
                                        "DOCUMENTER_DATA_DIR": data_dir,
                                    })
             self.assertEqual(rc2, 0)
-            # resolutions empty (no unresolved intents), counts zero
             self.assertEqual(len(resp2["resolutions"]), 0)
             self.assertEqual(resp2["counts"]["reconciled"], 0)
             self.assertEqual(resp2["counts"]["needs_attention"], 0)

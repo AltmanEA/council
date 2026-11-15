@@ -1569,6 +1569,46 @@ class TestReconcile(unittest.TestCase):
                                         self.corpus, self.data_dir)
         self.assertEqual(results, [])
 
+    def test_reconcile_clean_hash_include_resolved(self):
+        import hashlib
+        alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")
+        with open(alpha_path, "rb") as f:
+            expected_sha = "sha256:" + hashlib.sha256(f.read()).hexdigest()
+        intent = {
+            "target_ids": ["alpha"],
+            "staged_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "per_file_sha256": {"alpha": expected_sha},
+            "resolved": False,
+        }
+        self.registry.append("intent_record", intent)
+
+        results = core_write.reconcile(
+            self.registry, self.manifest, self.corpus, self.data_dir,
+            include_resolved=True)
+        self.assertEqual([r["status"] for r in results], ["reconciled"])
+
+    def test_reconcile_idempotent_with_include_resolved(self):
+        import hashlib
+        alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")
+        with open(alpha_path, "rb") as f:
+            expected_sha = "sha256:" + hashlib.sha256(f.read()).hexdigest()
+        intent = {
+            "target_ids": ["alpha"],
+            "staged_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "per_file_sha256": {"alpha": expected_sha},
+            "resolved": False,
+        }
+        self.registry.append("intent_record", intent)
+
+        first = core_write.reconcile(
+            self.registry, self.manifest, self.corpus, self.data_dir,
+            include_resolved=True)
+        self.assertEqual([r["status"] for r in first], ["reconciled"])
+        second = core_write.reconcile(
+            self.registry, self.manifest, self.corpus, self.data_dir,
+            include_resolved=True)
+        self.assertEqual(second, [])
+
     def test_reconcile_hash_mismatch(self):
         intent = {
             "target_ids": ["alpha"],

@@ -296,9 +296,10 @@ class Service:
                 raise StructuredError(
                     "gate_failure",
                     "audit registry is corrupt — delegate() denied (restore the "
-                    "registry from git; status() reports details). The MVP has "
-                    "no override path (override_gate is Tier 2+, structurally "
-                    "absent).")
+                    "registry from git; status() reports details). The preview "
+                    "path has no override route: override_gate is implemented "
+                    "but Tier 2+ and dormant behind the dual interlock "
+                    "(ADR-013).")
             # load_policy_safe emits the degradation warning exactly once per
             # instance (policy cache); do not re-emit here (would repeat per
             # call and double-log alongside the cached warning).
@@ -443,7 +444,8 @@ class Service:
         Exit code is always 0 on success even if needs_attention is true.
         """
         resolutions = core_write.reconcile(
-            self.registry, self.manifest, self.root, self._data_dir)
+            self.registry, self.manifest, self.root, self._data_dir,
+            include_resolved=True)
 
         needs_attention = any(
             r.get("status") not in ("reconciled", "clean", "noop")

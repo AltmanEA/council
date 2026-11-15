@@ -61,6 +61,23 @@ class TestStatusStagedFiles(unittest.TestCase):
         out = status_core(r, None)
         self.assertEqual(out["registry"]["staged_files"], [])
 
+    def test_resolved_copy_hides_unresolved_intent(self):
+        """A resolved copy appended after the staging record clears staged_files."""
+        r = _registry(self.tmp)
+        now = r.now()
+        intent = {
+            "target_ids": ["alpha"],
+            "staged_at": now,
+            "per_file_sha256": {"alpha": "sha256:" + "0" * 64},
+            "resolved": False,
+        }
+        r.append("intent_record", intent)
+        resolved = dict(intent)
+        resolved["resolved"] = True
+        r.append("intent_record", resolved)
+        out = status_core(r, None)
+        self.assertEqual(out["registry"]["staged_files"], [])
+
     def test_multiple_targets_per_intent(self):
         """An intent with multiple target_ids → multiple staged_files entries."""
         r = _registry(self.tmp)
