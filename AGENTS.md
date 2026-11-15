@@ -1,7 +1,7 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 0.16.0
+Version: 0.17.0
 Status: active
-Last Modified: 2026-11-14
+Last Modified: 2026-11-15
 changelog-path: CHANGELOGS/agents.changes.md
 
 This file defines how AI agents interact with, maintain, and evolve the project's documentation. It is not part of the framework itself — it governs the *documentation process* only. Do not confuse this file with `docs/project-concept/index.md`, which describes Council.
@@ -25,7 +25,7 @@ Documentation artifacts are divided into two categories based on their role in t
 
 **Project documents** — specifications and protocols that describe the developing project (Council framework). Stored under `docs/`, managed by Documenter via the manifest. Examples: `docs/protocol-core/`, `docs/project-concept/`, `docs/glossary/`.
 
-**Implementation files** — files for the current temporary operation of the Council system. Stored at repository root, excluded from Documenter control. Examples: `AGENTS.md`, `fallback/`, `documenter-service/`, `.agents/skills/documentation/`, `CHANGELOGS/`, `.opencode/`, `defaults/`, `archive/`, `tests/`, `tools/`, `consensus-non-controlled-files.md`, `notes.md`.
+**Implementation files** — files for the current temporary operation of the Council system. Stored at repository root, excluded from Documenter control. Examples: `AGENTS.md`, `fallback/`, `documenter-service/`, `.agents/skills/documentation/`, `CHANGELOGS/`, `.opencode/`, `defaults/`, `archive/`, `tests/`, `tools/`, `consensus-non-controlled-files.md`, `notes.md`. External repositories owned by the project (e.g. the Translation Project `techdoc-translator`, ADR-014) are likewise implementation artifacts outside Documenter scope; their pinned checkout is recorded in a lock file under `defaults/`, and their internal documentation is governed by their own repository rules.
 
 This separation is documented in the consensus document from session `sess-documentation-separation` (2026-11-09). The manifest (`docs-manifest.yaml`) tracks only project documents under `docs/`. Implementation files are explicitly excluded from Documenter scope.
 
@@ -43,6 +43,8 @@ Tools are divided into two categories:
 
 **Operational (available now):**
 - Documentation Worker skill (`/.agents/skills/documentation/SKILL.md`) — write and audit operations on documentation artifacts per `AGENTS.md` rules.
+
+- Translation Project CLI (`techdoc-translator`, external repository) — the EN→RU translation engine, extracted from `tools/` per ADR-014. Operational via its CLI contract (`docs/en/translation-project/`, exit codes 0–6, pinned by `defaults/translation.lock`). The engine knows nothing about Council; the Documentation Worker skill supplies glossary and skip-patterns and owns verification and writes. Council-side translation test suite rebuild is deferred to a dedicated session; provenance artifacts live in `documenter/artifacts/translation/` (operational, git-tracked, never manifest).
 
 **Under development (not yet operational):**
 - Documenter Service — automated quality auditing and delegated writes. Implementation status (glossary, §Implementation Status): Tier 0–1 surface Operational (CLI and MCP stdio implemented, `documenter_service/` package, covered by tests); the MCP server is **not registered** in the workspace configuration — registration is an explicit operator decision. The Tier 2+ write branch is Dormant behind the dual interlock (ADR-013) and not activatable until the Operator Surface exists as code. Agents MUST NOT invoke unregistered `documenter.*` MCP tools, MUST NOT register the MCP server, and MUST NOT edit `documenter_policy.yml` — changing `active_tier`, `allowed_operations`, or `briefing_ref` is an activation act reserved to the operator out-of-session. The Tier 0–1 CLI (`python3 -m documenter_service`) may be used in read-only/preview mode where the operator has sanctioned it.

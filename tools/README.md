@@ -14,11 +14,12 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (AGENTS.md §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) |
 | `classify_bump.py` | Read-only diff→bump classifier ("AI proposes — algorithm records"): proposes `patch`/`minor`/`major` for a full candidate document; never writes documents, changelogs, or the manifest — only its JSONL decision log `tools/state/classify_log.jsonl`. Reuses the `check_all.py` §-reference resolver and `gen_manifest.build_entries` path resolution; ambiguous → minor with a §7.5 warning; escalations printed in AGENTS.md §6 format; `--report` gate: escalation rate > 20% → `classifier requires redesign`, exit 3. Exit codes: 0 classification/identical/report-within-gate, 2 usage/refusal, 3 gate exceeded. | operational (Stage C) |
 | `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only (soak) by default, blocking once the marker file exists. | operational, soak mode (Stage B) |
-| `local-translate.sh` / `local_translate.py` | Glossary-aware EN→RU translation via a local OpenAI-compatible LLM server (preflight, paragraph chunking, post-processing). See §Translation backend dependency below. | operational |
+| `translation_status.py` | Deterministic rebuild of translation provenance: per-document sidecar + `STATUS.md` status index from stored run reports under `documenter/artifacts/translation/runs/` (ADR-014). Idempotent; exit 0 ok, 2 nothing to do. | operational |
+| `check_drift.py` | Deterministic EN↔RU structural comparison (see below) — the sole Council-side structural judge; translation itself is external (ADR-014). | operational |
 | `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational |
 | `check_drift.py` | Deterministic EN↔RU structural comparison: 8 rules (heading count/depth, table rows/blocks, code fences, list markers, inline code count/set, hr count/pos, metadata fingerprint, EN-leakage). Used by full mode tests and e2e. | operational (M2) |
-| `tests/` | Translation test suite: unit tests (`test_unit.py`), mock backend (`gen_mock_responses.py` + `responses.json`), unified runner (`run_translate_tests.sh`), live e2e (`e2e_live.sh`). | operational (M3) |
+| `tests/` | (empty after ADR-014; the translation test suite moved to the external project) | removed |
 | `../documenter_service/` | Documenter Service MVP scaffold (Tier 0–1 read-only): `audit()`/`status()`/`delegate(preview:true)` поверх tools-ядра, без форка правил; status: scaffold (Stage 4, sess-doc-reliability-algo). | scaffold (Stage 4) |
 
 ## Rule coverage (check_all.py)
@@ -61,115 +62,24 @@ In BLOCK mode a commit is rejected when `check_all` reports a
 printed as warnings. The hook is a best-effort gate only — `git commit
 --no-verify` bypasses it (see consensus `sess-doc-reliability-algo`).
 
-## Translation backend dependency
+## Translation (external — ADR-014)
 
-`local-translate.sh` / `local_translate.py` require an **OpenAI-compatible**
-LLM server running locally (or a remote one with `NEURALDEEP_BASE_URL`
-override).
+The EN→RU translation engine is no longer part of `tools/`. It lives in the
+standalone **Translation Project** (`techdoc-translator`), invoked through its
+versioned CLI contract. See `docs/en/translation-project/index.md` (procedure)
+and `docs/en/translation-project/contract.md` (flags, report schema, exit codes
+0–6). The pinned checkout is recorded in `defaults/translation.lock`.
 
-### Required server
+Council keeps the **verification** layer:
+- `check_drift.py` — the sole deterministic EN↔RU structural judge (exit 0 clean,
+  1 findings, 2 internal error).
+- `translation_status.py` — rebuilds provenance sidecars + `STATUS.md` from stored
+  run reports under `documenter/artifacts/translation/runs/`.
+- `tests/translate-fixtures/regression_test.sh` — Council-side integration test:
+  drives the pinned external CLI over 4 fixtures and checks metadata parity,
+  code-token preservation, and contamination traps. Runs against the local
+  OpenAI-compatible dev server (endpoint pinned to loopback; no external calls).
 
-A typical vLLM-based server:
-
-```bash
-vllm serve Qwen3.6-35B-A3B-NVFP4 --served-model-name Qwen3.6-35B-A3B-NVFP4 \
-    --chat-template-kwargs '{"enable_thinking":false}'
-```
-
-Health-check command (used internally by preflight):
-
-```bash
-curl -sf http://127.0.0.1:8000/v1/models
-```
-
-Default server URL: `http://127.0.0.1:8000/v1` (`NEURALDEEP_BASE_URL`).
-Default model: `Qwen3.6-35B-A3B-NVFP4` (`CLOUD_MODEL`).
-
-The preflight step (exit 3) verifies:
-1. `/models` endpoint is reachable (≤ 3 s).
-2. The configured model name is listed among `data[].id` entries.
-
-### Exit codes
-
-| Code | Meaning |
-| --- | --- |
-| 0 | All lines translated successfully |
-| 1 | Invalid arguments or Python error (e.g. no input) |
-| 2 | Cloud backend API key missing |
-| 3 | Local model server unreachable / model not found on server |
-| 4 | **Translation incomplete** — one or more lines failed; `stdout` still contains partial output; stderr has `[exit] N lines failed translation` |
-
-### Flags
-
-**`--summary-json`** — After translation, prints a single JSON object to stderr:
-
-```json
-{"ok": 30, "skip": 5, "fail": 0, "backend": "cloud", "model": "Qwen3.6-35B-A3B-NVFP4", "prompt_version": "2026.11-r1", "gloss_applied": 12}
-```
-
-| Field | Description |
-| --- | --- |
-| `ok` | Lines successfully translated |
-| `skip` | Structural / metadata lines passed through untranslated |
-| `fail` | Lines where model output matched input exactly (treated as fail) |
-| `backend` | Active backend (`cloud` or `ollama`) |
-| `model` | Model name used |
-| `prompt_version` | Prompt spec version (see `EXPERIMENTS.md` E-003, E-004) |
-| `gloss_applied` | Total glossary term replacements performed by `enforce_glossary` |
-
-### Run log (`TRANSLATE_RUN_LOG`)
-
-Set `TRANSLATE_RUN_LOG` to a file path to append one JSONL record per run:
-
-```json
-{"timestamp":"2026-11-14T12:00:00+0000","backend":"cloud","model":"Qwen3.6-35B-A3B-NVFP4","prompt_version":"2026.11-r1","ok":30,"skip":5,"fail":0,"exit_reason":"ok","gloss_applied":12,"input_lines":35}
-```
-
-**No default file is created** — the environment variable must be set explicitly.
-
-## Translation test layers (M2–M4)
-
-Translation scripts ship with a layered test suite that validates correctness
-without requiring a live model backend.
-
-### Layer overview
-
-| Layer | What it tests | How it runs |
-| --- | --- | --- |
-| Unit (M3) | `needs_skip()`, `enforce_glossary()`, `restore_heading_prefix()`, `restore_list_marker()` | `tools/tests/test_unit.py` — stdlib `unittest`, no deps |
-| Mock (M3) | End-to-end translation via mock backend → structural validation via `check_drift.py` | `tools/tests/run_translate_tests.sh full` |
-| Live (M3) | Real model call, candidate generation, `check_drift` EN-vs-candidate | `tools/tests/e2e_live.sh` |
-| Drift CLI (M2) | Deterministic EN↔RU structural comparison: 8 rules (heading count/depth, table rows/blocks, code fences, list markers, inline code count/set, hr count/pos, metadata fingerprint, EN-leakage) | `python3 tools/check_drift.py <en_path> <ru_path> [--json]` |
-| Docmeta import (M4) | `local_translate.py` imports `KNOWN_KEYS` from `docmeta.py` with fallback | `grep -n "docmeta" tools/local_translate.py` |
-
-### Running tests
-
-```bash
-# Quick mode — unit tests only (< 5 s, no model, no network)
-tools/tests/run_translate_tests.sh quick
-
-# Full mode — unit tests + mock layer (local_translate.py → candidate → check_drift)
-tools/tests/run_translate_tests.sh full
-
-# Live e2e — real model call on source → check_drift EN-vs-candidate
-tools/tests/e2e_live.sh
-```
-
-### Mock backend
-
-The mock backend (`TRANSLATE_BACKEND=mock`) reads pre-generated responses from
-`tools/tests/fixtures/scenario/responses.json`, keyed by `sha256(user_prompt)`.
-Mock responses preserve inline code (backticks), headings, list markers, and
-table structure; body text lines receive Cyrillic + `[RU]` markers.
-
-### Drift check exit codes
-
-| Code | Meaning |
-| --- | --- |
-| 0 | No structural drift found (EN and RU match on all 8 deterministic rules) |
-| 1 | Findings present — structural differences detected |
-| 2 | Internal error (file read failure, missing file) |
-
-When checking EN vs EN (same file), `check_drift` exits 1 and reports
-`en-leakage` for every non-structural body line, confirming the English-in-RU
-detection works.
+The engine's own backend/model configuration lives in its `.env` (never read by
+Council). Council-side translation unit/mock/live tests were removed with the
+engine; the engine ships its own test suite (see its repository).

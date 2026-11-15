@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "0.8.0"
+  version: "1.0.0"
 ---
 
 # Documentation Worker
@@ -181,61 +181,33 @@ For each failed check: if the failure is mechanically correctable (line shift du
 
 ---
 
-#### Translation via project translator (optional)
+#### Translation via external Translation Project (ADR-014)
 
-When the delegation context includes `use_project_translation: true` (alias `use_local_translation` accepted for compatibility — treated identically), replace the skill's internal translation with the project's translator (`tools/local-translate.sh`). This uses the validated configuration from `tools/EXPERIMENTS.md` (E-002 post-factum 2): NVFP4 quantisation of the same 35B-A3B architecture as the cloud base model.
+When the delegation context includes `use_project_translation: true` (alias `use_local_translation` accepted for compatibility — treated identically), candidate generation runs through the external Translation Project CLI (`techdoc-translator`), not any in-repo script. The engine knows nothing about Council formats (ADR-014); this skill prepares its inputs and owns every Council-side check. The consumer-side contract is normative in `docs/en/translation-project/` (invocation procedure in `index.md`, flags/report schema/exit codes in `contract.md`).
 
-**Validated configuration (defaults):**
-
-| Parameter | Default | Source |
-|---|---|---|
-| Backend | `cloud` | — |
-| Endpoint | `http://127.0.0.1:8000/v1` | Local OpenAI-compatible server (vLLM) |
-| API key | `dummy` | Ignored by vLLM; only placeholder |
-| Model | `Qwen3.6-35B-A3B-NVFP4` | Local server |
-| Thinking mode | `{"enable_thinking":false}` | `CLOUD_CHAT_KWARGS`; mandatory (×15 speedup, E-002 post-factum 2) |
-| Temperature | `0.2` | Reproducibility (E-004) |
-| top_p | `0.95` | No measured effect vs 0.8 (E-008) |
-| Hints style | `plain` | 0/3 contamination (E-003) |
-| Metadata | skip (do not translate) | E-005: preserves convection and line-parity |
-| Code-guard | disabled | E-006: base model preserves code-spans without hints |
-| Chunking | paragraph-based | E-007: no advantage from section-mode |
-
-**Fallback chain (in priority order):**
-
-1. **Local NVFP4** (`127.0.0.1:8000`, default) — first choice; independence from external networks.
-2. **Cloud NeuralDeep** (`https://api.neuraldeep.ru/v1`, model `qwen3.6-35b-a3b-noreason`) — NEVER automatic: when the local server is unreachable, STOP and ask the operator for per-run consent (ADR-012 privacy gate). Only proceed with the cloud call after explicit approval for that run; wrapper exit code 3 signals the stop condition.
-3. **Native skill translation** — last resort; log a warning in the report.
-
-**Wrapper usage:**
+**Pinned invocation.** Read `defaults/translation.lock` (`local_path`, `commit`, `contract_version`, `mode`). Invoke:
 
 ```bash
-tools/local-translate.sh en ru <glossary_path> < input.md > output.md
+<local_path>/translate.sh \
+  --input-en <en_file> --output-ru <tmp_candidate> \
+  --glossary docs/en/glossary/index.md --report <tmp_report.json> \
+  --contract-version <contract_version> \
+  --skip-pattern '^has_translation:' --skip-pattern '^changelog-path:' \
+  --skip-pattern '^Abstraction:' --skip-pattern '^references:' \
+  --skip-pattern '^allow_non_index_paths:' [--allow-cloud]
 ```
 
-Example:
-```bash
-tools/local-translate.sh en ru docs/en/glossary/index.md < docs/en/glossary/index.md > docs/en/glossary/index-RU.md
-```
+Council-specific frontmatter keys the engine does not skip by default are passed as `--skip-pattern` data (the set above is the current Council key list; keep it in sync with `AGENTS.md` §7.2). Generic keys (`id`, `Version`, …) are skipped by the engine itself. Backend/model configuration lives in the engine's own `.env` at the pinned checkout — the skill NEVER reads, logs, or copies that file.
 
-For files exceeding 200 lines, paragraph-based chunking is the default. Splitting at heading boundaries with subsequent reassembly is acceptable for very large documents; the wrapper itself handles paragraph chunking internally.
+**Cloud policy (ADR-012 privacy gate).** `--allow-cloud` is passed only after the operator's per-run explicit consent. Backend unavailable (exit 3): STOP and escalate to the operator; do not retry silently.
 
-**Contract that Phase 4 self-verify may rely on:**
+**Fail-closed exit-code policy.** `0` = candidate usable (verify gates still apply); `1` invalid input; `2` usage/config/cloud-not-allowed; `3` backend unavailable; `4` incomplete (`fail > 0`); `5` contract mismatch (escalate, do not translate with a mismatched engine); `6` report schema error. Any non-zero exit: RU is NOT written; candidate and report are preserved for the operator review report.
 
-- **Line-parity is invariant:** every output line corresponds to exactly one input line (blank lines and structural lines pass through untranslated). Line-count fallback within the wrapper ensures this — if a model response has a different line count, it is re-queried line-by-line.
-- **Metadata lines, `---` separators, table separator rows, and code fences are copied verbatim** (skipped by `needs_skip`); **headings are translated**, with the `#` prefix structurally restored by `restore_heading_prefix()`; inline-code spans are identifiers: model translations of span contents are reverted by `restore_code_spans()` (`[span-restore]` on stderr, counted as `span_restores` in summary-json) and identifier characters are protected (`enforce_glossary` skips `[A-Za-z0-9_]`-adjacent matches, `restore_paths` repairs homoglyph mangling). Lines consisting solely of identifiers/inline-code/URLs are kept verbatim and counted as `skip`, not `fail`.
-- **Glossary terms are canonicalised:** if a model leaves an English term untranslated, `enforce_glossary()` replaces it with the Russian equivalent; each such correction is logged as `[gloss-apply] <EN> -> <RU> xN` on stderr.
-- **`[FAIL] L<n>` on stderr means the line on line N was NOT translated** (remained identical to source, but contained translatable words). Every `[FAIL]` line must be reported in the language-leakage section of the verification report and **blocks `safe` trust level** — the operation must be escalated to `review`. Lines consisting solely of identifiers (snake_case / CamelCase / ALLCAPS), inline code, or URLs are kept verbatim and counted as `skip` — they are not failures.
+**Engine guarantees Phase 4 may rely on (still verified by the skill):** line-parity is an engine invariant (one output line per input line; blank/structural lines pass through); separators, table separator rows and code fences are copied verbatim, headings keep their `#` prefixes; inline-code spans are reverted to the source; glossary terms are canonicalised post-generation (`[gloss-apply]` on stderr); untranslated lines are reported as `[FAIL] L<n>` and exit 4. These guarantees do NOT replace the Phase 4 write-gates (fail==0, line parity, EN-identity scan, glossary compliance) — the skill re-verifies all four before any write.
 
-**Environment variables supported by the wrapper:**
+**Deterministic drift check.** In drift-audit mode (c) the skill invokes `python3 tools/check_drift.py <en> <ru>` as the sole Council-side structural judge (headings, tables, fences, list markers, inline-code set, separators, metadata fingerprint, Cyrillic-ratio EN-leakage); line-parity and glossary/abstraction checks are excluded there (Phase 4 / AI-reserved per `AGENTS.md` §8) — no-rule-fork is preserved. The engine is a black box to this check.
 
-`TRANSLATE_BACKEND`, `CLOUD_MODEL`, `CLOUD_CHAT_KWARGS`, `TRANSLATE_TEMP`, `TRANSLATE_TOP_P`, `TRANSLATE_HINT_STYLE`, `TRANSLATE_METADATA`, `TRANSLATE_PROMPT`, `TRANSLATE_FORCE_SECTION`, `REQUEST_TIMEOUT`, `MAX_RETRIES`.
-
-See `tools/EXPERIMENTS.md` (E-001…E-008) for full experiment history and rationale for each default.
-
-**Deterministic drift check.** In drift-audit mode (c), the skill invokes `python3 tools/check_drift.py <en> <ru>` as a deterministic structural component (strictly structural: headings, tables, fences, list markers, inline-code set, separators, metadata fingerprint, Cyrillic-ratio EN-leakage). The tool deliberately excludes line-parity (a Phase 4 write-gate) and glossary/abstraction checks (AI-reserved per `AGENTS.md` §8) — no-rule-fork is preserved. When `PROMPT_VERSION` changes (or no live run is recorded in `TRANSLATE_RUN_LOG`), the runner emits a reminder; upon detecting such a reminder, the skill MUST offer the operator a run of `tools/tests/e2e_live.sh`.
-
-Fallback: if the configured server is unreachable and no explicit cloud override is set, the wrapper exits with code 3 and a diagnostic message on stderr. If the Python translator encounters a key error or network failure, fall back to native skill translation and log a warning in the report.
+**Provenance.** After a successful write, store the run report at `documenter/artifacts/translation/runs/<id>-<timestamp>.json`, refresh `documenter/artifacts/translation/<id>.json`, and regenerate the `STATUS.md` status index via `python3 tools/translation_status.py` (see §Deterministic Delegation). Statuses: `verified` only when all write-gates passed; otherwise `unverified` / `drift` / `error-<code>`. These artifacts are operational (git-tracked, never in the manifest).
 
 ### Audit Compliance
 
@@ -262,9 +234,9 @@ Mechanical documentation operations are owned by the deterministic suites under 
 | Compliance rule suite | `python3 tools/check_all.py [--json] [--severity] [--rule] [--strict]` | Rules 1, 2, 4, 6 + naming/schema; exit 0 clean, 1 findings, 2 internal error |
 | Version bump + changelog + manifest | `python3 tools/bump_version.py --id <id> --kind <patch\|minor\|major> --note "<reason>"` | Enforced write order: document content → changelog → manifest (last); atomic per-file temp+rename with rollback; exit 2 = refusal/rolled back |
 | Diff→bump classification proposal | `python3 tools/classify_bump.py` | Read-only; ambiguous → `minor` with a §7.5 warning; `--report` gate: escalation rate > 20% → redesign |
-| Translation | `tools/local-translate.sh` | Optional path, §Translation via project translator |
+| Candidate translation (external engine) | `<local_path>/translate.sh` from `defaults/translation.lock` | ADR-014; §Translation via external Translation Project; exit ≠ 0 is fail-closed |
 | Structural drift comparison EN↔RU | `python3 tools/check_drift.py <en> <ru>` | structural-only; excludes line-parity (Phase 4) and AI-reserved rules 3/5 |
-| Translation regression runner | `tools/tests/run_translate_tests.sh [quick|full]` | quick: unit <5s; full: + mock corpus; live: `tools/tests/e2e_live.sh` on operator request |
+| Status index regeneration | `python3 tools/translation_status.py` | rebuilds `documenter/artifacts/translation/` sidecar + `STATUS.md` from stored run reports; idempotent |
 
 Rules of engagement:
 
@@ -326,6 +298,7 @@ Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skil
 - [ ] Trust levels aligned with the Documenter classifier and shipped `tools/` behavior (§Trust Levels, `AGENTS.md` §1.7)
 - [ ] Russian synchronization per `AGENTS.md` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
   - [ ] For explicit or `auto_sync` writes: line number parity verified; all four Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance)
+  - [ ] External engine used per ADR-014 contract (lock file read, `--contract-version` passed, exit code 0, report stored); provenance sidecar + `STATUS.md` regenerated after write
 
 Fix failures mechanically where a `tools/` script owns the fix; escalate if unfixable or if the fix requires semantic judgment.
 
@@ -335,6 +308,7 @@ Fix failures mechanically where a `tools/` script owns the fix; escalate if unfi
 
 - `AGENTS.md` (§2–§8, §5.1–§5.2, §3.3, §6, §7.1–§7.6, §1.6)
 - `docs/en/glossary/index.md` (canonical term definitions)
+- `docs/en/translation-project/index.md` + `contract.md` (external Translation Project consumer contract, ADR-014)
 - `fallback/index.md` (Council protocol; this skill is separate)
 
 ---

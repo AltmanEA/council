@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.15.0
+Version: 0.16.0
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -183,6 +183,14 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Structural Fingerprint** (Структурный отпечаток) The set of invariant structural properties of a Markdown document (heading hierarchy, table and fence counts, list markers, inline-code spans, separators, metadata keys) used by the drift checker to verify translation candidates without semantic comparison.
 
 **Mock Regression** (Мок-регрессия) A deterministic offline test layer in which the translation model is replaced by canned responses (`TRANSLATE_BACKEND=mock`), verifying structural invariants of the pipeline; necessary but not sufficient — a separate live-e2e layer validates against the real model. Test layers are marked `mock` vs `live` in all reports.
+
+**Translation Project** (Проект перевода) The standalone external software project (techdoc-translator) that generates EN→RU candidate translations via a CLI contract; it holds no knowledge of Council artifacts and writes no Council files (ADR-014). [translation]
+
+**Translation Project Artifact** (Артефакт проекта перевода) An operational output consumed by Council from a translation run: the RU candidate, the run report JSON, and derived provenance records under `documenter/artifacts/translation/`; never a project document, never listed in the manifest. [translation]
+
+**Status Index** (Индекс статусов) The generated operational table (`documenter/artifacts/translation/STATUS.md`) mapping each translated document to a verification status (`verified` / `unverified` / `drift` / `error-<code>`); rebuilt deterministically from stored run reports, never written into `index-RU.md` files. [translation]
+
+**Translation Contract** (Контракт перевода) The versioned CLI interface (flags, report schema, exit codes 0–6) between Council's adapter and the Translation Project; consumer-side norm in `docs/en/translation-project/`, producer-side norm in the external repository; mismatch fails closed (ADR-014). [translation]
 
 ---
 

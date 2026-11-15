@@ -1,3 +1,4 @@
+<!-- CHANGES v0.9.0: ADR-014 external translation project boundary (sess-translation-extraction) -->
 <!-- CHANGES v0.8.0: Registered ADR-013: Documenter Tier 2+ dual interlock amending ADR-007, with provenance paragraph -->
 <!-- CHANGES v0.7.0: Register ADR-012: post-Approve automatic RU synchronization (conditional lift of AGENTS.md §3.3 suspension) -->
 <!-- CHANGES v0.2.4 (layer-0.md): Removed stray Source: line from body (compliance fix, AGENTS.md §7.2; precedent per earlier stray-metadata fixes) (sess-doc-reliability-algo Stage A). -->

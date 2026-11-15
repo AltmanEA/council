@@ -1,0 +1,20 @@
+{
+  "ok": 15,
+  "skip": 19,
+  "fail": 0,
+  "backend": "cloud",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 0,
+  "source_sha256": "42638dc1cdcfd8bc1f63b52599efa59278966b2d0d79b0e248fa20cc5b7c59e8",
+  "output_sha256": "28c30751f0a3cebe5a128ae76bbfe33e9684107083b6220c8ade46793978d5c9",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-15T04:57:47+0000",
+  "message": "ok",
+  "target_id": "project-concept",
+  "ru_path": "docs/ru/project-concept/index-RU.md",
+  "en_sha256_at_commit": "42638dc1cdcfd8bc1f63b52599efa59278966b2d0d79b0e248fa20cc5b7c59e8",
+  "status": "unverified",
+  "note": "RU bytes differ from run output"
+}

@@ -1,0 +1,3 @@
+# SKILL.md changelog (Documentation Worker skill, .agents/skills/documentation/SKILL.md)
+
+<!-- CHANGES v1.0.0: MAJOR — RU candidate generation moves from in-repo tools/local-translate.sh to the external Translation Project CLI (ADR-014, sess-translation-extraction 2026-11-15): locked invocation via defaults/translation.lock, --skip-pattern data for Council frontmatter keys, fail-closed exit-code policy 0-6, per-run cloud consent (ADR-012), provenance sidecar + STATUS.md via tools/translation_status.py; Phase 4 write-gates unchanged as the sole write authority; Deterministic Delegation and Compliance Checklist rows replaced accordingly. -->

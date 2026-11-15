@@ -14,14 +14,42 @@ GLOS="$SCRIPT_DIR/glossary.md"
 PASS=0
 FAIL=0
 
+# ADR-014: the engine is external; locate it via the lock file.
+LOCK="$PROJECT_DIR/defaults/translation.lock"
+TRANSLATOR_PATH=$(grep '^local_path:' "$LOCK" | sed 's/^local_path:[[:space:]]*//')
+CONTRACT_VERSION=$(grep '^contract_version:' "$LOCK" | sed 's/^contract_version:[[:space:]]*//' | tr -d '"')
+if [ -z "$TRANSLATOR_PATH" ] || [ ! -x "$TRANSLATOR_PATH/translate.sh" ]; then
+    echo "ERROR: Translation Project not found at local_path from lock ($TRANSLATOR_PATH); fix: checkout the pinned engine (ADR-014)"; exit 2
+fi
+
+# Integration tests run offline against the local OpenAI-compatible dev server only,
+# pinned to loopback — no external endpoint, no provider secrets (ADR-012 privacy gate).
+# The engine's "cloud" mode names any OpenAI-compatible API backend; here it is local.
+# Model/backend defaults come from the engine's own .env; only the endpoint is pinned.
+if [ -f "$TRANSLATOR_PATH/.env" ]; then
+    TRANSLATE_MODEL=$(grep -m1 '^TRANSLATE_MODEL=' "$TRANSLATOR_PATH/.env" | cut -d= -f2-) || TRANSLATE_MODEL=""
+    export TRANSLATE_MODEL
+fi
+export TRANSLATE_BACKEND=cloud
+export TRANSLATE_API_BASE=http://127.0.0.1:8000/v1
+export TRANSLATE_API_KEY=dummy
+
 run_test() {
     local name="$1" infile="$2"
-    local outf errf
+    local outf errf report
     outf="$(mktemp)"
     errf="$(mktemp)"
+    report="$(mktemp)"
 
-    bash tools/local-translate.sh en ru "$GLOS" < "$infile" > "$outf" 2> "$errf"
-    local exit_code=$?
+    # Council-specific frontmatter keys are passed as data (ADR-014; AGENTS.md §7.2)
+    # "cloud" here only selects OpenAI-compatible API mode; the endpoint is pinned to
+    # loopback by the exports above, so no data leaves the machine (ADR-012 privacy gate).
+    bash "$TRANSLATOR_PATH/translate.sh" --input-en "$infile" --output-ru "$outf" \
+        --glossary "$GLOS" --report "$report" --contract-version "$CONTRACT_VERSION" --allow-cloud \
+        --skip-pattern '^Abstraction:' --skip-pattern '^changelog-path:' \
+        --skip-pattern '^has_translation:' --skip-pattern '^references:' \
+        --skip-pattern '^allow_non_index_paths:' --skip-pattern '^no_auto_translation:' \
+        > /dev/null 2> "$errf" && exit_code=0 || exit_code=$?
 
     if [ $exit_code -ne 0 ]; then
         echo "FAIL [$name]: exit code $exit_code"

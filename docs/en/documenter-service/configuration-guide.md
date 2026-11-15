@@ -1,7 +1,7 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.18.0-draft
+Version: 0.18.1-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -236,7 +236,7 @@ Controlled by `glossary_enforcement` (policy: `draft` or `active`). Staleness gu
 
 ## Russian Translation Alignment
 
-Auto-fix banned in all tiers during MVP. When enabled (Tier 3+): invokes `change_type: create_ru` with line parity per AGENTS.md §3.3.
+Auto-fix banned in all tiers during MVP. When enabled (Tier 3+): invokes the Translation Project CLI per the consumer contract (`translation-project/index.md`, ADR-014) with `change_type: create_ru` and line parity check per AGENTS.md §3.3. Provenance artifacts (sidecar, `STATUS.md`, run reports) are stored under `documenter/artifacts/translation/` (git-tracked operational files, outside manifest scope); statuses are maintained in the Status Index (`documenter/artifacts/translation/STATUS.md`).
 
 ---
 

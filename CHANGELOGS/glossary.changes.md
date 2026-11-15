@@ -1,3 +1,4 @@
+<!-- CHANGES v0.16.0: add translation-boundary terms (ADR-014, sess-translation-extraction) -->
 <!-- CHANGES v0.15.0: Documenter entry updated to implementation status per ADR-013; new Implementation Status section defining Operational and Dormant (implemented, not activated) status terms -->
 <!-- CHANGES v0.15.0: RU synchronization (ADR-012, post-Approve): docs/ru/glossary/index-RU.md aligned — Documenter entry status clause, new Статус реализации section mirroring Implementation Status, Version line synced. check_drift PASS (headings/hr/metadata parity), line-for-line insertion. -->
 <!-- CHANGES v0.14.0: Add terms: Drift Checker, Structural Fingerprint, Mock Regression (sess-prevention-measures) -->
