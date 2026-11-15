@@ -1,0 +1,8 @@
+# Default whitelist for Implementation Worker path gate.
+# One glob pattern per line; '#' comments and blank lines ignored.
+# New files under these areas are permitted; existing files additionally
+# require explicit listing in target-task.md (checked separately by the
+# primary agent). Deny list in path-gate.sh always wins.
+tools/*
+documenter_service/*
+tests/test_*.py

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "cycle-state",
+  "description": "Checkpoint and progress record of one Implementation Worker cycle. Updated by the primary agent after every phase.",
+  "type": "object",
+  "required": ["run_id", "iteration", "phase", "status", "fail_count", "progress", "worktree", "session"],
+  "properties": {
+    "run_id": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]+$" },
+    "session": { "type": "string", "description": "session id, e.g. sess-implement-skill" },
+    "worktree": { "type": "string", "description": "worktree name, e.g. impl-run-<run-id>" },
+    "iteration": { "type": "integer", "minimum": 1 },
+    "phase": { "enum": ["pre-gate", "write-test", "baseline-run", "write-code", "run-test", "analyze", "merge", "done", "escalated"] },
+    "status": { "enum": ["running", "completed", "escalated", "operator-approved"] },
+    "fail_count": { "type": "integer", "minimum": 0, "description": "incremented only for stalled/regressing iterations; improving does not increment" },
+    "progress": { "enum": ["improving", "stalled", "regressing", "none"], "description": "computed deterministically: pass-count delta + worktree diff comparison" },
+    "last_exit_code": { "type": ["integer", "null"] },
+    "last_passed": { "type": ["integer", "null"] },
+    "test_output_paths": { "type": "array", "items": { "type": "string" } },
+    "prompt_versions": {
+      "type": "object",
+      "description": "role -> version of prompt last used; unchanged prompt may not be reused across iterations",
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "stop_reason": { "enum": ["TIMEOUT", "GOVERNANCE", "MAX_ITERATIONS", "CRITICAL_BLOCKER", null] },
+    "started_at": { "type": "string" },
+    "elapsed_seconds": { "type": "number" }
+  }
+}

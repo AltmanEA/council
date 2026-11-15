@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "verdict",
+  "description": "Analyst verdict. pass=true may only be produced by Level 0 (script); the LLM level always emits pass=false.",
+  "type": "object",
+  "required": ["pass", "progress", "reasons", "next_steps", "critical_blocker"],
+  "properties": {
+    "pass": { "type": "boolean" },
+    "level0_pass": { "type": ["boolean", "null"], "description": "authoritative deterministic result: exit_code==0 AND pass-count grew AND signature grep checks AND path-gate" },
+    "progress": { "enum": ["improving", "stalled", "regressing"] },
+    "reasons": { "type": "array", "items": { "type": "string" } },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "change"],
+        "properties": {
+          "role": { "enum": ["test-author", "code-author", "test-runner", "analyst"] },
+          "change": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "critical_blocker": { "type": "boolean" },
+    "hypotheses": { "type": "array", "items": { "type": "string" } }
+  }
+}
