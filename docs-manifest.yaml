@@ -93,8 +93,8 @@ documents:
   - id: glossary
     path: docs/en/glossary/index.md
     title: Glossary
-    version: 0.16.0
-    status: draft
+    version: 0.17.0
+    status: active
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md
     changelog-path: CHANGELOGS/glossary.changes.md
@@ -187,8 +187,8 @@ documents:
   - id: protocol-core
     path: docs/en/protocol-core/index.md
     title: Protocol Core
-    version: 0.5.6
-    status: draft
+    version: 0.6.0
+    status: active
     abstraction: protocol
     has_translation: docs/ru/protocol-core/index-RU.md
     changelog-path: CHANGELOGS/protocol-core.changes.md
