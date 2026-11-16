@@ -65,10 +65,19 @@ printed as warnings. The hook is a best-effort gate only — `git commit
 ## Translation (external — ADR-014)
 
 The EN→RU translation engine is no longer part of `tools/`. It lives in the
-standalone **Translation Project** (`techdoc-translator`), invoked through its
-versioned CLI contract. See `docs/en/translation-project/index.md` (procedure)
-and `docs/en/translation-project/contract.md` (flags, report schema, exit codes
-0–6). The pinned checkout is recorded in `defaults/translation.lock`.
+standalone **Translation Project** (`techdoc-translator`), consumed as a
+**vendored distribution** unpacked into `vendor/techdoc-translator/` from the
+project's distributable archive (built by `scripts/build_dist.sh`). The invocation
+path is read from `defaults/translation.lock` (`local_path`), which defaults to
+the vendored copy. See `docs/en/translation-project/index.md` (procedure) and
+`docs/en/translation-project/contract.md` (flags, report schema, exit codes
+0–6).
+
+To update the vendored copy from the Translation Project repository:
+
+```bash
+python3 tools/sync_translator.sh   # builds archive, verifies, unpacks, updates lock
+```
 
 Council keeps the **verification** layer:
 - `check_drift.py` — the sole deterministic EN↔RU structural judge (exit 0 clean,
@@ -81,5 +90,6 @@ Council keeps the **verification** layer:
   OpenAI-compatible dev server (endpoint pinned to loopback; no external calls).
 
 The engine's own backend/model configuration lives in its `.env` (never read by
-Council). Council-side translation unit/mock/live tests were removed with the
-engine; the engine ships its own test suite (see its repository).
+Council, never committed — see `.gitignore`). Council-side translation unit/mock/live
+tests were removed with the engine; the engine ships its own test suite
+(`tests/smoke.sh`, `tests/test_unit.py` in the vendored distribution).

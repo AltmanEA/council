@@ -185,7 +185,7 @@ For each failed check: if the failure is mechanically correctable (line shift du
 
 When the delegation context includes `use_project_translation: true` (alias `use_local_translation` accepted for compatibility — treated identically), candidate generation runs through the external Translation Project CLI (`techdoc-translator`), not any in-repo script. The engine knows nothing about Council formats (ADR-014); this skill prepares its inputs and owns every Council-side check. The consumer-side contract is normative in `docs/en/translation-project/` (invocation procedure in `index.md`, flags/report schema/exit codes in `contract.md`).
 
-**Pinned invocation.** Read `defaults/translation.lock` (`local_path`, `commit`, `contract_version`, `mode`). Invoke:
+**Pinned invocation.** Read `defaults/translation.lock` (`local_path`, `commit`, `contract_version`, `mode`). The `local_path` points to the vendored distribution unpacked from the Translation Project archive into `vendor/techdoc-translator/` (ADR-014, vendoring model per INTEGRATION.md §4). Invoke:
 
 ```bash
 <local_path>/translate.sh \

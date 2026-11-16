@@ -1,13 +1,18 @@
-# defaults/translation.lock — pinned checkout of the external Translation Project
+# defaults/translation.lock — pinned vendored distribution of the external Translation Project
 # (ADR-014; schema: docs/en/translation-project/contract.md §Lock file).
 # Consumed by the Documentation Worker skill (§Translation via external Translation
 # Project) and tools/translation_status.py. Updated by the operator; reviewed like code.
 # Values are plain scalars; comments live on their own lines (consumers parse naively).
-# tag/commit: fill once the public repo is created and pushed.
+#
+# The engine is vendored from a distributable archive (tarball built by
+# scripts/build_dist.sh in the Translation Project). See INTEGRATION.md §4
+# (vendoring) for the consumer model.
+# Update: tools/sync_translator.sh — builds a new archive from the Translation Project
+# repo, verifies checksums, unpacks into vendor/techdoc-translator/, and updates this file.
 repo: https://github.com/AltmanEA/techdoc-translator
-local_path: /home/ea/techdoc-translator
+local_path: vendor/techdoc-translator
 tag: v0.1.0
-commit: 7123a37c68d96397fc30164f68241504f0ab68e8
+commit: 0b48ad9
 contract_version: 1.0.0
 mode: external
-updated_by: operator 2026-11-15 (sess-translation-extraction)
+updated_by: operator 2026-11-16 (vendored distribution)

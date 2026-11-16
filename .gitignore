@@ -5,6 +5,9 @@ sessions/
 __pycache__/
 *.pyc
 
+# Translator vendor secrets — always untracked (INTEGRATION.md §4)
+vendor/techdoc-translator/.env
+
 # documenter/ is intentionally NOT ignored: it is the git-tracked audit registry
 # that backs the Documenter MVP threat model (ADR-008, operator decision 2026-11-12).
 # The service never commits; committing documenter/ state is an operator action.
