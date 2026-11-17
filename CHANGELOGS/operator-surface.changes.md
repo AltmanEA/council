@@ -1,3 +1,4 @@
+<!-- CHANGES v0.5.0: Phase 2 physical split (sess-operator-surface-split): Documenter Integration approval-lifecycle moved to documenter-service/approval-surface.md; canonical contract mvp-contract.md §4; cross-references updated -->
 <!-- CHANGES v0.4.0: Approve P1-P3+P5(a) sess-operator-surface-split AI-3: threat-model annex, A10 deferred-items list, stub-swap contract note, banner truth-update (stdio Tier 0-1 implemented, MCP unregistered, Tier 2+ dormant ADR-013) -->
 <!-- CHANGES v0.3.0: Phase 1 canonical-source fix (sess-operator-surface-split): Documenter Integration approval detail replaced with canonical reference to mvp-contract §4; verbs table gains Owner column with DORMANT (ADR-013) on documenter.* rows; exclusive operator-identity guard added to Caller Identity; Cross-References extended -->
 <!-- CHANGES v0.2.0: Fix pre_check timeout constant and unavailable timeout-and-continue semantics per ADR-015 (p3-operator-surface-impl-plan, operator OD-2) -->

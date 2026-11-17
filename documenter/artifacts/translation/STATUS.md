@@ -6,11 +6,12 @@
 |---|---|---|---|---|---|
 | documentation-rules | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T07:49:39+0000 | runs/ |
 | documenter-service | verified | local-model | 2026.11-r5 | 2026-11-17T04:24:17+0000 | runs/ |
+| documenter-service-approval-surface | unverified | local-model | 2026.11-r5 | 2026-11-17T10:11:17+0000 | runs/ |
 | documenter-service-configuration-guide | missing |  |  |  | runs/ |
-| documenter-service-policy-reference | verified | local-model | 2026.11-r5 | 2026-11-17T04:25:14+0000 | runs/ |
+| documenter-service-policy-reference | drift | local-model | 2026.11-r5 | 2026-11-17T04:25:14+0000 | runs/ |
 | execution-runtime | missing |  |  |  | runs/ |
 | glossary | missing |  |  |  | runs/ |
-| operator-surface | verified | local-model | 2026.11-r5 | 2026-11-17T09:27:06+0000 | runs/ |
+| operator-surface | unverified | local-model | 2026.11-r5 | 2026-11-17T10:16:53+0000 | runs/ |
 | planned-architecture | missing |  |  |  | runs/ |
 | planned-architecture-layer-0 | missing |  |  |  | runs/ |
 | planned-architecture-layer-1 | missing |  |  |  | runs/ |

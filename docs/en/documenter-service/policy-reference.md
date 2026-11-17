@@ -1,7 +1,7 @@
 # Documenter Policy Reference
 
 id: documenter-service-policy-reference
-Version: 0.7.3-draft
+Version: 0.7.4-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/policy-reference-RU.md
@@ -129,7 +129,7 @@ Documenter has no notification subsystem: no timer, no daemon, no push channel, 
 
 ## Authorization Workflow
 
-Procedure for advancing write capability. Each step is a discrete operator action; Documenter never performs a step on its own behalf. Steps 1–3 precede the first Tier 2+ invocation; the main spec §Trust Tiers states both the policy file and the briefing as mandatory preconditions.
+Procedure for advancing write capability. Each step is a discrete operator action; Documenter never performs a step on its own behalf. Steps 1–3 precede the first Tier 2+ invocation; the main spec §Trust Tiers states both the policy file and the briefing as mandatory preconditions. The operator-side out-of-band approval and override mechanics once activated are specified in `documenter-service/approval-surface.md` (canonical contract: `mvp-contract.md` §4).
 
 1. **Audit at current tier.** Run `audit("*")` and resolve findings at `high` and `critical`. Tier 2+ on a non-compliant corpus automates drift, not cleanup.
 2. **Draft the policy file.** Author `documenter_policy.yml` per §Policy File: set the intended `change_type` + `trust_level` + `targets` combinations in `allowed_operations`, and set operational knobs per §Operational Tuning.

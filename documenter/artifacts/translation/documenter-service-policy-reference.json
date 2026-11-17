@@ -15,5 +15,6 @@
   "target_id": "documenter-service-policy-reference",
   "ru_path": "docs/ru/documenter-service/policy-reference-RU.md",
   "en_sha256_at_commit": "9a84a9874142e17eab9024095584b735c04748d4990f91b35e79e2f7caa9cbb1",
-  "status": "verified"
+  "status": "drift",
+  "note": "EN changed after translation"
 }

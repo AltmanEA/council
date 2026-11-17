@@ -1,3 +1,4 @@
+<!-- CHANGES v0.12.1: Phase 2 (sess-operator-surface-split): ADR-013/ADR-016 where-applied extended with documenter-service/approval-surface.md -->
 <!-- CHANGES v0.12.0: Register ADR-016 Tier 2+ Activation Gate Norm (sess-operator-surface-split, operator decision AI-4) -->
 <!-- CHANGES v0.11.0: Register ADR-015 (Operator Surface MVP build parameters) from p3-operator-surface-impl-plan -->
 <!-- CHANGES v0.10.0: ADR-012 normative-content column retargeted to documentation-rules §3.3 (AGENTS.md router split) -->

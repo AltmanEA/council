@@ -1,3 +1,4 @@
+<!-- CHANGES v0.8.1-draft: Phase 2 (sess-operator-surface-split): canonical paragraph now names approval-surface.md as the moved operator-side prose -->
 <!-- CHANGES v0.8.0-draft: Section 4 declared canonical source for Tier 2+ out-of-band approval contract and documenter.* event schemas (Canonical rule, sess-operator-surface-split) -->
 <!-- CHANGES v0.7.1-draft: translation engine externalized (ADR-014) -->
 <!-- CHANGES v0.7.0-draft: Statuses per decision B: Multi-file Commit Protocol implemented-policy-gated-dormant; 3.4 and C3 aligned; Tier 3 core-level behind ADR-013 interlock wording (fix plan stage 4 p.27) -->

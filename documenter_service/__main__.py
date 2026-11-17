@@ -125,8 +125,8 @@ _OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
 def resolve_operator_id(environ) -> str:
     """Resolve the authenticated operator from process environment.
 
-    AuthN decision (mvp-contract §AuthN; operator-surface §Documenter
-    Integration): operator_id NEVER comes from client-supplied parameters.
+    AuthN decision (mvp-contract §AuthN; operator-surface §Caller Identity and
+    Authorization): operator_id NEVER comes from client-supplied parameters.
     The trusted ingress is the process environment variable COUNCIL_OPERATOR_ID,
     validated against ``^op-[a-z0-9][a-z0-9-]{2,63}$``.
 

@@ -1,3 +1,4 @@
+<!-- CHANGES v0.7.4-draft: Phase 2 (sess-operator-surface-split): Authorization Workflow references approval-surface.md for out-of-band approval mechanics -->
 <!-- CHANGES v0.7.3-draft: approval_expiry_window row now cites mvp-contract §4 as canonical source for the out-of-band approve call -->
 <!-- CHANGES v0.7.2-draft: Cross-References AGENTS.md entry retargeted to documentation-rules -->
 <!-- CHANGES v0.7.2-draft (policy-reference-RU.md): RU aligned — Cross-References AGENTS.md entry retargeted to documentation-rules, version aligned; check_drift clean. -->

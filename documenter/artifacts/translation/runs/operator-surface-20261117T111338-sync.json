@@ -1,0 +1,15 @@
+{
+  "ok": 136,
+  "skip": 86,
+  "fail": 0,
+  "backend": "local",
+  "model": "local-model",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 1,
+  "source_sha256": "349d67002ee3a8bcef4a96bab742adc8df7b6a782250dbe7363628ac088f619e",
+  "output_sha256": "f04cd2d29f82aaaa718bbaa9ace154fb05151cfe7e98826dd8b27a278a13669f",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-17T10:16:53+0000",
+  "message": "ok"
+}

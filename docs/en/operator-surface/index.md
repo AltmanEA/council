@@ -1,7 +1,7 @@
 # Operator Surface & Escalation
 
 id: operator-surface
-Version: 0.4.0
+Version: 0.5.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-surface/index-RU.md
@@ -29,7 +29,7 @@ Three caller classes: `operator`, `agent`, `service`.
 - AuthN: local stdio process plus `COUNCIL_OPERATOR_ID` and `COUNCIL_OPERATOR_TOKEN` from the environment. The surface verifies the token and never forwards it to Layer 1.
 - AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in `operator-surface/index.md` §Caller Identity and Authorization; structural schema violations remain `VAL.001`.
 - `operator_id` is a human principal. Agent principals MUST NOT approve Documenter writes or resolve escalations at MVP.
-- Operator identity is defined **exclusively** in this section. The `operator_id` that resolves escalations (§Resolution Binding and Resume) and approves Documenter writes (`documenter.approve`, §Documenter Integration) is the same human principal, valid cross-document. No other document may define or extend who counts as an operator.
+- Operator identity is defined **exclusively** in this section. The `operator_id` that resolves escalations (§Resolution Binding and Resume) and approves Documenter writes (`documenter.approve`, `documenter-service/approval-surface.md`) is the same human principal, valid cross-document. No other document may define or extend who counts as an operator.
 
 #### Authentication (MVP)
 
@@ -92,7 +92,7 @@ This table is the single transport-level permission registry owned by this docum
 | `council.override_precheck` | Record an authenticated `pre_check` override with a reason |
 | `documenter.audit` | Run a read-only compliance scan; `pre_check=true` returns a gate verdict |
 | `documenter.delegate` | Validate a change and return a diff preview; no writes at Tier 0–1 |
-| `documenter.approve` | Out-of-band approval for Tier 2+ (implemented; policy-gated — see §Documenter Integration) |
+| `documenter.approve` | Out-of-band approval for Tier 2+ (implemented; policy-gated — see `documenter-service/approval-surface.md`) |
 | `documenter.override_gate` | Override a pre-check or audit-gate failure with a recorded reason and authenticated `operator_id`; emits `documenter.override_gate` event in the canonical envelope |
 
 **Stub-swap record.** Of the six deferred-tool envelopes drafted at implementation Step 2, five were superseded by real authenticated handlers in the MVP transport: `documenter.delegate`, `documenter.approve`, `council.resolve_escalation`, `council.override_precheck`, and `documenter.override_gate`. Their drafted CONFIG.001 texts remain the localization source for the withdrawn drafts. `council.get_artifacts` continues to serve its drafted deferred envelope.
@@ -194,15 +194,9 @@ Notices map to the following event types in the canonical envelope: `notice.simp
 
 ## Documenter Integration
 
-<!-- STATUS: Tier 0-1 (audit, delegate preview, approve) implemented for stdio; MCP unregistered; Tier 2+ writes dormant (ADR-013). See AGENTS.md §1.7 -->
+<!-- STATUS: approval-lifecycle moved to `documenter-service/approval-surface.md` (Phase 2, sess-operator-surface-split); canonical contract mvp-contract.md §4. See AGENTS.md §1.7 -->
 
-<span style="color:red;font-weight:bold">⚠ MCP UNREGISTERED — stdio ONLY</span> `documenter.audit`, `documenter.delegate` (preview) and `documenter.approve` are implemented at Tier 0–1 behind the stdio transport; the MCP server is not registered (operator decision) and Tier 2+ writes stay dormant (ADR-013). The operator surface integrates with the Documenter service per its contract.
-
-Documenter is a Supporting service invoked through this surface. Its `audit()` and `delegate()` are MCP tools; events and verdicts return synchronously.
-
-- Tier 0–1 ships at MVP: read-only audit and diff preview. `documenter.delegate` validates `change_type`, `diff`, and `audit_id`, then returns a preview without writing.
-- Tier 2+ is policy-gated (interlock until the operator advances `active_tier` with a valid `briefing_ref`). When enabled, `documenter.delegate` returns `approval_required` with an `approval_id` and the diff hash; no write proceeds until approval.
-- `documenter.approve` and all Tier 2+ approval mechanics (`approval_id` semantics, diff-hash binding, single-use, `approval_expiry_window`, changed-diff invalidation, approver ≠ proposer) are specified in `documenter-service/mvp-contract.md` §4, the **canonical source** for the approval contract and for the `documenter.approval` / `documenter.override_gate` event schemas; where this document disagrees with §4, **§4 wins** (Canonical rule, sess-operator-surface-split). This section provides only the operator-surface rendering and delivery semantics.
+<span style="color:red;font-weight:bold">⚠ DORMANT (ADR-013) — MCP UNREGISTERED</span> The operator-side Tier 2+ approval and gate-override workflow is specified in `documenter-service/approval-surface.md`; the canonical approval contract and `documenter.*` event schemas are in `documenter-service/mvp-contract.md` §4. The Tier 2+ write branch is implemented and dormant behind the ADR-013 dual interlock.
 
 ## Event Delivery
 
@@ -221,6 +215,7 @@ Deferred items (A10, p2 roadmap; source: p3 impl-plan out-of-scope list): crash-
 - `service-contract/index.md` — artifact, event, and error schemas
 - `execution-runtime/index.md` — phase machine, persistence, escalation routing
 - `documenter-service/index.md` — Documenter interfaces and trust tiers
+- `documenter-service/approval-surface.md` — operator-side Tier 2+ approval and override workflow
 - `documenter-service/mvp-contract.md` §4 — canonical Tier 2+ approval contract and `documenter.*` event schemas
 - `planned-architecture/layer-2.md` — adapter responsibilities
 - `fallback/index.md` — manual fallback workflow
