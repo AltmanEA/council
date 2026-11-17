@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.7.2-draft
+Version: 0.8.0-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -12,7 +12,7 @@ changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
 
 ## Purpose
 
-Machine-readable interface schemas for the Documenter Service MVP. Core operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface — write-branch `delegate(preview: false)`, `documenter.approve`, `documenter.override_gate` — is specified in `documenter-service/mvp-contract.md` §4 (operator-side workflow: `documenter-service/approval-surface.md`) and IMPLEMENTED in the build; it is gated at runtime by the policy interlock (`active_tier >= 2` + non-null `briefing_ref` + archived briefing file + authenticated operator ingress). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`.
+Machine-readable interface schemas for the Documenter Service MVP. Core operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface — write-branch `delegate(preview: false)`, `documenter.approve`, `documenter.override_gate` — is specified in `documenter-service/mvp-contract.md` §4 (operator-side workflow: `documenter-service/approval-surface.md`) and IMPLEMENTED in the build; it is gated at runtime by the policy interlock (`active_tier >= 2` + non-null `briefing_ref` + archived briefing file + authenticated operator ingress + Operator Surface readiness sentinel, ADR-016). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`.
 
 Data models behind these interfaces: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
 
@@ -71,7 +71,7 @@ Legacy mappings: `info`→`low`, `warning`→`medium`, `error`→`high`.
 
 ## 2. `delegate(preview: true)` — Diff preview
 
-Preview only. Returns a diff without write intent; exempt from `allowed_operations` checks at all tiers. **The write branch is implemented behind the dual interlock (policy gate + Operator Surface not built, ADR-013); currently unreachable.**
+Preview only. Returns a diff without write intent; exempt from `allowed_operations` checks at all tiers. **The write branch is implemented behind the dual interlock (policy state + readiness sentinel, ADR-013/ADR-016); currently unreachable.**
 
 ### Request
 
@@ -132,7 +132,7 @@ Effective level is assigned by Documenter. On the scale `safe < review`, the inv
 
 Re-invocation with `approval_id` (after approval) applies the write under the mvp-contract §2.2 sequence and returns `{applied: true, target_id, diff_hash, approval_id, next_action: write_applied}`; the approval is consumed on apply. Changed `diff_input` → `approval_invalidated`; stale/expired → `approval_expired`; replay → `token_replay`; lock timeout → `lock_conflict`; hash mismatch → `hash_mismatch`.
 
-`documenter.approve(approval_id, operator_id)` — separate invocation; `operator_id` comes from authenticated ingress only (never a client parameter); approver ≠ proposer; single-use; expiry per policy. `documenter.override_gate(reason, operator_id, target_id, diff_hash, audit_id?)` — bound to one `(target_id, diff_hash)`, one-shot within the window, emits `documenter.override_gate`, returns `next_action: rerun_audit`; unavailable for `critical` findings (`blocking_finding` + `resolve_finding`).
+`documenter.approve(approval_id, operator_id, acknowledge?)` — separate invocation; `operator_id` comes from authenticated ingress only (never a client parameter); approver ≠ proposer (sole exception ADR-017: a solo self-approval is permitted only when `acknowledge` equals `CONFIRMED_SOLE_REVIEWER`, the matched operation is `safe`, and `min_approval_delay_seconds` has elapsed — see `documenter-service/mvp-contract.md` §4); single-use; expiry per policy. `acknowledge` is supplied as the CLI `--acknowledge` flag or the MCP `acknowledge` argument and is inert on non-solo approvals. `documenter.override_gate(reason, operator_id, target_id, diff_hash, audit_id?)` — bound to one `(target_id, diff_hash)`, one-shot within the window, emits `documenter.override_gate`, returns `next_action: rerun_audit`; unavailable for `critical` findings (`blocking_finding` + `resolve_finding`).
 
 ---
 

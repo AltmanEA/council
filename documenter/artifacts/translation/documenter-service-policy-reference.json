@@ -1,20 +1,19 @@
 {
-  "ok": 66,
-  "skip": 90,
+  "ok": 69,
+  "skip": 92,
   "fail": 0,
   "backend": "local",
-  "model": "local-model",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
   "prompt_version": "2026.11-r5",
   "glossary_applied": 0,
-  "source_sha256": "9a84a9874142e17eab9024095584b735c04748d4990f91b35e79e2f7caa9cbb1",
-  "output_sha256": "d305c14aecf2cf13c8005158508833134de613177ce9cca2344e25807bdbcb3b",
+  "source_sha256": "6acca3f2fb9638fa0220439518fc0cdd6a4243762975f3a96efa00f64e6c9ab7",
+  "output_sha256": "7913dcddaaafbd72fd1d42eb472fed9078958334b20d9483a3643fbb2a528019",
   "exit_code": 0,
   "contract_version": "1.0.0",
-  "timestamp": "2026-11-17T04:25:14+0000",
+  "timestamp": "2026-11-17T14:13:08+0000",
   "message": "ok",
   "target_id": "documenter-service-policy-reference",
   "ru_path": "docs/ru/documenter-service/policy-reference-RU.md",
-  "en_sha256_at_commit": "9a84a9874142e17eab9024095584b735c04748d4990f91b35e79e2f7caa9cbb1",
-  "status": "drift",
-  "note": "EN changed after translation"
+  "en_sha256_at_commit": "6acca3f2fb9638fa0220439518fc0cdd6a4243762975f3a96efa00f64e6c9ab7",
+  "status": "verified"
 }

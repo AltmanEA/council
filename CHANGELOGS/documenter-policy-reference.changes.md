@@ -1,3 +1,4 @@
+<!-- CHANGES v0.8.0-draft: AI-2 per sess-solo-operator-activation: new fields allow_solo_approval (fail-closed false) and min_approval_delay_seconds ([60,86400]) in YAML example and Field Reference; Authorization Workflow step 6 solo authorization (ADR-017 bounded experiment, ACK token, delay, 5 clean cycles, review <=30d) -->
 <!-- CHANGES v0.7.4-draft: Phase 2 (sess-operator-surface-split): Authorization Workflow references approval-surface.md for out-of-band approval mechanics -->
 <!-- CHANGES v0.7.3-draft: approval_expiry_window row now cites mvp-contract §4 as canonical source for the out-of-band approve call -->
 <!-- CHANGES v0.7.2-draft: Cross-References AGENTS.md entry retargeted to documentation-rules -->

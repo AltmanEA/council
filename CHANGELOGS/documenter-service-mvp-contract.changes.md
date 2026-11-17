@@ -1,3 +1,5 @@
+<!-- CHANGES v0.10.0-draft: AI-2 tail: §4 approve row gains acknowledge? parameter (ADR-017 solo token CONFIRMED_SOLE_REVIEWER, inert on non-solo path) -->
+<!-- CHANGES v0.9.0-draft: AI-2 per sess-solo-operator-activation: §4 solo-operator risk-acceptance exception (ADR-017: allow_solo_approval + safe-only + CONFIRMED_SOLE_REVIEWER + min delay + bias banner + ramp/review); interlock wording synchronized to ADR-015/ADR-016 (surface exists as code, readiness sentinel gate); ADR-017 row in §5 -->
 <!-- CHANGES v0.8.1-draft: Phase 2 (sess-operator-surface-split): canonical paragraph now names approval-surface.md as the moved operator-side prose -->
 <!-- CHANGES v0.8.0-draft: Section 4 declared canonical source for Tier 2+ out-of-band approval contract and documenter.* event schemas (Canonical rule, sess-operator-surface-split) -->
 <!-- CHANGES v0.7.1-draft: translation engine externalized (ADR-014) -->

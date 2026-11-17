@@ -1,3 +1,4 @@
+<!-- CHANGES v0.8.0-draft: AI-2 tail: documenter.approve signature gains acknowledge? (ADR-017 solo token); approver!=proposer clause cites the ADR-017 exception; interlock wording synchronized to ADR-016 sentinel gate -->
 <!-- CHANGES v0.7.2-draft: Phase 2 (sess-operator-surface-split): Purpose references approval-surface.md for operator-side workflow -->
 <!-- CHANGES v0.7.1-draft: Rule references (§7.3, §8) retargeted to documentation-rules after AGENTS.md router split -->
 <!-- CHANGES v0.7.0-draft: Prose synchronization (ADR-013): write branch described as implemented behind the dual interlock (policy gate + Operator Surface not built), currently unreachable -->

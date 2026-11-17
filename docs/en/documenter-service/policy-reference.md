@@ -1,7 +1,7 @@
 # Documenter Policy Reference
 
 id: documenter-service-policy-reference
-Version: 0.7.4-draft
+Version: 0.8.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/policy-reference-RU.md
@@ -42,6 +42,8 @@ documenter_policy:
   sync_latency_budget_ms: 30000   # milliseconds; a synchronous call exceeding this budget returns a structured timeout error instead of blocking
   glossary_staleness_days: 30     # days since last glossary modification; terms appearing ≥3 times within this window are flagged as missing
   briefing_ref: null              # path to operator briefing artifact; required when active_tier >= 2
+  allow_solo_approval: false      # bool; solo (self-)approval exception per ADR-017; absent ⇒ false (fail-closed)
+  min_approval_delay_seconds: 0   # int; minimum seconds between proposal and solo approval; range [60, 86400]; absent ⇒ 0
 ```
 
 At Tier 0–1, `allowed_operations` must remain empty regardless of content. The operator updates this file explicitly when advancing tiers. Documenter refuses to execute any operation not listed.
@@ -56,6 +58,8 @@ At Tier 0–1, `allowed_operations` must remain empty regardless of content. The
 | `active_tier` | int | Yes | `0` | Current trust tier (0–3). Must match Tier table (§Trust Tiers, main spec). |
 | `allowed_operations` | array | Yes | `[]` | Operations authorized at current tier. Empty below Tier 2. May only tighten the trust floor (§Authority rule above). |
 | `approval_expiry_window` | int | No | `30` | Maximum time (minutes) before an unapproved `approval_id` expires. Range: 5–1440 (5 minutes to 24 hours). Used together with the out-of-band `documenter.approve(approval_id, operator_id)` call specified in `documenter-service/mvp-contract.md` §4 (canonical approval contract). |
+| `allow_solo_approval` | bool | No | `false` | Enables the solo-operator self-approval exception (`mvp-contract.md` §4, ADR-017) for the sole `op-*` identity. Absent ⇒ `false`: self-approval is denied (fail-closed), preserving the `approver ≠ proposer` norm. When `true`, solo approval additionally requires the matched operation to be `safe` (verified against the `change_type` persisted on the approval record), the acknowledgment token `CONFIRMED_SOLE_REVIEWER`, and the `min_approval_delay_seconds` window; the approve response carries a bias-warning banner. |
+| `min_approval_delay_seconds` | int | No | `0` | Minimum seconds that must elapse between a proposal's `created_at` and its solo approval. Range: 60–86400. Applies only on the solo path (`allow_solo_approval: true`); out-of-range or non-integer values are rejected at policy load time. Missing or unparseable `created_at` during the delay check → `gate_failure` (fail-closed). Recommended minimum for a solo deployment: 300. |
 | `audit_freshness` | int | No | `30` | Maximum age (minutes) of an `audit_id` accepted by the `delegate()` pre-audit gate. The gate additionally validates scope coverage (exact match or `*`), blocking findings, and scan completion (`has_remaining` must not be `true`) against the audit registry (`documenter-service/configuration-guide.md`, §Audit Registry). Set to `0` to disable the gate entirely (no audit required; `audit_id` will be ignored if provided). Any other value enforces the freshness window. |
 | `briefing_ref` | string | No | `null` | Path to the archived operator briefing artifact documenting the scope of delegated authority. MUST be non-null when `active_tier >= 2` (§Authorization Workflow, step 4). |
 | `glossary_enforcement` | enum | No | `draft` | Controls glossary compliance noise reduction (§Glossary Compliance, configuration guide). |
@@ -136,8 +140,9 @@ Procedure for advancing write capability. Each step is a discrete operator actio
 3. **Validate offline.** Load the candidate file in check-only mode. Load fails on: `allowed_operations` non-empty below Tier 2 (validator rule), a `trust_level` below the derived floor for its `change_type` (authority rule), or an unrecognized `notification_mode` value.
 4. **Record the briefing.** Write and archive the operator briefing — which documents and `change_type` values are delegated, the maximum number of documents a single invocation may touch, and the reversal procedure — then set `briefing_ref` to its path. This artifact is the human-readable counterpart of `allowed_operations`.
 5. **Advance the tier.** Set `active_tier` in the same edit as `briefing_ref`, so a partial edit cannot leave Tier 2+ without a briefing reference.
-6. **First write at the new tier.** Invoke `delegate()` on a single low-risk target with a fresh `audit_id`. Review the diff item by item regardless of tier; Tier 2 grants capability, not reduced scrutiny.
-7. **Evaluate for Tier 3.** Advance only on documented evidence: ≥90% approval rate at Tier 2 across the preceding two weeks of the event log (§Tier Selection Guidance, main spec), computable from `decision` fields in the event log (§Event Schema, configuration guide). Approved patterns are then enumerated explicitly in `allowed_operations` using `type: pattern` entries with `pattern_id`, `pattern_description`, and `match_criteria` (§Per-Operation Entries); Tier 3 never infers a pattern the operator did not authorize.
+6. **Solo authorization (ADR-017 only).** If — and only if — the deployment has a single operator, additionally set `allow_solo_approval: true` and `min_approval_delay_seconds` (≥300 recommended) in the same edit as step 5, and record the solo scope in the briefing. The briefing must state: the experiment is risk-accepted and bounded; solo approval applies only to `safe`-trust matched operations; each solo approval requires the typed acknowledgment token `CONFIRMED_SOLE_REVIEWER` and the delay window; every solo approval returns a bias-warning banner; scope widens only after 5 consecutive clean write cycles (one change_type or one document per expansion); a mandatory operator review occurs within 30 days of activation. Without `allow_solo_approval: true` the system keeps the strict `approver ≠ proposer` norm.
+7. **First write at the new tier.** Invoke `delegate()` on a single low-risk target with a fresh `audit_id`. Review the diff item by item regardless of tier; Tier 2 grants capability, not reduced scrutiny.
+8. **Evaluate for Tier 3.** Advance only on documented evidence: ≥90% approval rate at Tier 2 across the preceding two weeks of the event log (§Tier Selection Guidance, main spec), computable from `decision` fields in the event log (§Event Schema, configuration guide). Approved patterns are then enumerated explicitly in `allowed_operations` using `type: pattern` entries with `pattern_id`, `pattern_description`, and `match_criteria` (§Per-Operation Entries); Tier 3 never infers a pattern the operator did not authorize.
 
 **Rollback:** set `active_tier` to a lower value. The change takes effect at the next invocation; an in-flight `delegate()` completes under the tier at which it was accepted, holding the operation-level lock to §Safety Protocol #2.
 

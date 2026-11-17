@@ -1,3 +1,4 @@
+<!-- CHANGES v0.13.0: AI-2: register ADR-017 solo-operator Tier 2+ bounded experiment (sess-solo-operator-activation 2026-11-17, moderator-confirmed stance d) -->
 <!-- CHANGES v0.12.1: Phase 2 (sess-operator-surface-split): ADR-013/ADR-016 where-applied extended with documenter-service/approval-surface.md -->
 <!-- CHANGES v0.12.0: Register ADR-016 Tier 2+ Activation Gate Norm (sess-operator-surface-split, operator decision AI-4) -->
 <!-- CHANGES v0.11.0: Register ADR-015 (Operator Surface MVP build parameters) from p3-operator-surface-impl-plan -->

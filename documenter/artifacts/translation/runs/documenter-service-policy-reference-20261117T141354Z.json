@@ -1,0 +1,15 @@
+{
+  "ok": 69,
+  "skip": 92,
+  "fail": 0,
+  "backend": "local",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 0,
+  "source_sha256": "6acca3f2fb9638fa0220439518fc0cdd6a4243762975f3a96efa00f64e6c9ab7",
+  "output_sha256": "7913dcddaaafbd72fd1d42eb472fed9078958334b20d9483a3643fbb2a528019",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-17T14:13:08+0000",
+  "message": "ok"
+}
