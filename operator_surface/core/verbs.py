@@ -8,18 +8,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from ..core.approval import ApprovalError, hash_diff
+from ..core.approval import ApprovalError, _get_precheck_journal, hash_diff
 from ..core.envelope import error_envelope
 from ..core.events import make_envelope
 from ..core.notices import default_notices
 from ..core.precheck import run_precheck
 from ..core.escalations import render
-
-
-# ---------------------------------------------------------------------------
-# Volatile single-use registry for precheck overrides (in-memory only).
-# ---------------------------------------------------------------------------
-_precheck_override_consumed: set[tuple[str, str]] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +343,7 @@ def override_precheck(
     reason: str | None,
     operator_id: str,
     events,
+    state_root: str | None = None,
 ) -> dict:
     """Grant a single-use precheck override.
 
@@ -358,7 +353,7 @@ def override_precheck(
     On valid grant:
       - store.append_record(session_id, {...})
       - ONE precheck.overridden event via events
-      - populate single-use registry
+      - populate disk-backed journal
       - return {"status": "override_granted", ...}
 
     Returns a fresh dict (defensive copy).
@@ -369,6 +364,9 @@ def override_precheck(
 
     override_id = uuid.uuid4().hex
     granted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Create journal and record grant (loads from disk if state_root provided).
+    journal = _get_precheck_journal(state_root)
 
     # Append record to store.
     store.append_record(session_id, {
@@ -394,8 +392,8 @@ def override_precheck(
         )
     )
 
-    # Populate single-use registry.
-    _precheck_override_consumed.add((session_id, operator_id))
+    # Record in disk-backed journal.
+    journal.grant(session_id, operator_id, granted_at)
 
     # Return fresh dict.
     return {
@@ -405,20 +403,19 @@ def override_precheck(
     }
 
 
-def consume_precheck_override(session_id: str, operator_id: str) -> bool:
-    """Consume a single-use precheck override grant.
+def consume_precheck_override(
+        session_id: str,
+        operator_id: str,
+        state_root: str | None = None,
+) -> bool:
+    """Consume a single-use precheck override grant from the disk journal.
 
     Returns True exactly once for a (session_id, operator_id) that was
     granted via override_precheck, then False.  Returns False when never
     granted.
-
-    Volatile in-memory only — no disk I/O.
     """
-    key = (session_id, operator_id)
-    if key in _precheck_override_consumed:
-        _precheck_override_consumed.remove(key)
-        return True
-    return False
+    journal = _get_precheck_journal(state_root)
+    return journal.consume(session_id, operator_id)
 
 
 def override_gate(

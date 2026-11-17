@@ -52,6 +52,9 @@ DEFAULTS = {
     "temperature": 0.1,
     "top_p": 0.9,
     "frequency_penalty": 0.0,
+    # Solo-operator Tier 2+ activation fields (AI-1, per target-task.md).
+    "allow_solo_approval": False,
+    "min_approval_delay_seconds": 0,
 }
 
 #: Integer fields that must be positive integers (mvp-data-models §2 rule 7).
@@ -110,7 +113,14 @@ class Policy:
     """Loaded, validated policy; attribute access to normalized fields."""
 
     def __init__(self, fields: dict, path: str | None = None) -> None:
-        self._fields = dict(fields)
+        # If the caller passed the full raw dict (e.g. {"documenter_policy": {...}})
+        # extract the inner mapping; otherwise treat the input as already flattened.
+        if isinstance(fields, dict) and "documenter_policy" in fields:
+            inner = dict(DEFAULTS)
+            inner.update(fields["documenter_policy"])
+            self._fields = inner
+        else:
+            self._fields = dict(fields)
         self.path = path
 
     def get(self, name: str):
@@ -303,6 +313,29 @@ def validate_policy(raw, manifest_ids=None) -> Policy:
         if fields[name] not in allowed:
             raise PolicyError(
                 f"policy field {name}={fields[name]!r} not in {list(allowed)}")
+
+    # --- AI-1 solo-operator activation fields ---
+
+    # allow_solo_approval: must be a bool if present; absent → False (fail-closed).
+    solo_val = data.get("allow_solo_approval")
+    if solo_val is not None:
+        if not isinstance(solo_val, bool):
+            raise PolicyError(
+                f"allow_solo_approval={solo_val!r} must be a boolean (True or False)")
+        # Already stored correctly in fields via the merge above.
+
+    # min_approval_delay_seconds: must be a plain int in [60, 86400] if present;
+    # absent → 0 (no delay). Reject booleans (Python bool is subclass of int).
+    delay_val = data.get("min_approval_delay_seconds")
+    if delay_val is not None:
+        if isinstance(delay_val, bool) or not isinstance(delay_val, int):
+            raise PolicyError(
+                f"min_approval_delay_seconds={delay_val!r} must be an integer "
+                f"(got {type(delay_val).__name__})")
+        if not (60 <= delay_val <= 86400):
+            raise PolicyError(
+                f"min_approval_delay_seconds={delay_val!r} must be in the "
+                f"range [60, 86400]")
 
     return Policy(fields)
 

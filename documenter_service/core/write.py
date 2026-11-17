@@ -43,6 +43,9 @@ from ..adapters import commit_protocol as _commit_protocol
 # represented by the same string.
 BEFORE_HASH_MISSING = "missing"
 
+#: Acknowledgment token required for solo-operator approval.
+ACK_TOKEN = "CONFIRMED_SOLE_REVIEWER"
+
 
 def _before_hash_of(root, rel_path):
     """sha256:<hex> of the file, or BEFORE_HASH_MISSING when absent/unreadable."""
@@ -211,9 +214,9 @@ def propose_write(
     # Compute source_sha256 for the OCC check on apply (always present).
     source_sha256 = "sha256:" + hashlib.sha256(source_bytes).hexdigest()
 
-    # Build extra: always carries source_sha256; additionally carries
-    # changeset_digest when *changeset* is a non-empty list.
-    extra: dict = {"source_sha256": source_sha256}
+    # Build extra: always carries source_sha256 and change_type; additionally
+    # carries changeset_digest when *changeset* is a non-empty list.
+    extra: dict = {"source_sha256": source_sha256, "change_type": change_type}
     if changeset is not None and len(changeset) > 0:
         # We need before_hashes for the digest; re-read them.
         all_paths = [target_entry["path"]]
@@ -373,6 +376,7 @@ def approve(
     root,
     approval_id: str,
     operator_id: str,
+    acknowledged: str | None = None,
 ) -> dict:
     """Approve a pending write proposal.
 
@@ -422,18 +426,117 @@ def approve(
             f"(window {expiry_min} min) — re-propose with delegate(preview=False)",
             next_action="preview_denied")
 
-    # 5. Self-approval check
+    # 5. Self-approval / solo-approval check.
+    #    When proposer == operator_id, the solo path may permit the approval
+    #    when allow_solo_approval is True AND the matched operation has
+    #    trust_level "safe" AND the caller supplies the correct ack token.
+    #    Otherwise the existing rule applies (self-approval denied).
     proposer = approval.get("proposer_id")
     if proposer is None:
         raise StructuredError(
             "gate_failure",
             "unattributed approval — re-propose with attribution",
             next_action="preview_denied")
+
     if proposer == operator_id:
+        # Attempt solo approval path.
+        allow_solo = policy.get("allow_solo_approval") if policy else False
+        if allow_solo:
+            # Check min_approval_delay_seconds gate.
+            min_delay = policy.get("min_approval_delay_seconds") if policy else 0
+            if min_delay:
+                created_at = approval.get("created_at")
+                if created_at:
+                    from datetime import datetime, timezone
+                    try:
+                        created_dt = datetime.strptime(
+                            created_at, "%Y-%m-%dT%H:%M:%SZ").replace(
+                            tzinfo=timezone.utc)
+                        elapsed = (
+                            datetime.now(timezone.utc) - created_dt).total_seconds()
+                        if elapsed < min_delay:
+                            raise StructuredError(
+                                "gate_failure",
+                                f"approval too recent: "
+                                f"{min_delay}s delay required, "
+                                f"only {int(elapsed)}s elapsed since "
+                                f"created_at {created_at}",
+                                next_action="preview_denied")
+                    except (ValueError, TypeError):
+                        raise StructuredError(
+                            "gate_failure",
+                            f"approval created_at {created_at!r} is unparseable — "
+                            "min_delay gate cannot verify elapsed time",
+                            next_action="preview_denied")
+                else:
+                    raise StructuredError(
+                        "gate_failure",
+                        f"approval created_at is missing — "
+                        "min_delay gate cannot verify elapsed time",
+                        next_action="preview_denied")
+
+            # Check trust_level: solo approval only for "safe" ops.
+            # Must use the actual proposal's change_type; absent change_type
+            # is a security defect — deny (fail-closed, per ADR-002).
+            change_type_val = approval.get("change_type")
+            if not change_type_val:
+                raise StructuredError(
+                    "gate_failure",
+                    "approval record lacks change_type — "
+                    "cannot verify safe-only rule",
+                    next_action="preview_denied")
+            target_id_val = approval.get("target_ids", [None])[0] if approval.get("target_ids") else None
+            match_entry = match_operation(
+                policy, change_type=change_type_val, target_id=target_id_val or "")
+            if match_entry is None or match_entry.get("trust_level") != "safe":
+                raise StructuredError(
+                    "gate_failure",
+                    "solo approval requires trust_level=safe "
+                    "for the matched operation",
+                    next_action="preview_denied")
+
+            # Check acknowledgment token.
+            if acknowledged != ACK_TOKEN:
+                raise StructuredError(
+                    "gate_failure",
+                    "solo approval requires acknowledgment token "
+                    f"{ACK_TOKEN!r}; got {acknowledged!r}",
+                    next_action="preview_denied")
+
+            # Solo path granted — include bias_warning banner.
+            approval_bias_warning = (
+                "BIAS_WARNING: solo approval bypassed multi-operator review; "
+                "confirm changes independently before applying."
+            )
+
+            # 6. Resolve approval (single-use).
+            resolved = registry.resolve_approval(
+                approval_id, decision="approved", operator_id=operator_id)
+
+            # 7. Emit event.
+            diff_hash = approval.get("diff_hash", "")
+            events.emit("documenter.approval", {
+                "approval_id": approval_id,
+                "operator_id": operator_id,
+                "target_id": target_id_val or "",
+                "diff_hash": diff_hash,
+                "decision": "approved",
+            })
+
+            # 8. Return with bias_warning.
+            return {
+                "approval_id": approval_id,
+                "decision": "approved",
+                "next_action": "await_approval",
+                "bias_warning": approval_bias_warning,
+            }
+
+        # Solo not allowed: reject self-approval (existing behavior).
         raise StructuredError(
             "gate_failure",
             "self-approval denied: approver must differ from the proposing "
-            "actor (mvp-contract §4)")
+            "actor (mvp-contract §4)",
+            next_action="preview_denied")
 
     # 6. Resolve approval (single-use — raises token_replay if already resolved)
     resolved = registry.resolve_approval(approval_id, decision="approved",
@@ -786,6 +889,16 @@ def _apply_write_changeset(
       13. return
     """
     from hashlib import sha256 as _sha256
+
+    # --- Protected-paths gate: deny list enforced at staging. ---
+    _PROTECTED_PATHS = frozenset(("docs-manifest.yaml", "documenter_policy.yml"))
+    for rec in changeset:
+        p = posixpath.normpath(rec["path"].replace("\\", "/"))
+        if p in _PROTECTED_PATHS:
+            raise StructuredError(
+                "gate_failure",
+                f"changeset targets protected path {p!r}; "
+                "modifying this file is not permitted")
 
     # Collect all files in the changeset including the target document.
     # We need entries for ordering: [target_doc] + changeset_files
