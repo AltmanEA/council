@@ -376,7 +376,7 @@ def approve(
 ) -> dict:
     """Approve a pending write proposal.
 
-    Steps (per mvp-contract §4 / operator-surface §Documenter Integration):
+    Steps (per mvp-contract §4 — canonical approval contract):
       1. operator_id_valid → else StructuredError("unknown").
       2. check_tier2_authorized(policy, root) → tier_interlock (ADR-013).
       3. find_approval → None → StructuredError("audit_mismatch").
@@ -433,7 +433,7 @@ def approve(
         raise StructuredError(
             "gate_failure",
             "self-approval denied: approver must differ from the proposing "
-            "actor (operator-surface §Documenter Integration)")
+            "actor (mvp-contract §4)")
 
     # 6. Resolve approval (single-use — raises token_replay if already resolved)
     resolved = registry.resolve_approval(approval_id, decision="approved",

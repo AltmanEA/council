@@ -10,7 +10,7 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | --- | --- | --- |
 | `docmeta.py` | Parse and validate document frontmatter headers (required fields, versions, changelog refs). Library used by the tools below. | operational (Stage A) |
 | `gen_manifest.py` | Generate `docs-manifest.yaml` from document frontmatter (`--write` / `--check`, byte-exact, atomic). Sole writer of the manifest. | operational (Stage A) |
-| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Exit codes: 0 clean, 1 findings, 2 internal error. | operational (Stage B) |
+| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Includes the **link-integrity** step (consensus sess-operator-surface-split O-3): docs→manifest references are hard-fail (high, exit 1); code→docs references in `documenter_service/` / `operator_surface/` comments are warn-only, promoted to blocking by `--strict-links` (clean pre-merge mode). Exit codes: 0 clean, 1 findings, 2 internal error. | operational (Stage B) |
 | `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (documentation-rules §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) |
 | `classify_bump.py` | Read-only diff→bump classifier ("AI proposes — algorithm records"): proposes `patch`/`minor`/`major` for a full candidate document; never writes documents, changelogs, or the manifest — only its JSONL decision log `tools/state/classify_log.jsonl`. Reuses the `check_all.py` §-reference resolver and `gen_manifest.build_entries` path resolution; ambiguous → minor with a §7.5 warning; escalations printed in documentation-rules §6 format; `--report` gate: escalation rate > 20% → `classifier requires redesign`, exit 3. Exit codes: 0 classification/identical/report-within-gate, 2 usage/refusal, 3 gate exceeded. | operational (Stage C) |
 | `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only (soak) by default, blocking once the marker file exists. | operational, soak mode (Stage B) |
@@ -27,7 +27,21 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 `check_all.py` implements deterministic **rules 1, 2, 4, 6** from
 `docs/en/documenter-service/mvp-interfaces.md` (line count, changelog
 existence, cross-reference anchors, manifest parity) plus the **naming and
-schema** checks. Rules **3 (glossary terms)** and **5 (abstraction
+schema** checks and the **link-integrity** CI guard (O-3):
+
+- **docs→manifest (hard fail):** a document under `docs/en` or `docs/ru`
+  whose body references a `docs/...md` path that is missing or not
+  registered in `docs-manifest.yaml` yields a high-severity
+  `docs-manifest-link` finding (exit 1). Precedent for a hard CI on a prose
+  invariant: ADR-003.
+- **code→docs (warn-only):** comments and docstrings under
+  `documenter_service/` (and `operator_surface/` when it exists) referencing
+  unregistered `docs/...md` paths yield `warning` `code-docs-link` findings
+  that never change the exit code — worktree drift during legitimate
+  implementation work must not block changesets. `--strict-links` promotes
+  them to blocking for clean pre-merge runs.
+
+Rules **3 (glossary terms)** and **5 (abstraction
 consistency)** remain skill/AI-reserved judgments and are NOT implemented
 here — never describe this tool as implementing "rules 1–6"
 (see `documentation-rules` §8).

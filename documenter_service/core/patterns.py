@@ -17,8 +17,8 @@ Persisted via token_record with token_type == "pattern_usage":
 
 IMPORTANT: The module NEVER self-approves. An item is applied ONLY when the
 registry already holds an approved out-of-band token with matching diff_hash,
-pattern_id, and proposer_id != resolved_by. See mvp-contract §4 and
-operator-surface §Documenter Integration.
+pattern_id, and proposer_id != resolved_by. See mvp-contract §4 (canonical
+approval contract).
 """
 from __future__ import annotations
 
@@ -542,8 +542,8 @@ def _apply_pattern_item(
     IMPORTANT: The module NEVER self-approves. An item is applied ONLY when
     the registry already holds an approved token with matching diff_hash,
     pattern_id, and proposer_id != resolved_by (i.e., issued by an operator,
-    not by the module itself). See mvp-contract §4 and operator-surface
-    §Documenter Integration.
+    not by the module itself). See mvp-contract §4 (canonical approval
+    contract).
     """
     from ..core.write import apply_write as _apply_write
     from ..core.registry import TOKEN_RECORD, APPROVAL_ID

@@ -1,3 +1,4 @@
+<!-- CHANGES v0.22.1-draft: Approval semantics now cite mvp-contract §4 as canonical source instead of operator-surface Documenter Integration -->
 <!-- CHANGES v0.22.0-draft: Cross-references retargeted from AGENTS.md rule sections to documentation-rules (router split, sess-agents-context-slimming 2026-11-15); AGENTS.md cross-reference now names it thin router -->
 <!-- CHANGES v0.22.0-draft (index-RU.md): RU aligned — rule references retargeted to documentation-rules, AGENTS.md router cross-reference line added, create_ru scope clause restored (pre-existing omission), version aligned; check_drift clean. -->
 <!-- CHANGES v0.21.1-draft: create_ru references external Translation Project (ADR-014) -->

@@ -30,6 +30,20 @@ ONLY the deterministic side:
   schema  docmeta.validate     native   frontmatter schema, version-format,
                                           last-modified-deprecated, unknown-key,
                                           references-non-index
+  link-integrity (CI guard, consensus sess-operator-surface-split O-3):
+          docs→manifest        high    a docs/en (or docs/ru) document references a
+                                          docs/... path that does not exist or is
+                                          not registered in docs-manifest.yaml
+                                          (hard fail — ADR-003 precedent for a
+                                          prose invariant enforced by CI)
+          code→docs            warning comments/docstrings under documenter_service/
+                                          (and operator_surface/ when it exists)
+                                          referencing a missing/unregistered docs/
+                                          path: WARN-ONLY by contract (worktree
+                                          drift must not block legitimate
+                                          changesets); --strict-links promotes
+                                          these to blocking for clean pre-merge
+                                          runs
 
 NON-CLAIM (normative): rules 3 (glossary terms) and 5 (abstraction
 consistency) are skill/AI-reserved and NOT implemented here. This tool NEVER
@@ -54,12 +68,13 @@ implementation-style and never exceed LOW.
 
 CLI:
   python3 tools/check_all.py [--root DIR] [--json] [--severity low|medium|high]
-                             [--rule ID ...] [--strict]
+                             [--rule ID ...] [--strict] [--strict-links]
 
 Exit codes:
   0  no findings at or above severity_min (default high; medium and below
      are warnings unless --strict promotes everything to blocking)
-  1  at least one finding at or above severity_min
+  1  at least one finding at or above severity_min; --strict-links additionally
+     promotes code→docs link-integrity warnings to blocking
   2  internal error (crash, unreadable corpus) — FAIL LOUD with traceback
      and remediation message on stderr. DocMetaError corpus conditions are
      reported as findings; a defect inside the validator itself is not.
@@ -76,11 +91,14 @@ text appears on the line.
 from __future__ import annotations
 
 import argparse
+import ast
 import difflib
+import io
 import json
 import os
 import re
 import sys
+import tokenize
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -103,6 +121,7 @@ RULE_GROUPS = {
                   "ambiguous-section-reference"},
     "manifest-parity": {"manifest-drift", "orphan", "parity-skipped"},
     "naming": {"naming"},
+    "link-integrity": {"docs-manifest-link", "code-docs-link"},
     "schema": {
         "frontmatter", "required-field", "version-format",
         "last-modified-deprecated", "unknown-key", "references-non-index",
@@ -140,6 +159,213 @@ _BOLD_LEAD_RE = re.compile(r"\*\*([^*\n:：]+?)\s*[:：]?\s*\*\*")
 #: Bare file basenames that carry no targeting information on a reference
 #: line (`index.md` alone says nothing about which document is meant).
 _GENERIC_MD_NAMES = {"index.md", "readme.md"}
+
+# ---------------------------------------------------------------------------
+# link-integrity (consensus sess-operator-surface-split, O-3)
+# ---------------------------------------------------------------------------
+
+#: docs/... path token, anchored left on a non-path character so that prose
+#: like `mvp-interfaces.md` is not mistaken for a path and `docs/en` inside
+#: longer words is not partially matched. Shared by the docs side (markdown
+#: body) and the code side (comments/docstrings).
+_LINK_DOC_PATH_RE = re.compile(r"(?<![\w/.-])(docs/(?:en|ru)/[\w./-]+\.md)(?![\w-])")
+
+#: Package directories whose Python comments/docstrings are scanned for
+#: code→docs references. `operator_surface` joins the list when the package
+#: appears (p3 plan Steps 0-9); a missing directory is skipped silently.
+LINK_INTEGRITY_CODE_DIRS = ("documenter_service", "operator_surface")
+
+
+def _registered_doc_paths(root: str) -> set:
+    """Set of repo-relative docs paths registered in docs-manifest.yaml:
+    every entry `path` plus every entry `has_translation` (RU mirrors).
+
+    Registration truth is the ON-DISK manifest (the published index agents
+    read documentation through, AGENTS.md §1): a file that exists on disk but
+    is absent from the manifest is unregistered — that is precisely the
+    docs→manifest divergence O-3 targets (manifest drift itself is rule-6's
+    high-severity territory). Returns None (skip) when the manifest is
+    missing or unparsable, so link-integrity never fails closed on a
+    condition it cannot judge."""
+    disk = os.path.join(root, "docs-manifest.yaml")
+    if not os.path.exists(disk):
+        return None
+    import yaml  # PyYAML: the only third-party import permitted in tools/
+    try:
+        with open(disk, encoding="utf-8") as fh:  # OSError -> exit 2 by main
+            data = yaml.safe_load(fh)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("documents"), list):
+        return None
+    registered = set()
+    for entry in data["documents"]:
+        if not isinstance(entry, dict):
+            continue
+        if isinstance(entry.get("path"), str):
+            registered.add(entry["path"])
+        if isinstance(entry.get("has_translation"), str):
+            registered.add(entry["has_translation"])
+    return registered
+
+
+def _link_doc_findings(root: str, rel: str, text: str, registered) -> list:
+    """link-integrity docs-side findings for one markdown document body.
+
+    A `docs/en/...md` or `docs/ru/...md` token is unresolved when the file
+    does not exist under root OR it exists but is not registered in the
+    manifest (rule-6 covers EN orphans; this closes the gap for RU files and
+    frontmatter-registered paths). Fence-aware; HTML comments stripped via
+    _visible_lines. High severity: docs→manifest is a hard-fail contract
+    (O-3; ADR-003 precedent)."""
+    findings = []
+    for idx, line in _visible_lines(text.splitlines()):
+        for m in _LINK_DOC_PATH_RE.finditer(line):
+            token = m.group(1)
+            exists = os.path.isfile(os.path.join(root, *token.split("/")))
+            registered_ok = registered is not None and token in registered
+            if exists and registered_ok:
+                continue
+            findings.append(_finding(
+                "docs-manifest-link", "high", rel,
+                f"link-integrity docs→manifest: {token!r} on line {idx + 1} is "
+                f"{'not a file under root' if not exists else 'not registered in docs-manifest.yaml'}"
+                f" — hard fail (O-3, ADR-003 precedent)"))
+    return findings
+
+
+def _code_comment_texts(abs_path: str):
+    """(line_no, text) pairs of comments and docstrings in a Python file.
+
+    Comments come from tokenize (COMMENT tokens); docstrings from the AST via
+    ast.get_docstring on every Module/ClassDef/FunctionDef/AsyncFunctionDef.
+    SyntaxError → fall back to `#`-prefixed raw lines (the file is broken for
+    other tools too; link-integrity must not crash the suite)."""
+    try:
+        with open(abs_path, "rb") as fh:
+            src_bytes = fh.read()
+        source = src_bytes.decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    out = []
+    try:
+        toks = list(tokenize.tokenize(io.BytesIO(src_bytes).readline))
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        for i, line in enumerate(source.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                out.append((i, line))
+        return out
+    for tok in toks:
+        if tok.type == tokenize.COMMENT:
+            out.append((tok.start[0], tok.string))
+    try:
+        tree = ast.parse(source, filename=abs_path)
+    except SyntaxError:
+        return out
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef,
+                             ast.FunctionDef, ast.AsyncFunctionDef)):
+            doc = ast.get_docstring(node, clean=False)
+            if doc:
+                start = getattr(node, "lineno", 1)
+                if isinstance(node, ast.Module):
+                    start = 1
+                for off, dline in enumerate(doc.splitlines()):
+                    out.append((start + off, dline))
+    return out
+
+
+def check_link_integrity(corpus: "_Corpus", strict_links: bool = False) -> list:
+    """link-integrity step (O-3, sess-operator-surface-split).
+
+    docs→manifest (high, blocking): documents under docs/en and docs/ru whose
+    body references a docs/... path missing on disk or unregistered in
+    docs-manifest.yaml. Manifest-registered paths and existing+registered
+    RU mirrors pass; when the manifest cannot be built the docs side skips
+    (medium parity-skipped) — frontmatter defects are rule-6's territory.
+
+    code→docs (warning, non-blocking unless strict_links): comments and
+    docstrings under LINK_INTEGRITY_CODE_DIRS referencing docs/... paths not
+    registered in the manifest. Warn-only by contract: legitimate worktree
+    drift must not block changesets; --strict-links promotes these for clean
+    pre-merge runs (raising rank to 'low' keeps them out of the default
+    blocking bar while making them visible to --strict and to the flag).
+    """
+    registered = _registered_doc_paths(corpus.root)
+    findings = []
+
+    # -- docs side --------------------------------------------------------
+    if registered is None:
+        findings.append(_finding(
+            "parity-skipped", "medium", "docs-manifest.yaml",
+            "link-integrity: skipped — docs-manifest.yaml is missing or "
+            "unparsable, registration cannot be judged (manifest-drift from "
+            "rule-6 owns the broken-manifest condition)"))
+    else:
+        for rel in corpus.docs:
+            findings.extend(
+                _link_doc_findings(corpus.root, rel, corpus.texts[rel], registered))
+        # RU mirrors are outside _Corpus (which walks docs/en only): walk them here.
+        ru_base = os.path.join(corpus.root, "docs", "ru")
+        if os.path.isdir(ru_base):
+            for dirpath, dirnames, filenames in os.walk(ru_base):
+                dirnames.sort()
+                for name in sorted(filenames):
+                    if not name.endswith(".md"):
+                        continue
+                    abs_path = os.path.join(dirpath, name)
+                    rel = os.path.relpath(abs_path, corpus.root).replace("\\", "/")
+                    with open(abs_path, encoding="utf-8") as fh:  # OSError -> exit 2
+                        text = fh.read()
+                    findings.extend(
+                        _link_doc_findings(corpus.root, rel, text, registered))
+
+    # -- code side ---------------------------------------------------------
+    # Unbuildable manifest → registration is unknown; skip instead of
+    # flooding warnings (the parity-skipped finding above carries the signal).
+    if registered is None:
+        return findings
+    # --strict-links promotes warn-only code→docs findings to high so they
+    # block under the default severity_min; without the flag they are
+    # genuine warnings (severity rank 0, never blocking under any threshold
+    # except --strict, which already promotes everything).
+    severity = "high" if strict_links else "warning"
+    for pkg in LINK_INTEGRITY_CODE_DIRS:
+        base = os.path.join(corpus.root, *pkg.split("/"))
+        if not os.path.isdir(base):
+            continue
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+            for name in sorted(filenames):
+                if not name.endswith(".py"):
+                    continue
+                abs_path = os.path.join(dirpath, name)
+                rel = os.path.relpath(abs_path, corpus.root).replace("\\", "/")
+                for lineno, text in _code_comment_texts(abs_path):
+                    for m in _LINK_DOC_PATH_RE.finditer(text):
+                        token = m.group(1)
+                        if token in registered:
+                            continue
+                        if os.path.isfile(os.path.join(corpus.root,
+                                                        *token.split("/"))):
+                            # exists on disk but unregistered is a manifest
+                            # concern; for warn-only code refs, existence is
+                            # enough to pass (worktree drift tolerance)
+                            if strict_links:
+                                findings.append(_finding(
+                                    "code-docs-link", severity, rel,
+                                    f"link-integrity code→docs: {token!r} on "
+                                    f"line {lineno} exists but is not "
+                                    f"registered in docs-manifest.yaml "
+                                    f"(promoted by --strict-links)"))
+                            continue
+                        findings.append(_finding(
+                            "code-docs-link", severity, rel,
+                            f"link-integrity code→docs: {token!r} on line "
+                            f"{lineno} does not exist under root (warn-only; "
+                            f"--strict-links promotes to blocking)"))
+    return findings
 
 
 def _finding(rule: str, severity: str, file: str, description: str) -> dict:
@@ -883,14 +1109,17 @@ RULE_DISPATCH = [
     ("manifest-parity", check_rule6_manifest_parity),
     ("naming", check_naming),
     ("schema", check_schema),
+    ("link-integrity", check_link_integrity),
 ]
 
 
-def scan(root: str, rules=None) -> list:
+def scan(root: str, rules=None, strict_links: bool = False) -> list:
     """Run enabled rule groups over the whole corpus; return findings (dicts).
 
     `rules` is an iterable of --rule group tokens or None for all. Unreadable
     files and missing docs/en raise OSError (mapped to exit 2 by main()).
+    `strict_links` promotes link-integrity code→docs warnings to blocking
+    (consensus sess-operator-surface-split O-3, clean pre-merge mode).
     """
     if rules is None:
         enabled = {name for name, _ in RULE_DISPATCH}
@@ -909,7 +1138,10 @@ def scan(root: str, rules=None) -> list:
     findings = []
     for name, fn in RULE_DISPATCH:
         if name in enabled:
-            findings.extend(fn(corpus))
+            if name == "link-integrity":
+                findings.extend(fn(corpus, strict_links=strict_links))
+            else:
+                findings.extend(fn(corpus))
     findings.sort(key=lambda f: (-tests_helpers.severity_rank(f["severity"]),
                                  f["file"], f["rule"], f["description"]))
     return findings
@@ -922,13 +1154,16 @@ def scan(root: str, rules=None) -> list:
 EPILOG = """\
 Rule coverage (mvp-interfaces.md §Compliance rules scanned):
   implemented (deterministic): rule-1 line-count, rule-2 changelog-existence,
-  rule-4 cross-ref-anchors, rule-6 manifest-parity, naming/schema.
+  rule-4 cross-ref-anchors, rule-6 manifest-parity, naming/schema,
+  link-integrity (docs→manifest hard fail; code→docs warn-only, --strict-links
+  promotes; consensus sess-operator-surface-split O-3).
   NOT implemented: rule 3 (glossary terms) and rule 5 (abstraction
   consistency) are skill/AI-reserved judgments; this tool makes no claim to
   cover "rules 1-6".
 
-Exit codes: 0 clean at/above severity_min; 1 blocking findings; 2 internal
-error (fail loud, remediation on stderr)."""
+Exit codes: 0 clean at/above severity_min; 1 blocking findings (including
+code→docs under --strict-links); 2 internal error (fail loud, remediation on
+stderr)."""
 
 
 def main(argv=None) -> int:
@@ -957,12 +1192,16 @@ def main(argv=None) -> int:
                              "manifest-parity=rule-6")
     parser.add_argument("--strict", action="store_true",
                         help="treat any finding (down to warning) as blocking")
+    parser.add_argument("--strict-links", action="store_true",
+                        help="promote link-integrity code→docs warnings to "
+                             "blocking (clean pre-merge runs); docs→manifest "
+                             "findings are always blocking")
     args = parser.parse_args(argv)
 
     root = args.root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     try:
-        findings = scan(root, rules=args.rules)
+        findings = scan(root, rules=args.rules, strict_links=args.strict_links)
     except ValueError as exc:  # bad --rule token: usage error
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2

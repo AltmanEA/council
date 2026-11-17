@@ -1,3 +1,4 @@
+<!-- CHANGES v0.8.0-draft: Section 4 declared canonical source for Tier 2+ out-of-band approval contract and documenter.* event schemas (Canonical rule, sess-operator-surface-split) -->
 <!-- CHANGES v0.7.1-draft: translation engine externalized (ADR-014) -->
 <!-- CHANGES v0.7.0-draft: Statuses per decision B: Multi-file Commit Protocol implemented-policy-gated-dormant; 3.4 and C3 aligned; Tier 3 core-level behind ADR-013 interlock wording (fix plan stage 4 p.27) -->
 <!-- CHANGES v0.6.0-draft: Prose synchronization (ADR-013): section 2.2 header and section 4 conditions updated to dual interlock — policy gate plus implemented Operator Surface; policy-file edits are operator-only activation acts -->

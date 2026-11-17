@@ -1,3 +1,4 @@
+<!-- CHANGES v0.7.3-draft: approval_expiry_window row now cites mvp-contract §4 as canonical source for the out-of-band approve call -->
 <!-- CHANGES v0.7.2-draft: Cross-References AGENTS.md entry retargeted to documentation-rules -->
 <!-- CHANGES v0.7.2-draft (policy-reference-RU.md): RU aligned — Cross-References AGENTS.md entry retargeted to documentation-rules, version aligned; check_drift clean. -->
 <!-- CHANGES v0.7.1-draft (policy-reference.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->

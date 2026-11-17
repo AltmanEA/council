@@ -1,7 +1,7 @@
 # Documenter Service — MVP Contract
 
 id: documenter-service-mvp-contract
-Version: 0.7.1-draft
+Version: 0.8.0-draft
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
@@ -103,6 +103,8 @@ Crash-injection via `kill -9` after **every** boundary of the durability sequenc
 ---
 
 ## 4. Tier 2+ Interfaces (implemented; policy-gated)
+
+This section is the **canonical source** for the Tier 2+ out-of-band approval contract (`approval_id` semantics, diff-hash binding, single-use, expiry, changed-diff invalidation, approver ≠ proposer) and for the event schemas of `documenter.approval` and `documenter.override_gate`. Where `operator-surface/index.md` §Documenter Integration or any other prose describes these mechanics differently, this section wins (Canonical rule, sess-operator-surface-split, 2026-11-17).
 
 Implemented per the conditions above; reachable only when **all** of: policy file with non-empty `allowed_operations`, non-null `briefing_ref` to an archived operator briefing whose file exists, authenticated out-of-band operator ingress (`COUNCIL_OPERATOR_ID` from the environment), **and an implemented Operator Surface providing that ingress** — the `operator-surface/index.md` specification is a necessary but not sufficient condition (ADR-013); until the surface exists as code, every Tier 2+ call fails closed (`tier_interlock`). Editing the policy file is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Single-operator deployment is **not** a valid Tier 2+ configuration — `approver ≠ proposer` cannot be satisfied by one person with two IDs.
 

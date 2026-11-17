@@ -1,7 +1,7 @@
 # Documenter Service
 
 id: documenter-service
-Version: 0.22.0-draft
+Version: 0.22.1-draft
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -60,7 +60,7 @@ Severity levels (unified across all interfaces and event schema):
 
 ### Approval semantics
 
-Approval is an explicit operator action via the out-of-band `documenter.approve(approval_id, operator_id)` tool call (§Documenter Integration, operator-surface). Documenter does not track time-based state between invocations and does not auto-approve findings: no timer or background process exists (see §Purpose, idle-until-invoked). The only auto-execution path is Tier 3 pattern-based auto-apply, driven by the operator's prior pattern authorization — never by elapsed time.
+Approval is an explicit operator action via the out-of-band `documenter.approve(approval_id, operator_id)` tool call (canonical source: `documenter-service/mvp-contract.md` §4). Documenter does not track time-based state between invocations and does not auto-approve findings: no timer or background process exists (see §Purpose, idle-until-invoked). The only auto-execution path is Tier 3 pattern-based auto-apply, driven by the operator's prior pattern authorization — never by elapsed time.
 
 The out-of-band approval flow: (1) at Tier 2+, `delegate()` returns `approval_required` with an `approval_id` and diff hash but performs no write; (2) the operator independently invokes `documenter.approve(approval_id, operator_id)` (MUST be a separate invocation from the proposing call); (3) the approving `operator_id` MUST differ from the actor id of the proposing call to prevent self-approval; (4) upon successful approve, the system proceeds with the write using the same diff hash for binding; (5) changed diffs invalidate pending approvals.
 

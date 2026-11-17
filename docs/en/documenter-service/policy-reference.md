@@ -1,7 +1,7 @@
 # Documenter Policy Reference
 
 id: documenter-service-policy-reference
-Version: 0.7.2-draft
+Version: 0.7.3-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/policy-reference-RU.md
@@ -55,7 +55,7 @@ At Tier 0–1, `allowed_operations` must remain empty regardless of content. The
 | `version` | string | Yes | `"0.2.0"` | Policy schema version for compatibility detection |
 | `active_tier` | int | Yes | `0` | Current trust tier (0–3). Must match Tier table (§Trust Tiers, main spec). |
 | `allowed_operations` | array | Yes | `[]` | Operations authorized at current tier. Empty below Tier 2. May only tighten the trust floor (§Authority rule above). |
-| `approval_expiry_window` | int | No | `30` | Maximum time (minutes) before an unapproved `approval_id` expires. Range: 5–1440 (5 minutes to 24 hours). Used together with the out-of-band `documenter.approve(approval_id, operator_id)` call described in operator-surface §Documenter Integration. |
+| `approval_expiry_window` | int | No | `30` | Maximum time (minutes) before an unapproved `approval_id` expires. Range: 5–1440 (5 minutes to 24 hours). Used together with the out-of-band `documenter.approve(approval_id, operator_id)` call specified in `documenter-service/mvp-contract.md` §4 (canonical approval contract). |
 | `audit_freshness` | int | No | `30` | Maximum age (minutes) of an `audit_id` accepted by the `delegate()` pre-audit gate. The gate additionally validates scope coverage (exact match or `*`), blocking findings, and scan completion (`has_remaining` must not be `true`) against the audit registry (`documenter-service/configuration-guide.md`, §Audit Registry). Set to `0` to disable the gate entirely (no audit required; `audit_id` will be ignored if provided). Any other value enforces the freshness window. |
 | `briefing_ref` | string | No | `null` | Path to the archived operator briefing artifact documenting the scope of delegated authority. MUST be non-null when `active_tier >= 2` (§Authorization Workflow, step 4). |
 | `glossary_enforcement` | enum | No | `draft` | Controls glossary compliance noise reduction (§Glossary Compliance, configuration guide). |

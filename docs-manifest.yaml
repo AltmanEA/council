@@ -23,7 +23,7 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter Service
-    version: 0.22.0-draft
+    version: 0.22.1-draft
     status: draft
     abstraction: protocol
     has_translation: docs/ru/documenter-service/index-RU.md
@@ -45,7 +45,7 @@ documents:
   - id: documenter-service-mvp-contract
     path: docs/en/documenter-service/mvp-contract.md
     title: Documenter Service — MVP Contract
-    version: 0.7.1-draft
+    version: 0.8.0-draft
     status: draft
     abstraction: protocol
     changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
@@ -80,7 +80,7 @@ documents:
   - id: documenter-service-policy-reference
     path: docs/en/documenter-service/policy-reference.md
     title: Documenter Policy Reference
-    version: 0.7.2-draft
+    version: 0.7.3-draft
     status: draft
     abstraction: reference
     has_translation: docs/ru/documenter-service/policy-reference-RU.md
@@ -111,7 +111,7 @@ documents:
   - id: operator-surface
     path: docs/en/operator-surface/index.md
     title: Operator Surface & Escalation
-    version: 0.2.0
+    version: 0.4.0
     status: draft
     abstraction: protocol
     has_translation: docs/ru/operator-surface/index-RU.md
@@ -138,7 +138,7 @@ documents:
   - id: planned-architecture-decisions
     path: docs/en/planned-architecture/decisions/index.md
     title: Decisions Index
-    version: 0.11.0
+    version: 0.12.0
     status: draft
     abstraction: reference
     changelog-path: CHANGELOGS/planned-architecture.changes.md

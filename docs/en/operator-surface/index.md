@@ -1,7 +1,7 @@
 # Operator Surface & Escalation
 
 id: operator-surface
-Version: 0.2.0
+Version: 0.4.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-surface/index-RU.md
@@ -16,9 +16,9 @@ Defines the single MVP transport, caller identity, operator verbs, the `pre_chec
 
 ## Transport and Entry Point
 
-<!-- STATUS: Specification only, pre-implementation. Not executable until the Moderator is built. See AGENTS.md §1.7 for tooling separation. -->
+<!-- STATUS: stdio transport implemented (p3 MVP); MCP registration is an operator act (AGENTS.md §1.7); Tier 2+ dormant (ADR-013). -->
 
-<span style="color:red;font-weight:bold">⚠ SPECIFICATION ONLY — NOT EXECUTABLE UNTIL IMPLEMENTED</span> This section describes the transport contract; no MCP tools are currently callable. All sessions run in fallback mode per `AGENTS.md` §1.7.
+<span style="color:red;font-weight:bold">⚠ MCP UNREGISTERED — stdio ONLY</span> This section describes the transport contract; the MCP server is not registered in the workspace configuration (operator decision). Sessions run in fallback mode per `AGENTS.md` §1.7 until a Moderator adapter is available.
 
 MVP ships one transport: MCP over stdio. The operator surface is an adapter in Layer 2: it authenticates the caller, validates input, and calls Layer 1. It contains no protocol logic and no LLM invocation. CLI and REST remain deferred adapters over the same library functions.
 
@@ -29,6 +29,7 @@ Three caller classes: `operator`, `agent`, `service`.
 - AuthN: local stdio process plus `COUNCIL_OPERATOR_ID` and `COUNCIL_OPERATOR_TOKEN` from the environment. The surface verifies the token and never forwards it to Layer 1.
 - AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in `operator-surface/index.md` §Caller Identity and Authorization; structural schema violations remain `VAL.001`.
 - `operator_id` is a human principal. Agent principals MUST NOT approve Documenter writes or resolve escalations at MVP.
+- Operator identity is defined **exclusively** in this section. The `operator_id` that resolves escalations (§Resolution Binding and Resume) and approves Documenter writes (`documenter.approve`, §Documenter Integration) is the same human principal, valid cross-document. No other document may define or extend who counts as an operator.
 
 #### Authentication (MVP)
 
@@ -48,24 +49,38 @@ Error codes for auth failures:
 - `AUTH.003` — Unrecognized caller class. Verify MCP tool permissions or integration config.
 - `AUTH.004` — Revoked credential (e.g., operator logout revokes all agent tokens from the session).
 
-| Verb | Operator | Agent | Service |
-|------|----------|-------|---------|
-| `council.submit_task` | allow | deny | deny |
-| `council.status` | allow | allow (read-only) | allow (read-only) |
-| `council.list_sessions` | allow | allow (read-only) | allow (read-only) |
-| `council.get_artifacts` | allow | allow (read-only) | allow (read-only) |
-| `council.resolve_escalation` | allow | deny | deny |
-| `council.override_precheck` | allow + reason | deny | deny |
-| `documenter.audit` | allow | allow (read-only) | allow (read-only) |
-| `documenter.delegate` | allow (Tier 0–1 preview) | deny | deny |
-| `documenter.approve` | allow (Tier 2+, implemented; policy-gated) | deny | deny |
-| `documenter.override_gate` | allow + reason | deny | deny |
+| Verb | Operator | Agent | Service | Owner |
+|------|----------|-------|---------|-------|
+| `council.submit_task` | allow | deny | deny | `operator-surface` |
+| `council.status` | allow | allow (read-only) | allow (read-only) | `operator-surface` |
+| `council.list_sessions` | allow | allow (read-only) | allow (read-only) | `operator-surface` |
+| `council.get_artifacts` | allow | allow (read-only) | allow (read-only) | `operator-surface` |
+| `council.resolve_escalation` | allow | deny | deny | `operator-surface` |
+| `council.override_precheck` | allow + reason | deny | deny | `operator-surface` |
+| `documenter.audit` | allow | allow (read-only) | allow (read-only) | mvp-contract.md §4 — DORMANT (ADR-013) |
+| `documenter.delegate` | allow (Tier 0–1 preview) | deny | deny | mvp-contract.md §4 — DORMANT (ADR-013) |
+| `documenter.approve` | allow (Tier 2+, implemented; policy-gated) | deny | deny | mvp-contract.md §4 — DORMANT (ADR-013) |
+| `documenter.override_gate` | allow + reason | deny | deny | mvp-contract.md §4 — DORMANT (ADR-013) |
+
+This table is the single transport-level permission registry owned by this document. Contract semantics of `documenter.*` verbs are defined by their owner (`documenter-service/mvp-contract.md` §4), not here.
+
+## Security and Threat Model (MVP)
+
+<!-- STATUS: Describes the implemented MVP (p3 Steps 0-9, sess-operator-surface-split). -->
+
+- **Ingress.** The only entry point is the local stdio JSON-RPC server. Authentication is enforced before any verb route; unauthenticated requests receive AUTH.* envelopes and no verb executes. Only the `operator` caller class may exercise governance verbs; `agent` and `service` are denied by default per the permission table above. The HMAC secret comes from `COUNCIL_OPERATOR_SECRET` (fail-closed: missing or empty aborts startup).
+- **No write path.** The Tier 2+ write branch is unreachable from the surface (ADR-013 dual interlock). `documenter.delegate` is preview-only; `documenter.override_gate` records the override event without invoking the Documenter port.
+- **Sentinel is not activation.** `documenter/.operator_surface_ready` is a code consequence of a successful READY handshake; activation remains exclusively a policy-file state act (ADR-016). Sentinel presence grants nothing.
+- **Volatile state.** Escalation and approval registries are in-memory; they are lost on restart. The surface reports this through the advisory `notice.fallback-deferred` notice.
+- **Degradation.** When `documenter_service` is unimportable the surface still starts; `documenter.*` verbs return an honest IO.004 envelope naming `council.status` as the fallback action; the pre_check gate returns `unavailable` and submit auto-proceeds with a `precheck.unavailable` event (ADR-015).
+- **Crash integrity.** The session store silently skips malformed trailing lines on cold start and ignores stale intent records; roll-forward recovery is deferred (OD-3).
+- **Out of MVP scope (threats accepted):** shared-secret rotation/revocation, replay protection, and state-root tamper resistance are deferred (see §Deferred).
 
 ## Operator Verbs
 
-<!-- STATUS: Specification only — all listed tools are under development. See AGENTS.md §1.7 -->
+<!-- STATUS: stdio Tier 0-1 MVP implemented (p3 Steps 0-9); MCP unregistered; get_artifacts deferred (KD-1); Tier 2+ dormant (ADR-013). See AGENTS.md §1.7 -->
 
-<span style="color:red;font-weight:bold">⚠ SPECIFICATION ONLY — NOT EXECUTABLE UNTIL IMPLEMENTED</span> All entries below describe interface contracts; no MCP tools are currently callable until built.
+<span style="color:red;font-weight:bold">⚠ MCP UNREGISTERED — stdio ONLY</span> Entries below are implemented behind the stdio transport at Tier 0–1; `council.get_artifacts` remains deferred (roadmap KD-1); no MCP tools are callable while the MCP server is unregistered (operator decision).
 
 | Tool | Purpose |
 |------|---------|
@@ -79,6 +94,8 @@ Error codes for auth failures:
 | `documenter.delegate` | Validate a change and return a diff preview; no writes at Tier 0–1 |
 | `documenter.approve` | Out-of-band approval for Tier 2+ (implemented; policy-gated — see §Documenter Integration) |
 | `documenter.override_gate` | Override a pre-check or audit-gate failure with a recorded reason and authenticated `operator_id`; emits `documenter.override_gate` event in the canonical envelope |
+
+**Stub-swap record.** Of the six deferred-tool envelopes drafted at implementation Step 2, five were superseded by real authenticated handlers in the MVP transport: `documenter.delegate`, `documenter.approve`, `council.resolve_escalation`, `council.override_precheck`, and `documenter.override_gate`. Their drafted CONFIG.001 texts remain the localization source for the withdrawn drafts. `council.get_artifacts` continues to serve its drafted deferred envelope.
 
 ## `pre_check` Gate
 
@@ -177,17 +194,15 @@ Notices map to the following event types in the canonical envelope: `notice.simp
 
 ## Documenter Integration
 
-<!-- STATUS: Specification only, pre-implementation. Not executable until the Moderator is built. See AGENTS.md §1.7 -->
+<!-- STATUS: Tier 0-1 (audit, delegate preview, approve) implemented for stdio; MCP unregistered; Tier 2+ writes dormant (ADR-013). See AGENTS.md §1.7 -->
 
-<span style="color:red;font-weight:bold">⚠ SPECIFICATION ONLY — NOT EXECUTABLE UNTIL IMPLEMENTED</span> All `documenter.*` tools are specification-only; no MCP calls are currently callable. The operator surface integrates with the Documenter service per its contract.
+<span style="color:red;font-weight:bold">⚠ MCP UNREGISTERED — stdio ONLY</span> `documenter.audit`, `documenter.delegate` (preview) and `documenter.approve` are implemented at Tier 0–1 behind the stdio transport; the MCP server is not registered (operator decision) and Tier 2+ writes stay dormant (ADR-013). The operator surface integrates with the Documenter service per its contract.
 
 Documenter is a Supporting service invoked through this surface. Its `audit()` and `delegate()` are MCP tools; events and verdicts return synchronously.
 
 - Tier 0–1 ships at MVP: read-only audit and diff preview. `documenter.delegate` validates `change_type`, `diff`, and `audit_id`, then returns a preview without writing.
 - Tier 2+ is policy-gated (interlock until the operator advances `active_tier` with a valid `briefing_ref`). When enabled, `documenter.delegate` returns `approval_required` with an `approval_id` and the diff hash; no write proceeds until approval.
-- Approval is **out-of-band**: the operator invokes `documenter.approve(approval_id, operator_id)` as a separate MCP tool call from the proposing `delegate()` invocation. The approving `operator_id` MUST differ from the `actor.id` of the proposing call to prevent self-approval.
-- `approval_id` is a UUID-v4 returned by `delegate()`. It binds the specific diff hash; changed diffs invalidate pending approvals. The approval expires after `approval_expiry_window` minutes (default 30) — see policy-reference.md §Field Reference for the field definition.
-- `documenter.approve` emits a `documenter.approval` event in the canonical envelope with `decision: approved` or `rejected`.
+- `documenter.approve` and all Tier 2+ approval mechanics (`approval_id` semantics, diff-hash binding, single-use, `approval_expiry_window`, changed-diff invalidation, approver ≠ proposer) are specified in `documenter-service/mvp-contract.md` §4, the **canonical source** for the approval contract and for the `documenter.approval` / `documenter.override_gate` event schemas; where this document disagrees with §4, **§4 wins** (Canonical rule, sess-operator-surface-split). This section provides only the operator-surface rendering and delivery semantics.
 
 ## Event Delivery
 
@@ -199,12 +214,13 @@ Errors use the registry in `service-contract/index.md` and are localized by the 
 
 ## Deferred
 
-Typer CLI, REST transport, parallel mode, distributed locking, automatic escalation expiry, and mid-phase checkpoint/resume (ADR-004). Tier 2+ writes stay blocked until the out-of-band approval path is implemented and tested.
+Deferred items (A10, p2 roadmap; source: p3 impl-plan out-of-scope list): crash-recovery roll-forward (OD-3); full error taxonomy; Typer CLI and REST transport; parallel mode and distributed locking; automatic escalation expiry; mid-phase checkpoint/resume (ADR-004); shared-secret rotation and revocation (roadmap SUBJ-003); Agent and Service caller classes; real Layer 1 / Moderator adapters; `council.get_artifacts` (the sole remaining deferred surface tool, roadmap KD-1). Tier 2+ writes are not deferred but **gated**: the write branch is implemented and dormant behind the ADR-013 dual interlock, activatable by the operator out-of-session only.
 
 ## Cross-References
 
 - `service-contract/index.md` — artifact, event, and error schemas
 - `execution-runtime/index.md` — phase machine, persistence, escalation routing
 - `documenter-service/index.md` — Documenter interfaces and trust tiers
+- `documenter-service/mvp-contract.md` §4 — canonical Tier 2+ approval contract and `documenter.*` event schemas
 - `planned-architecture/layer-2.md` — adapter responsibilities
 - `fallback/index.md` — manual fallback workflow
