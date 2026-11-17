@@ -65,7 +65,12 @@ here** — this package never claims "rules 1–6" coverage (documentation-rules
 - **Approval** — `--approve` / MCP `approve`: out-of-band, approver ≠
   proposer, single-use (consumed on apply; second apply → `token_replay`),
   expiry per `approval_expiry_window`. `operator_id` comes from
-  `COUNCIL_OPERATOR_ID` only — never a CLI/MCP parameter.
+  `COUNCIL_OPERATOR_ID` only — never a CLI/MCP parameter. Solo self-approval
+  (ADR-017) additionally requires the acknowledgment token: CLI
+  `--acknowledge CONFIRMED_SOLE_REVIEWER` / MCP `approve {"acknowledge": …}`;
+  it is permitted only for a `safe`-trust matched operation, after
+  `min_approval_delay_seconds`, and the approve response carries a
+  `bias_warning` banner. Missing or wrong token → `gate_failure`.
 - **Override gate** — `--override-gate` / MCP `override_gate`: one-shot per
   `(target_id, diff_hash)` within the window, emits the canonical event,
   unavailable for `critical` findings (§4 wins over §2.2.6; the

@@ -387,15 +387,20 @@ class Service:
             sync_latency_budget_ms=budget_ms,
         )
 
-    def approve(self, approval_id: str, operator_id: str) -> dict:
+    def approve(self, approval_id: str, operator_id: str,
+                acknowledged: str | None = None) -> dict:
         """Approve a pending write proposal (Tier 2+).
 
-        See core_write.approve for full step list.
+        See core_write.approve for full step list. *acknowledged* carries
+        the solo-operator acknowledgment token (ADR-017) when the approval
+        is a self-approval; on non-solo approvals it is inert.
         """
         policy, _ = self.load_policy_safe()
         return core_write.approve(self.registry, policy, self.events,
                                   root=self.root,
-                                  approval_id=approval_id, operator_id=operator_id)
+                                  approval_id=approval_id,
+                                  operator_id=operator_id,
+                                  acknowledged=acknowledged)
 
     def apply(self, approval_id: str, operator_id: str, diff_input: str,
               *, max_diff_bytes: int = 524288,
@@ -571,6 +576,8 @@ def _print_approve_human(resp: dict) -> None:
     print(f"approval_id: {resp['approval_id']}")
     print(f"decision: {resp['decision']}")
     print(f"next_action: {resp['next_action']}")
+    if resp.get("bias_warning"):
+        print(f"bias_warning: {resp['bias_warning']}")
 
 
 def _print_override_human(resp: dict) -> None:
@@ -601,6 +608,11 @@ def main(argv=None) -> int:
                            "optional --audit-id and --approval-id)")
     mode.add_argument("--approve", action="store_true",
                       help="approve: approve a pending write (requires --approval-id)")
+    parser.add_argument("--acknowledge", default=None, dest="acknowledge",
+                        help="solo-operator acknowledgment token required on a "
+                             "solo approval (ADR-017): pass "
+                             "CONFIRMED_SOLE_REVIEWER to confirm you are the "
+                             "sole reviewer; ignored on non-solo approvals")
     mode.add_argument("--override-gate", action="store_true",
                       help="override_gate: override audit-gate failure "
                            "(requires --target, --diff-hash, --reason)")
@@ -703,7 +715,8 @@ def main(argv=None) -> int:
                     "--approve requires --approval-id")
 
             operator_id = resolve_operator_id(service._env)
-            resp = service.approve(args.approval_id, operator_id)
+            resp = service.approve(args.approval_id, operator_id,
+                                   acknowledged=args.acknowledge)
             if args.json_mode:
                 _print_json(resp)
             else:

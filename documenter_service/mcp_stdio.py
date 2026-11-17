@@ -203,7 +203,11 @@ TOOLS_LIST = {
             "description": (
                 "approve: approve a pending write proposal (Tier 2+). "
                 "Operator identity from environment (COUNCIL_OPERATOR_ID), "
-                "not from client parameters (operator-surface §AuthN)."
+                "not from client parameters (operator-surface §AuthN). "
+                "For a solo (self-)approval under ADR-017, pass "
+                "\"acknowledge\": \"CONFIRMED_SOLE_REVIEWER\" to confirm "
+                "sole-reviewer awareness; missing or wrong value → "
+                "gate_failure on the solo path."
             ),
             "inputSchema": {
                 "type": "object",
@@ -211,6 +215,13 @@ TOOLS_LIST = {
                     "approval_id": {
                         "type": "string",
                         "description": "Approval ID to approve",
+                    },
+                    "acknowledge": {
+                        "type": "string",
+                        "description": (
+                            "Solo-operator acknowledgment token (ADR-017): "
+                            "CONFIRMED_SOLE_REVIEWER"
+                        ),
                     },
                 },
                 "required": ["approval_id"],
@@ -386,6 +397,7 @@ _DELEGATE_PREVIEW_SCHEMA = {
 
 _APPROVE_SCHEMA = {
     "approval_id": {"type": "string"},
+    "acknowledge": {"type": "string"},
 }
 
 _OVERRIDE_GATE_SCHEMA = {
@@ -521,6 +533,10 @@ def _handle_tools_call(service, request_id, params):
             kwargs[key] = bool(val) if val is not None else False
         elif key == "preview" and method_name == "delegate":
             kwargs[key] = bool(val) if val is not None else True
+        elif key == "acknowledge" and method_name == "approve":
+            # MCP-facing name "acknowledge" maps to the service/core
+            # parameter "acknowledged" (ADR-017 solo token, AI-1b).
+            kwargs["acknowledged"] = val
         else:
             kwargs[key] = val
 
