@@ -1,7 +1,7 @@
 # Documenter Service — MVP Data Models
 
 id: documenter-service-mvp-data-models
-Version: 0.5.0-draft
+Version: 0.6.0-draft
 Status: draft
 Abstraction: reference
 references: [documenter-service-mvp-interfaces, service-contract]
@@ -98,6 +98,8 @@ documenter_policy:
   glossary_enforcement: draft
   briefing_ref: null                 # required non-null when active_tier >= 2
 ```
+
+**Activation overlay merge:** at load time, the runtime evaluates an external activation overlay (default `~/.council/documenter_activation.yml` or via `DOCUMENTER_ACTIVATION_PATH`) per `documenter-service/policy-reference.md` §Activation Overlay, ADR-020. The overlay's `scope` field selects one of four deterministic code-defined scope presets (`pilot-safe-v1`, `docs-maint-safe`, `docs-content-review`, `ru-sync-review`) which expand into `allowed_operations` entries with explicit manifest-ID targets (defined in `documenter_service.core.scope_presets`). `scope_targets` narrows the preset's target set to a non-empty subset (narrowing-only, widening rejected). The effective policy is the merged result; validation rules apply to the merged policy. The overlay is absent ⇒ base Tier 1; present-but-invalid ⇒ `PolicyError` (fail-closed).
 
 ### Validation rules — fail-closed
 

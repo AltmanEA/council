@@ -1,7 +1,7 @@
 # Operator Ingress & Escalation
 
 id: operator-ingress
-Version: 1.0.1
+Version: 1.1.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-ingress/index-RU.md
@@ -72,7 +72,7 @@ This table is the single transport-level permission registry owned by this docum
 
 - **Ingress.** The only entry point is the local stdio JSON-RPC server. Authentication is enforced before any verb route; unauthenticated requests receive AUTH.* envelopes and no verb executes. Only the `operator` caller class may exercise governance verbs; `agent` and `service` are denied by default per the permission table above. The HMAC secret comes from `COUNCIL_OPERATOR_SECRET` (fail-closed: missing or empty aborts startup).
 - **No write path.** The Tier 2+ write branch is unreachable from the surface (ADR-013 dual interlock). `documenter.delegate` is preview-only; `documenter.override_gate` records the override event without invoking the Documenter port.
-- **Sentinel is not activation.** `documenter/.operator_ingress_ready` is a code consequence of a successful READY handshake; activation remains exclusively a policy-file state act (ADR-016). Sentinel presence grants nothing.
+- **Sentinel is not activation.** `documenter/.operator_ingress_ready` is a code consequence of a successful READY handshake; activation remains exclusively a policy-file state act (ADR-016). Sentinel presence grants nothing. With the overlay mechanism, policy readiness is determined by the overlay file's content (scope, `active_tier`, `briefing_ref`) merged into the effective policy at read-time while the sentinel remains the second interlock condition (ADR-013/ADR-016); the base policy file stays at Tier 1 baseline.
 - **Volatile state.** Escalation and approval registries are in-memory; they are lost on restart. The surface reports this through the advisory `notice.fallback-deferred` notice.
 - **Degradation.** When `documenter_service` is unimportable the surface still starts; `documenter.*` verbs return an honest IO.004 envelope naming `council.status` as the fallback action; the pre_check gate returns `unavailable` and submit auto-proceeds with a `precheck.unavailable` event (ADR-015).
 - **Crash integrity.** The session store silently skips malformed trailing lines on cold start and ignores stale intent records; roll-forward recovery is deferred (OD-3).
@@ -183,8 +183,9 @@ The surface MUST show operator-visible notices when any of the following occurs:
 - The quick-review path is disabled and the full path is forced.
 - Documenter Tier 2+ is interlocked.
 - A `pre_check` override was recorded.
+- Activation overlay state changed — see below for `notice.activation_active` and `notice.activation_invalid`.
 
-Notices map to the following event types in the canonical envelope: `notice.simplification-applied`, `notice.fallback-deferred`, `notice.quick_review_disabled`, `notice.documenter_tier2_interlock`. Pre-check events use `precheck.passed`, `precheck.failed`, `precheck.overridden`, and `precheck.unavailable`. All appear in `council.status` and are persisted as append-only events. The complete notice-to-event mapping:
+Notices map to the following event types in the canonical envelope: `notice.simplification-applied`, `notice.fallback-deferred`, `notice.quick_review_disabled`, `notice.documenter_tier2_interlock`, `notice.activation_active`, `notice.activation_invalid`. Pre-check events use `precheck.passed`, `precheck.failed`, `precheck.overridden`, and `precheck.unavailable`. All appear in `council.status` and are persisted as append-only events. The complete notice-to-event mapping:
 
 | Notice Condition | Event Type |
 |------------------|------------|
@@ -193,6 +194,8 @@ Notices map to the following event types in the canonical envelope: `notice.simp
 | Quick-review path disabled, full path forced | `notice.quick_review_disabled` |
 | Documenter Tier 2+ interlocked | `notice.documenter_tier2_interlock` |
 | `pre_check` override recorded | `precheck.overridden` |
+| Activation overlay present, valid, and effective (state `active`) | `notice.activation_active` |
+| Activation overlay present but invalid, fail-closed (state `invalid`) | `notice.activation_invalid` |
 
 ## Documenter Integration
 

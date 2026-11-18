@@ -1,3 +1,4 @@
+<!-- CHANGES v1.1.0: Added activation overlay context to sentinel description (overlay provides policy readiness, sentinel is second interlock condition; base policy stays Tier 1); added activation notice events (`notice.activation_active` for state `active`, `notice.activation_invalid` for state `invalid`, fail-closed) to Notices section event mapping table. RU mirror synchronized in same changeset. -->
 <!-- CHANGES v1.0.1: ADR-019 sentinel-path citation synchronized (documenter/.operator_ingress_ready); provenance note clarified (ADR-018/019) -->
 <!-- CHANGES v1.0.0: Renamed Operator Surface to Operator Ingress per ADR-018 (sess-term-operator-surface 2026-11-18): title, id, provenance note, term and path updates EN+RU -->
 <!-- CHANGES v0.5.0: Phase 2 physical split (sess-operator-surface-split): Documenter Integration approval-lifecycle moved to documenter-service/approval-surface.md; canonical contract mvp-contract.md §4; cross-references updated -->

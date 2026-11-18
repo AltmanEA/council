@@ -1,7 +1,7 @@
 # Documenter Service
 
 id: documenter-service
-Version: 0.23.0-draft
+Version: 0.24.0-draft
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -113,7 +113,7 @@ Four deployment tiers governing progressively greater write capability. Each tie
 | 2 | Confirm-per-change | No | Yes, per-item | Apply changes only after individual approve |
 | 3 | Batch approve | Pattern-based | Yes, per-batch with group summaries | Approved patterns auto-apply; critical items require per-item expanded review |
 
-Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Ingress exists as code providing an authenticated, out-of-band approval channel — the `operator-ingress/index.md` specification is a necessary but not sufficient condition (ADR-013). A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field), AND (c) an implemented Operator Ingress providing authenticated operator ingress (ADR-013). All conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Editing the policy file (`active_tier`, `allowed_operations`, `briefing_ref`) is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
+Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Ingress exists as code providing an authenticated, out-of-band approval channel — the `operator-ingress/index.md` specification is a necessary but not sufficient condition (ADR-013). A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field), AND (c) an implemented Operator Ingress providing authenticated operator ingress (ADR-013). All conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. **Activation via overlay:** Tier 2+ activation intent can also be provided through a runtime activation overlay file (see `documenter-service/policy-reference.md` §Activation Overlay, ADR-020). The overlay is merged at read-time into the effective policy; the base `documenter_policy.yml` stays at Tier 1 baseline and is never rewritten. The dual interlock (policy gate on effective policy + readiness sentinel `documenter/.operator_ingress_ready`, ADR-013/ADR-016) evaluates the merged effective policy. Use `--verify-activation` (documented in `mvp-interfaces.md` §3) as the primary diagnostic for activation state. Editing the policy file (`active_tier`, `allowed_operations`, `briefing_ref`) is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
 
 ### Tier Selection Guidance
 
@@ -141,9 +141,9 @@ Rollback is symmetric: lowering `active_tier` takes effect at the next invocatio
 
 ## Quick Start
 
-<!-- STATUS: Implemented — Tier 0–1 operational (glossary: Operational); MCP server not registered (operator decision, AGENTS.md §1.7); Tier 2+ dormant behind the dual interlock (glossary: Dormant; ADR-013). -->
+<!-- STATUS: Implemented — Tier 0–1 operational (glossary: Operational); MCP server not registered (operator decision, AGENTS.md §1.7); Tier 2+ dormant behind the dual interlock (glossary: Dormant; ADR-013). --verify-activation is the primary activation diagnostic (baseline|active|invalid) per `mvp-interfaces.md` §3. -->
 
-<span style="color:red;font-weight:bold">⚠ NOT REGISTERED — invocation outside operator-sanctioned contexts is prohibited per `AGENTS.md` §1.7.</span> The implementation exists (`python3 -m documenter_service`, CLI and MCP stdio); the examples below illustrate the interface contract.
+<span style="color:red;font-weight:bold">⚠ NOT REGISTERED — invocation outside operator-sanctioned contexts is prohibited per `AGENTS.md` §1.7.</span> The implementation exists (`python3 -m documenter_service`, CLI and MCP stdio); the examples below illustrate the interface contract. Use `--verify-activation` to check activation state before Tier 2+ operations.
 
 The MVP invocation path is MCP stdio. Every tool requires an explicit operator call; Tier 2+ writes stay unreachable behind the dual interlock (see §Trust Tiers, ADR-013).
 
@@ -161,7 +161,7 @@ documenter.delegate {
 }
 ```
 
-At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays dormant behind the dual interlock until the Operator Ingress exists as code providing an out-of-band approval channel (ADR-013). See §Authorization Workflow and `documentation-rules` for documentation rules this service enforces.
+At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays dormant behind the dual interlock (policy gate + Operator Ingress sentinel, ADR-013) — activation intent may come from direct policy edit or runtime activation overlay (see `policy-reference.md` §Activation Overlay). Use `--verify-activation` to check state (see `mvp-interfaces.md` §3). See §Authorization Workflow and `documentation-rules` for documentation rules this service enforces.
 
 ---
 

@@ -1,3 +1,4 @@
+<!-- CHANGES v0.6.0-draft: Added activation overlay merge section: overlay path, scope presets (4 presets with deterministic expansion), scope_targets narrowing, effective policy merge semantics, fail-closed on invalid overlay (ADR-020). RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.5.0-draft: §3 Event Channel: documenter.approval payload lists decision, matching EVENT_SCHEMAS and the emitter (drift fix). -->
 <!-- CHANGES v0.4.0-draft: DOCUMENTER_LOG_LEVEL: stderr warning filter wording (transport contract preserved), per fix plan p.12 -->
 <!-- CHANGES v0.3.2-draft: Correct validation rule 3 direction: allowed_operations non-empty (not empty) while active_tier < 2 fails load, per policy-reference validator rule (sess-doc-reliability-algo) -->

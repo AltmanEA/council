@@ -1,7 +1,7 @@
 # Documenter Policy Reference
 
 id: documenter-service-policy-reference
-Version: 0.8.0-draft
+Version: 0.9.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/policy-reference-RU.md
@@ -110,6 +110,73 @@ Pattern entry fields:
 | `match_criteria.change_type` | enum | Limits matching to a specific `change_type`. |
 | `match_criteria.file_pattern` | string | Glob-style path pattern relative to workspace root. `*` = any chars except `/`, `**` = any chars including `/`, `?` = single char except `/`. Invalid patterns rejected at policy load time. |
 
+## Activation Overlay
+
+The activation overlay is an **external YAML file** loaded transparently by `load_policy()` and merged into the effective policy at read-time. The base policy file (`documenter_policy.yml`) remains the **Tier 1 baseline** and is never modified by the overlay mechanism.
+
+### Overlay Location
+
+The overlay path is resolved as follows:
+
+1. **Explicit path:** `DOCUMENTER_ACTIVATION_PATH` environment variable (must be absolute and outside the workspace root).
+2. **Default path:** `~/.council/documenter_activation.yml` (outside the workspace by convention).
+
+When the explicit path is set but points to a non-existent file or a non-file, load fails with `PolicyError` (fail-closed). When the default path is absent, the overlay is considered **absent** and the base Tier 1 policy is used unchanged.
+
+### Overlay Schema
+
+The overlay YAML is a flat mapping. Only the following keys are permitted (strict allowlist):
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `active_tier` | int (not bool) | Override effective tier (normally 2) |
+| `scope` | str | Scope preset ID (see below) |
+| `allowed_operations` | list | Advanced override — manual operation list (XOR with `scope`) |
+| `scope_targets` | list[str] | Narrowing subset for a scope (only with `scope`) |
+| `briefing_ref` | str or null | Absolute path outside workspace root |
+| `allow_solo_approval` | bool | Solo-operator exception (default: false) |
+| `min_approval_delay_seconds` | int in [60, 86400] | Solo delay window |
+
+Unknown keys cause `PolicyError` (fail-closed).
+
+### Scope Presets
+
+Four scope presets map a short identifier to a deterministic set of allowed operations:
+
+| Preset ID | Change Type | Trust Level | Target Count | Description |
+|-----------|-------------|-------------|--------------|-------------|
+| `pilot-safe-v1` | `update` | `safe` | 2 | Minimal safe pilot: mechanical updates to 2 operational docs |
+| `docs-maint-safe` | `update` | `safe` | 24 | Mechanical maintenance (metadata) across full doc corpus |
+| `docs-content-review` | `update` | `review` | 24 | Content/normative updates across full doc corpus |
+| `ru-sync-review` | `create_ru` | `review` | 18 | RU translation create/sync for docs with translations |
+
+When a scope preset is selected, `scope_targets` may narrow the target set to a **non-empty subset** of the preset's targets (narrowing-only; widening is rejected).
+
+### XOR Rule
+
+The overlay must specify **exactly one** of `scope` or `allowed_operations`. Specifying both, or neither, causes `PolicyError`.
+
+### Containment Rules
+
+- An explicit overlay path must be absolute and outside the workspace root.
+- `briefing_ref` (if present and non-null) must be an absolute path outside the workspace root.
+- Containment uses `realpath` to resist symlink escape.
+
+### Example Overlay
+
+```yaml
+# Example: pilot-safe-v1 activation
+active_tier: 2
+scope: pilot-safe-v1
+briefing_ref: /home/user/.council/briefings/tier2-pilot-safe-v1.md
+allow_solo_approval: false
+```
+
+### Activation / Deactivation Procedure
+
+1. **Activate:** place a valid overlay file (or set `DOCUMENTER_ACTIVATION_PATH`), verify with `python3 -m documenter_service --verify-activation --root .` (state `active`) or `python3 tools/activation_helper.py verify`.
+2. **Deactivate:** remove or neutralize the overlay file, stop Operator Ingress, and remove the readiness sentinel; verify with `--verify-activation` (state `baseline`).
+
 ---
 
 ## Operational Tuning
@@ -139,7 +206,7 @@ Procedure for advancing write capability. Each step is a discrete operator actio
 2. **Draft the policy file.** Author `documenter_policy.yml` per §Policy File: set the intended `change_type` + `trust_level` + `targets` combinations in `allowed_operations`, and set operational knobs per §Operational Tuning.
 3. **Validate offline.** Load the candidate file in check-only mode. Load fails on: `allowed_operations` non-empty below Tier 2 (validator rule), a `trust_level` below the derived floor for its `change_type` (authority rule), or an unrecognized `notification_mode` value.
 4. **Record the briefing.** Write and archive the operator briefing — which documents and `change_type` values are delegated, the maximum number of documents a single invocation may touch, and the reversal procedure — then set `briefing_ref` to its path. This artifact is the human-readable counterpart of `allowed_operations`.
-5. **Advance the tier.** Set `active_tier` in the same edit as `briefing_ref`, so a partial edit cannot leave Tier 2+ without a briefing reference.
+5. **Advance the tier.** Set `active_tier` in the same edit as `briefing_ref`, so a partial edit cannot leave Tier 2+ without a briefing reference. Alternatively, place a valid activation overlay (see §Activation Overlay) that supplies `active_tier: 2`, a scope or `allowed_operations`, and `briefing_ref`; the base policy file remains the Tier 1 baseline when overlay activation is used.
 6. **Solo authorization (ADR-017 only).** If — and only if — the deployment has a single operator, additionally set `allow_solo_approval: true` and `min_approval_delay_seconds` (≥300 recommended) in the same edit as step 5, and record the solo scope in the briefing. The briefing must state: the experiment is risk-accepted and bounded; solo approval applies only to `safe`-trust matched operations; each solo approval requires the typed acknowledgment token `CONFIRMED_SOLE_REVIEWER` and the delay window; every solo approval returns a bias-warning banner; scope widens only after 5 consecutive clean write cycles (one change_type or one document per expansion); a mandatory operator review occurs within 30 days of activation. Without `allow_solo_approval: true` the system keeps the strict `approver ≠ proposer` norm.
 7. **First write at the new tier.** Invoke `delegate()` on a single low-risk target with a fresh `audit_id`. Review the diff item by item regardless of tier; Tier 2 grants capability, not reduced scrutiny.
 8. **Evaluate for Tier 3.** Advance only on documented evidence: ≥90% approval rate at Tier 2 across the preceding two weeks of the event log (§Tier Selection Guidance, main spec), computable from `decision` fields in the event log (§Event Schema, configuration guide). Approved patterns are then enumerated explicitly in `allowed_operations` using `type: pattern` entries with `pattern_id`, `pattern_description`, and `match_criteria` (§Per-Operation Entries); Tier 3 never infers a pattern the operator did not authorize.
@@ -157,4 +224,4 @@ Procedure for advancing write capability. Each step is a discrete operator actio
 
 ---
 
-*Defines the configuration surface for Documenter Service v0.5.0-draft; extracted from Configuration Guide.*
+*Defines the configuration surface for Documenter Service v0.9.0-draft; extracted from Configuration Guide.*

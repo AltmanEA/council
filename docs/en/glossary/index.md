@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.18.0
+Version: 0.19.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -158,6 +158,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 **Dormant** (Реализовано, не активировано) Documentation-status term: the described capability exists in code but is unreachable at runtime because a normative interlock blocks activation. Distinct from *structurally absent* and from *Operational*.
 
+**Activation Overlay** (Активационный оверлей) An external YAML configuration file (`~/.council/documenter_activation.yml` or via `DOCUMENTER_ACTIVATION_PATH`) that is loaded transparently by the Documenter policy loader and merged into the effective policy at read-time. Provides an alternative activation path to direct policy-file editing (Authorization Workflow step 5, ADR-020). Strict key allowlist, XOR between `scope` and `allowed_operations`, deterministic scope presets with narrowing-only `scope_targets`, and containment enforcement (absolute path outside workspace root). The base `documenter_policy.yml` stays at Tier 1 baseline and is never rewritten. Fail-closed on invalid overlay. Verified via `--verify-activation` CLI command.
+
 **Commit Order** (Порядок коммита) The fixed sequence of renames in a multi-file commit: document content → `index-RU.md` → changelog → `docs-manifest.yaml` → hash store. Chosen so a crash before the manifest step leaves orphaned but readable files.
 
 **Hash Store** (Хранилище хэшей) The Documenter-managed persistence structure storing content-hash tokens used for optimistic concurrency control on delegate-mode writes. A rebuildable cache (ADR-010), not authoritative state.
@@ -175,6 +177,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Effective Trust Level** (Фактический уровень доверия) The trust level applied to a `delegate()` invocation. Equal to the caller's requested level when at or above the derived floor; never a silently upgraded value.
 
 **Trust Tier** (Ступень доверия) One of four progressively broader write-capability levels: Tier 0 (audit only), Tier 1 (diff preview), Tier 2 (confirm-per-change), Tier 3 (pattern-based batch approve). Each advancement requires an explicit operator command.
+
+**Scope Preset** (Шаблон области) A deterministic mapping from a short identifier to a predefined set of `allowed_operations` entries (change type, trust level, target manifest IDs). Four scope presets exist in the current implementation: `pilot-safe-v1` (2-target safe pilot), `docs-maint-safe` (24-target mechanical maintenance), `docs-content-review` (24-target content review), and `ru-sync-review` (18-target RU sync). Selected via the `scope` field in the activation overlay; expanded at policy load time with `scope_targets` available for narrowing.
 
 **Write-Gate** (Гейт записи) A mandatory verification gate blocking automatic writing of a derived artifact until all checks pass. Used in RU translation synchronization.
 

@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.9.0-draft
+Version: 0.10.0-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -157,10 +157,39 @@ Read-only. Single answer to "why is the gate rejecting right now?". Under `idle-
 | registry.override_counter | integer | Override calls in the current session (counters habituation) |
 | scan_status | object | `{has_pending_scan, pending_scan_cursor, blocking_operator}` |
 | tier_interlock | object | `{tier_2_plus_locked, reason}` |
+| `activation` | object | Activation overlay diagnostics (see below). Reflects the runtime-merged effective policy (base + overlay) — overlay merge is transparent to callers. |
+
+| Sub-field | Type | Description |
+|-----------|------|-------------|
+| `overlay_present` | bool | Whether an activation overlay was loaded at read-time |
+| `overlay_path` | str or null | Resolved overlay file path (absolute, outside workspace root) |
+| `scope` | str or null | Selected scope preset ID (e.g. `pilot-safe-v1`) |
+| `mode` | str or null | `"scope"` (preset-based) or `"override"` (advanced `allowed_operations`), null when absent |
+| `source` | str | `"base"` (no overlay), `"overlay"` (overlay active), or `"none"` (no policy loaded) |
+| `briefing_ref` | str or null | Effective briefing reference path |
+| `allowed_operations_count` | int | Number of effective allowed operations after scope expansion |
+| `sentinel_present` | bool or null | Operator Ingress sentinel (`documenter/.operator_ingress_ready`) status |
+| `briefing_exists` | bool or null | Whether the effective `briefing_ref` file exists |
 
 **Registry health.** `healthy` — readable, `prev_hash` chain consistent. `degraded` — chain break, or size exceeds retention without checkpoint. `corrupt` — missing, truncated, or unparsable. On `corrupt`, `delegate()` returns `gate_failure`.
 
 **Pending scan visibility.** An unclosed `audit("*")` blocks every write under pre-audit rule 5, which is a cheap denial of service. `status` MUST name the blocking operator and how to release it; releasing another operator's scan is an operator-only action.
+
+### CLI `--verify-activation`
+
+A dedicated CLI command (`python3 -m documenter_service --verify-activation`) that reports activation state and interlock readiness (read-only, no writes). Supports `--json` for machine-readable output and `--root` for workspace root specification.
+
+**States:**
+
+| State | Exit Code | Meaning |
+|-------|-----------|---------|
+| `baseline` | 0 | No overlay applied; effective policy is base Tier 1 |
+| `active` | 0 | Overlay present and effective policy loaded valid; interlock sub-checks reported (sentinel/briefing readiness) |
+| `invalid` | 2 | Overlay present but invalid (fail-closed) or base policy invalid; structured error emitted |
+
+**Output fields (JSON mode):** `state`, `ok`, `overlay` (present/path/explicit/scope/mode), `effective` (active_tier/allowed_operations_count/briefing_ref/briefing_exists/allow_solo_approval/min_approval_delay_seconds/source), `interlock` (sentinel_present/tier2_policy_ready/tier2_authorized/reason), `errors`. For `active` state, also reports expanded scope summary (id, type, trust, target count, targets list). Human-readable mode prints labeled diagnostics with PASS/FAIL readiness checklist.
+
+See `documenter-service/configuration-guide.md` §Activation Overlay for runtime diagnostics and `tools/activation_helper.py verify` as an alternative helper command.
 
 ---
 

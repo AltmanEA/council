@@ -1,7 +1,7 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.18.2-draft
+Version: 0.19.0-draft
 Status: draft
 Abstraction: reference
 has_translation: docs/ru/documenter-service/configuration-guide-RU.md
@@ -12,6 +12,12 @@ changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 ## Scope
 
 This document defines runtime data structures and their integrity rules: hash store, audit registry, intent record, event schema, glossary compliance modes, and RU alignment procedure. The policy file schema, load-time validation rules, operational tuning parameters, and the tier authorization workflow live in `documenter-service/policy-reference.md` — the single source of truth for configuration. Where this guide references a policy field by name (e.g. `audit_freshness`, `rescan_batch_ceiling`), §Field Reference in the policy reference defines its type, default, and allowed values; behavior attributed to a field here is not restated there.
+
+---
+
+## Activation Overlay
+
+Activation overlay path resolution is handled by the policy loader transparently (see `documenter-service/policy-reference.md` §Activation Overlay). The effective policy equals base Tier 1 baseline plus overlay merged at read-time; the base policy file (`documenter_policy.yml`) is never rewritten. The `--status` CLI reports additive `activation` diagnostics (overlay presence/path/scope/mode/source/briefing_ref/allowed_operations_count/sentinel_present/briefing_exists). Use `python3 -m documenter_service --verify-activation` and `python3 tools/activation_helper.py print-effective`/`verify` to inspect effective activation state. Overlay path and `briefing_ref` must satisfy containment (absolute, outside workspace root) per spec.
 
 ---
 

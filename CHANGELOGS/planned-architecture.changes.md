@@ -1,3 +1,4 @@
+<!-- CHANGES v0.16.0: Registered ADR-020 runtime activation overlay (external YAML, read-time merge, 4 scope presets, --verify-activation CLI, fail-closed). RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.15.0: Registered ADR-019 code-level identifier cleanup (sentinel path, OPERATOR_INGRESS_SENTINEL, operator_ingress_ready); ADR-018 row corrected -->
 <!-- CHANGES v0.2.5: Layer 2 tools parenthetical renamed to Operator Ingress (ADR-018) -->
 <!-- CHANGES v0.5.0: Operator Surface section renamed to Operator Ingress; term and cross-reference synchronized (ADR-018) -->

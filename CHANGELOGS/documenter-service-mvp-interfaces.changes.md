@@ -1,3 +1,4 @@
+<!-- CHANGES v0.10.0-draft: Added `activation` block to `documenter.status()` response (overlay_present/path/scope/mode/source/briefing_ref/allowed_operations_count/sentinel_present/briefing_exists); added §4.1 CLI `--verify-activation` command documentation (states: baseline|active|invalid, --json/--root flags, interlock diagnostics, scope summary). RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.9.0-draft: Operator Ingress term synchronized; rendering obligation retargeted (ADR-018) -->
 <!-- CHANGES v0.8.0-draft: AI-2 tail: documenter.approve signature gains acknowledge? (ADR-017 solo token); approver!=proposer clause cites the ADR-017 exception; interlock wording synchronized to ADR-016 sentinel gate -->
 <!-- CHANGES v0.7.2-draft: Phase 2 (sess-operator-surface-split): Purpose references approval-surface.md for operator-side workflow -->
