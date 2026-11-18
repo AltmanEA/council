@@ -14,6 +14,7 @@ tier_interlock {tier_2_plus_locked, reason}.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from .audit import _utc
 from . import registry as reg
@@ -137,6 +138,23 @@ def status(registry, policy=None, *, target_id: str | None = None,
                 and rec["data"].get("token_type") == "override_gate"):
             override_counter += 1
 
+    # -- activation block (additive, Tier 2+ overlay) ------------------------
+    activation: dict[str, Any] = {  # type: ignore[no-redef]
+        "overlay_present": bool(
+            getattr(policy, "overlay_present", False)),
+        "overlay_path": getattr(policy, "overlay_path", None),
+        "scope": getattr(policy, "activation_scope", None),
+        "mode": getattr(policy, "activation_mode", None),
+        "source": (getattr(policy, "activation_source", "base")
+                   if policy is not None else "none"),
+        "briefing_ref": (policy.get("briefing_ref") if policy is not None
+                         else None),
+        "allowed_operations_count": (len(policy.get("allowed_operations")
+                                         or []) if policy is not None else 0),
+        "sentinel_present": (operator_ingress_ready(root) if root else None),
+        "briefing_exists": _briefing_exists(policy, root),
+    }
+
     return {
         "active_tier": active_tier,
         "registry": {
@@ -159,6 +177,7 @@ def status(registry, policy=None, *, target_id: str | None = None,
                 "is an operator-only action" if pending else None),
         },
         "tier_interlock": _tier_interlock_state(policy, root),
+        "activation": activation,
     }
 
 
@@ -169,3 +188,21 @@ def _is_fresh(issued_at, registry, policy):
     freshness = policy.get("audit_freshness") if policy is not None else 30
     age_min = (_utc(registry.now()) - _utc(issued_at)).total_seconds() / 60.0
     return age_min <= float(freshness)
+
+
+def _briefing_exists(policy, root) -> bool | None:
+    """Return True/False if briefing_ref file exists, None if unknown.
+
+    Resolves non-abs paths relative to root (matching check_tier2_authorized
+    semantics). Defensive: never raises.
+    """
+    if policy is None:
+        return None
+    br = policy.get("briefing_ref")
+    if not br or not isinstance(br, str):
+        return False
+    br_path = br if os.path.isabs(br) else os.path.join(root or "", br)
+    try:
+        return os.path.isfile(br_path)
+    except Exception:
+        return None

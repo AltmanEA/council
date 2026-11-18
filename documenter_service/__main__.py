@@ -72,10 +72,19 @@ from .adapters.hash_store import HashStore
 from .core.audit import audit, delegate_preview
 from .core.errors import StructuredError
 from .core.override import override_gate as _override_gate_core  # Tier 2+
-from .core.policy import PolicyError, load_policy
+from .core.policy import (
+    PolicyError, load_policy,
+    operator_ingress_ready, OPERATOR_INGRESS_SENTINEL,
+)
 from .core.status import status as status_core
 from .core import write as core_write  # W2: write branch
 from .core import patterns as core_patterns  # Tier 3 pattern auto-apply
+from .core.activation import (
+    resolve_activation_path,
+    load_activation_overlay,
+    activation_summary,
+)
+from .core import scope_presets
 
 __all__ = ["Service", "main", "resolve_operator_id"]
 
@@ -533,6 +542,25 @@ def _print_status_human(resp: dict) -> None:
     print(f"tier_interlock.tier_2_plus_locked: "
           f"{resp['tier_interlock']['tier_2_plus_locked']}")
     print(f"tier_interlock.reason: {resp['tier_interlock']['reason']}")
+    # Activation block (additive, Tier 2+ overlay diagnostics).
+    act = resp.get("activation")
+    if act:
+        print(f"activation.overlay_present: {act.get('overlay_present')}")
+        opath = act.get('overlay_path')
+        if opath:
+            print(f"activation.overlay_path: {opath}")
+        print(f"activation.scope: {act.get('scope') or 'N/A'}")
+        print(f"activation.mode: {act.get('mode') or 'N/A'}")
+        print(f"activation.source: {act.get('source')}")
+        print(f"activation.allowed_operations_count: "
+              f"{act.get('allowed_operations_count')}")
+        print(f"activation.briefing_ref: {act.get('briefing_ref') or 'null'}")
+        sentinel = act.get('sentinel_present')
+        if sentinel is not None:
+            print(f"activation.sentinel_present: {sentinel}")
+        brief = act.get('briefing_exists')
+        if brief is not None:
+            print(f"activation.briefing_exists: {brief}")
 
 
 def _print_audit_human(resp: dict) -> None:
@@ -589,6 +617,304 @@ def _print_override_human(resp: dict) -> None:
     print(f"next_action: {resp['next_action']}")
 
 
+# ---------------------------------------------------------------------------
+# --verify-activation handler
+# ---------------------------------------------------------------------------
+
+
+def _build_verify_activation_result(
+    state, policy, policy_err, overlay, overlay_path, explicit, root,
+    overlay_load_error=None,
+) -> dict:
+    """Build the verify-activation response dict for JSON output."""
+    ok = state in ("baseline", "active")
+    result: dict = {
+        "mode": "verify-activation",
+        "state": state,
+        "ok": ok,
+    }
+
+    # Overlay info.
+    result["overlay"] = {
+        "present": overlay is not None or overlay_load_error is not None,
+        "path": overlay_path,
+        "explicit": explicit,
+        "scope": None,
+        "mode": None,
+    }
+    if overlay is not None and policy is not None:
+        result["overlay"]["scope"] = getattr(
+            policy, "activation_scope", None)
+        result["overlay"]["mode"] = getattr(
+            policy, "activation_mode", None)
+
+    # Effective policy info.
+    effective: dict = {
+        "active_tier": 0,
+        "allowed_operations_count": 0,
+        "briefing_ref": None,
+        "briefing_exists": None,
+        "allow_solo_approval": False,
+        "min_approval_delay_seconds": 0,
+        "source": "base",
+    }
+    if policy is not None:
+        effective["active_tier"] = policy.get("active_tier") or 0
+        ops = policy.get("allowed_operations") or []
+        effective["allowed_operations_count"] = len(ops)
+        effective["briefing_ref"] = policy.get("briefing_ref")
+        effective["allow_solo_approval"] = policy.get("allow_solo_approval")
+        effective["min_approval_delay_seconds"] = (
+            policy.get("min_approval_delay_seconds") or 0)
+        effective["source"] = getattr(
+            policy, "activation_source", "base")
+        # briefing_exists
+        br = policy.get("briefing_ref")
+        if br and isinstance(br, str):
+            br_path = br if os.path.isabs(br) else os.path.join(root or "", br)
+            try:
+                effective["briefing_exists"] = os.path.isfile(br_path)
+            except Exception:
+                effective["briefing_exists"] = None
+        else:
+            effective["briefing_exists"] = False
+
+    result["effective"] = effective
+
+    # Interlock readiness.
+    sentinel_present = operator_ingress_ready(root) if root else False
+    tier2_policy_ready = bool(
+        policy is not None and policy.get("active_tier") >= 2
+        and (policy.get("allowed_operations") or [])
+        and policy.get("briefing_ref"))
+
+    # Tier 2 authorized = policy ready + sentinel + briefing exists.
+    tier2_authorized = tier2_policy_ready and sentinel_present
+    brief_exists = effective.get("briefing_exists")
+    if tier2_policy_ready and brief_exists is False:
+        tier2_authorized = False
+
+    interlock_reasons: list[str] = []
+    if not tier2_policy_ready:
+        reasons: list[str] = []
+        if not policy or policy.get("active_tier") < 2:
+            reasons.append(f"active_tier={effective['active_tier']} < 2")
+        if not (policy.get("allowed_operations") if policy else []):
+            reasons.append("allowed_operations is empty")
+        if not policy or not policy.get("briefing_ref"):
+            reasons.append("briefing_ref is null")
+        if reasons:
+            interlock_reasons.append(
+                "policy not ready: " + "; ".join(reasons))
+    if not sentinel_present:
+        sentinel_path = os.path.join(root, OPERATOR_INGRESS_SENTINEL) if root else OPERATOR_INGRESS_SENTINEL
+        interlock_reasons.append(
+            f"sentinel missing at {sentinel_path}")
+    if effective.get("briefing_exists") is False:
+        interlock_reasons.append("briefing file not found")
+
+    reason_str = (
+        "; ".join(interlock_reasons)
+        if interlock_reasons
+        else "all checks passed"
+    )
+
+    result["interlock"] = {
+        "sentinel_present": sentinel_present,
+        "tier2_policy_ready": tier2_policy_ready,
+        "tier2_authorized": tier2_authorized,
+        "reason": reason_str,
+    }
+
+    # Errors.
+    errors: list[str] = []
+    if state == "invalid":
+        seen: set[str] = set()
+        for err in (overlay_load_error, policy_err):
+            if err and err.reason not in seen:
+                errors.append(err.reason)
+                seen.add(err.reason)
+        if overlay is not None and policy is None and policy_err is None \
+                and not overlay_load_error:
+            errors.append("overlay present but effective policy load failed")
+    result["errors"] = errors
+
+    # Expanded scope summary (when active with scope).
+    if state == "active" and overlay is not None:
+        scope_id = overlay.get("scope")
+        if scope_id:
+            try:
+                preset_info = scope_presets.get_preset(scope_id)
+                if preset_info:
+                    ops_summary = _expand_scope_summary(
+                        scope_id, preset_info)
+                    result["scope_summary"] = ops_summary
+            except Exception:
+                pass  # non-fatal
+
+    return result
+
+
+def _expand_scope_summary(scope_id: str, preset_info: dict) -> dict:
+    """Build a concise scope summary for CLI output."""
+    ops = preset_info.get("operations", [])
+    targets: list[str] = []
+    for op in ops:
+        targets.extend(op.get("targets", []))
+    unique_targets = sorted(set(targets))
+
+    return {
+        "scope_id": scope_id,
+        "description": preset_info.get("description", ""),
+        "operation_count": len(ops),
+        "target_count": len(unique_targets),
+        "change_types": sorted(set(
+            op.get("change_type", "") for op in ops if op.get("change_type")
+        )),
+        "trust_levels": sorted(set(
+            op.get("trust_level", "") for op in ops if op.get("trust_level")
+        )),
+        "targets": unique_targets if len(unique_targets) <= 20 else None,
+    }
+
+
+def _cmd_verify_activation(args, service) -> int:
+    """Handle --verify-activation. Read-only; no operator-id required.
+
+    States: baseline (exit 0), active (exit 0), invalid (exit 2).
+    """
+    root = args.root
+
+    # 1) Resolve overlay path and explicit flag.
+    overlay_path, explicit = resolve_activation_path(root, service._env)
+
+    # 2) Detect absence: if not explicit and default file missing => baseline.
+    overlay = None
+    overlay_load_error = None
+    try:
+        overlay, loaded_path, exp = load_activation_overlay(root, service._env)
+        overlay_path = loaded_path or overlay_path
+        explicit = exp
+    except PolicyError as exc:
+        overlay_load_error = exc
+
+    # 3) Attempt effective policy load.
+    policy = None
+    policy_err = None
+    try:
+        policy, policy_err = service.load_policy_safe()
+    except Exception:
+        pass  # load_policy_safe already handles errors
+
+    # 4) Classify state.
+    # Overlay present but effective load failed => invalid.
+    # Also: explicit env set but overlay load itself raised => invalid.
+    if (overlay is not None and policy is None and policy_err is not None) \
+            or (overlay is None and explicit and overlay_load_error is not None):
+        state = "invalid"
+    elif overlay is not None and policy is not None:
+        state = "active"
+    else:
+        state = "baseline"
+
+    # 5) Build response.
+    resp = _build_verify_activation_result(
+        state, policy, policy_err,
+        overlay, overlay_path, explicit, root,
+        overlay_load_error,
+    )
+
+    # 6) Emit output.
+    if args.json_mode:
+        _print_json(resp)
+    else:
+        _print_verify_activation_human(resp, state, policy, overlay)
+
+    # 7) Exit code.
+    if state == "invalid":
+        return 2
+    return 0
+
+
+def _print_verify_activation_human(
+    resp: dict, state: str, policy, overlay
+) -> None:
+    """Human-readable output for --verify-activation."""
+    print(f"State: {state}")
+
+    if state == "baseline":
+        print("No overlay applied; effective policy is Tier 1 baseline.")
+        return
+
+    overlay_info = resp.get("overlay", {})
+    effective = resp.get("effective", {})
+    interlock = resp.get("interlock", {})
+
+    print(f"  Overlay present: {overlay_info.get('present')}")
+    print(f"  Overlay path: {overlay_info.get('path') or 'N/A'}")
+    print(f"  Explicit path: {overlay_info.get('explicit')}")
+    print(f"  Scope: {overlay_info.get('scope') or 'N/A'}")
+    print(f"  Mode: {overlay_info.get('mode') or 'N/A'}")
+    print(f"  Source: {effective.get('source', 'N/A')}")
+    print(f"  Effective active_tier: {effective.get('active_tier')}")
+    print(f"  Allowed operations count: {effective.get('allowed_operations_count')}")
+    print(f"  Briefing ref: {effective.get('briefing_ref') or 'null'}")
+
+    solo = effective.get("allow_solo_approval")
+    delay = effective.get("min_approval_delay_seconds")
+    if solo is not None and delay is not None:
+        print(f"  Allow solo approval: {bool(solo)}")
+        print(f"  Min approval delay: {delay} seconds")
+
+    # Readiness checklist.
+    print()
+    print("Interlock readiness:")
+
+    sentinel = interlock.get("sentinel_present")
+    print(f"  {'PASS' if sentinel else 'FAIL'} — sentinel present: {sentinel}")
+
+    tier_ready = interlock.get("tier2_policy_ready")
+    print(f"  {'PASS' if tier_ready else 'FAIL'} — tier2 policy ready")
+
+    brief_exists = effective.get("briefing_exists")
+    brief_str = "unknown" if brief_exists is None else str(brief_exists)
+    print(f"  {'PASS' if brief_exists else 'FAIL'} — briefing exists: {brief_str}")
+
+    authorized = interlock.get("tier2_authorized")
+    print(f"  {'PASS' if authorized else 'FAIL'} — tier2 authorized")
+    reason = interlock.get("reason", "")
+    if reason and reason != "all checks passed":
+        print(f"    Reason: {reason}")
+
+    # Scope summary.
+    summary = resp.get("scope_summary")
+    if summary:
+        print()
+        print("Scope summary:")
+        print(f"  id: {summary.get('scope_id')}")
+        print(f"  description: {summary.get('description')}")
+        print(f"  operation_count: {summary.get('operation_count')}")
+        print(f"  target_count: {summary.get('target_count')}")
+        print(f"  change_types: {summary.get('change_types', [])}")
+        print(f"  trust_levels: {summary.get('trust_levels', [])}")
+        targets = summary.get("targets")
+        if targets:
+            print("  targets:")
+            for t in targets:
+                print(f"    - {t}")
+        else:
+            print(f"  targets: ({summary.get('target_count', 0)} targets, "
+                  "omitted from human output)")
+
+    # Errors.
+    errors = resp.get("errors", [])
+    if errors:
+        print()
+        print("Errors:")
+        for e in errors:
+            print(f"  - {e}")
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="documenter_service",
                                      description=_HELP)
@@ -626,6 +952,10 @@ def main(argv=None) -> int:
                       help="reconcile: cold-start resolution of leftover "
                            "intent records (exit 0; needs_attention is "
                            "reported in JSON)")
+    mode.add_argument("--verify-activation", action="store_true",
+                      dest="verify_activation",
+                      help="verify runtime activation overlay + effective "
+                           "policy and report interlock readiness (no writes)")
     parser.add_argument("--root", default=os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))),
                         help="repository root (default: parent of the package)")
@@ -682,6 +1012,8 @@ def main(argv=None) -> int:
             else:
                 _print_status_human(resp)
             return 0
+        if args.verify_activation:
+            return _cmd_verify_activation(args, service)
         if args.audit:
             resp = service.audit(target_id=args.target,
                                  severity_min=args.severity_min,

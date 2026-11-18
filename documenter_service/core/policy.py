@@ -110,7 +110,11 @@ class PolicyError(Exception):
 
 
 class Policy:
-    """Loaded, validated policy; attribute access to normalized fields."""
+    """Loaded, validated policy; attribute access to normalized fields.
+
+    Activation metadata (Tier 2+ overlay) is stored additively as attributes
+    on the instance and does not affect ``as_dict()`` (back-compatible).
+    """
 
     def __init__(self, fields: dict, path: str | None = None) -> None:
         # If the caller passed the full raw dict (e.g. {"documenter_policy": {...}})
@@ -122,6 +126,12 @@ class Policy:
         else:
             self._fields = dict(fields)
         self.path = path
+        # -- activation metadata (additive, back-compatible) ------------------
+        self.overlay_present: bool = False
+        self.overlay_path: str | None = None
+        self.activation_scope: str | None = None
+        self.activation_mode: str | None = None  # 'scope' | 'override' | None
+        self.activation_source: str = "base"
 
     def get(self, name: str):
         return self._fields.get(name, DEFAULTS.get(name))
@@ -326,8 +336,10 @@ def validate_policy(raw, manifest_ids=None) -> Policy:
 
     # min_approval_delay_seconds: must be a plain int in [60, 86400] if present;
     # absent → 0 (no delay). Reject booleans (Python bool is subclass of int).
+    # Note: data may contain DEFAULTS-merged values (0); only validate if
+    # explicitly provided by the user (not a DEFAULTS carry-through).
     delay_val = data.get("min_approval_delay_seconds")
-    if delay_val is not None:
+    if delay_val is not None and delay_val != DEFAULTS.get("min_approval_delay_seconds"):
         if isinstance(delay_val, bool) or not isinstance(delay_val, int):
             raise PolicyError(
                 f"min_approval_delay_seconds={delay_val!r} must be an integer "
@@ -350,11 +362,21 @@ trust_rank = _trust_rank
 
 
 def load_policy(root: str, env=None, manifest_ids=None) -> Policy:
-    """Load and validate the policy file; fail closed on every problem.
+    """Load and validate the policy file, applying runtime activation overlay.
+
+    Base policy loaded from ``policy_path(root, env)`` (unchanged fail-closed).
+    If an activation overlay is present, it is merged to produce the effective
+    policy.  The overlay path defaults to ``~/.council/documenter_activation.yml``
+    (or ``DOCUMENTER_ACTIVATION_PATH``).  The overlay is never written to disk;
+    ``documenter_policy.yml`` remains the Tier 1 baseline.
 
     Missing file, unreadable, invalid YAML or a rule violation raise
     PolicyError. Callers map it to a StructuredError for delegate(); audit()
     and status() run without policy-dependent writes.
+
+    Returns
+    -------
+    Policy — the effective policy with activation metadata attached.
     """
     path = policy_path(root, env)
     if not os.path.isfile(path):
@@ -364,9 +386,37 @@ def load_policy(root: str, env=None, manifest_ids=None) -> Policy:
             raw = yaml.safe_load(fh)
     except (OSError, yaml.YAMLError) as exc:
         raise PolicyError(f"policy file {path} unreadable or invalid YAML: {exc}") from exc
-    policy = validate_policy(raw, manifest_ids=manifest_ids)
-    policy.path = path
-    return policy
+    base = validate_policy(raw, manifest_ids=manifest_ids)
+    base.path = path
+
+    # --- runtime activation overlay (transparent) ---------------------------
+    from .activation import load_activation_overlay, apply_activation_overlay
+
+    overlay, overlay_path, _explicit = load_activation_overlay(root, env)
+    if overlay is None:
+        # Absent overlay: attach base metadata and return base.
+        base.overlay_present = False
+        base.overlay_path = overlay_path if _explicit else None
+        base.activation_scope = None
+        base.activation_mode = None
+        base.activation_source = "base"
+        return base
+
+    # Present overlay: merge, validate, attach metadata.
+    base_fields = base.as_dict()
+    effective_fields = apply_activation_overlay(
+        base_fields, overlay, root, manifest_ids=manifest_ids,
+    )
+    effective = validate_policy(
+        {"documenter_policy": effective_fields}, manifest_ids=manifest_ids,
+    )
+    effective.path = path  # canonical base policy path
+    effective.overlay_present = True
+    effective.overlay_path = overlay_path
+    effective.activation_scope = overlay.get("scope")
+    effective.activation_mode = "scope" if "scope" in overlay else "override"
+    effective.activation_source = "overlay"
+    return effective
 
 
 def policy_structured_error(exc: PolicyError) -> StructuredError:
