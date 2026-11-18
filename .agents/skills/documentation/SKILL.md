@@ -37,6 +37,17 @@ Validate all required fields are present. If any field is missing or ambiguous, 
 
 **Authority note:** (Applies when Documenter service is operational.) For Documenter-mediated invocations within the documentation workspace (`docs-manifest.yaml`), the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority. Alignment obligation extends to BOTH the Documenter classifier (`documenter-service/index.md`, §Trust Classification) AND the deterministic tools under `tools/` (validator rule suite, generator) when shipped; the tools provide atomicity, not authority.
 
+### Step-(5) Consent Gate (operator approval carrier)
+
+The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is carried out-of-band through the operator consent terminal (`tools/consent_terminal.py`, `tools/consent_review.sh`; design consensus `sess-operator-approval-tool`, 2026-11-18). When this skill is asked to apply a `review`-tier changeset to live files, the primary agent MUST obtain an operator consent decision first; the procedure (agent-side, this skill verifies at apply time):
+
+1. **Register.** The agent writes a consent draft (`documenter/intent/consent_draft.json`: `target_path`, `summary` ≤200 chars, `tier` ∈ {safe, review}, `diff_file`) plus the diff file, then runs `python3 tools/consent_terminal.py request` (parameterless; the tool computes `diff_hash` and `request_id` itself and prints the operator command). A malformed draft is rejected fail-closed (quarantined, exit 2) — the agent corrects and retries, never proceeds.
+2. **Present, then wait.** The agent prints the exact command for the operator — `tools/consent_review.sh --request-id <id>` — to run in a **separate terminal** (out-of-band; never as an agent subprocess), states the expiry deadline, and ends its turn / polls the spool bounded by expiry.
+3. **Verification Gate (this skill's obligation, before ANY write).** Read the spool decision and require ALL of: latest `state == "approved"` ∧ `ct.verify_decision(...)` HMAC valid ∧ the diff the agent is about to apply hashes to the record's `diff_hash`. **Any other outcome — denied, expired, malformed, missing record, HMAC or hash mismatch — is a denial: do not write.** Absence of a decision is never consent (deny-by-default).
+4. **Consume.** After applying (or after a denial), the agent transitions the record to `consumed` (`ct.mark_consumed`).
+
+Honesty constraint (mirrors `tools/start_operator_ingress.sh`): HMAC signing gives **procedural separation and tamper *detection*, not cryptographic isolation** — under the same-UID threat model the agent could forge a record; signing makes forgery a *detectable incident*. The consent terminal is the step-(5) carrier only; the Tier 2+ `documenter.approve` path (§4), the ADR-017 solo flow, and Operator Ingress coupling are OUT of its scope and must not be conflated with it. See `tools/README.md` for the tool contract.
+
 ---
 
 ## Trust Levels
