@@ -1,0 +1,63 @@
+# ===========================================================================
+# DRAFT — Activation Overlay Example: pilot-safe-v1
+# ===========================================================================
+#
+# This is a minimal valid overlay example for the pilot-safe-v1 preset.
+# DO NOT use this file directly in production.
+#
+# OPERATOR ACTIONS REQUIRED:
+#   1. Replace briefing_ref with the absolute path to YOUR signed briefing
+#      (must be outside workspace root, e.g. ~/.council/briefings/...).
+#   2. Place this overlay at:
+#        - Default: ~/.council/documenter_activation.yml
+#        - Or set DOCUMENTER_ACTIVATION_PATH to a custom absolute path.
+#   3. Start Operator Ingress with COUNCIL_OPERATOR_SECRET to create the
+#      sentinel file documenter/.operator_ingress_ready.
+#
+# IMPORTANT:
+#   - The workspace policy file (documenter_policy.yml) is NOT modified.
+#     It remains the Tier 1 baseline at all times.
+#   - Activation = overlay presence + briefing_ref file exists + sentinel.
+#   - No repo policy rewrite. This is runtime merge (in memory).
+# ===========================================================================
+
+# --- Required: exactly one of scope OR allowed_operations ---
+# Using scope (preset expansion) rather than manual allowed_operations.
+scope: "pilot-safe-v1"
+
+# --- Tier ---
+# Must be 2 (or higher) for Tier 2+ operations.
+active_tier: 2
+
+# --- Briefing reference ---
+# MUST be an absolute path OUTSIDE workspace root.
+# Replace with your actual signed briefing path.
+briefing_ref: "/home/ea/.council/briefings/tier2-pilot-safe-v1-YYYYMMDD.md"
+
+# ===========================================================================
+# OPTIONAL / COMMENTED FIELDS (fail-closed defaults shown)
+# ===========================================================================
+
+# --- Narrowing targets (only valid with scope, narrowing-only) ---
+# Uncomment to use a subset of the preset's default targets (2 → fewer):
+# scope_targets:
+#   - "documenter-service-configuration-guide"
+# Note: scope_targets must be a non-empty subset of preset targets.
+# Widening (adding IDs not in preset) is rejected.
+
+# --- Solo approval (ADR-017, optional) ---
+# Fail-closed default: allow_solo_approval is false.
+# Solo self-approval is only permitted for trust_level: safe operations
+# and requires the typed acknowledgment token CONFIRMED_SOLE_REVIEWER.
+# Uncomment and set to true only if the operator decides to enable solo mode.
+# allow_solo_approval: true
+# min_approval_delay_seconds: 300   # range [60, 86400]; default recommended: 300
+
+# ===========================================================================
+# ALLOWLIST REFERENCE (strict — unknown keys cause PolicyError):
+#   active_tier, scope, allowed_operations, scope_targets,
+#   briefing_ref, allow_solo_approval, min_approval_delay_seconds
+#
+# XOR rule: exactly one of scope / allowed_operations must be present.
+# This example uses scope (preset expansion).
+# ===========================================================================
