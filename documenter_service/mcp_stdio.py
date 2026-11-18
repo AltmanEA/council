@@ -15,7 +15,7 @@ Read-only trio: audit, status, delegate_preview (readOnlyHint: true)
 Tier 2+ trio: approve, override_gate, delegate_write (readOnlyHint: false)
     Tier 2+ tools are gated by policy interlock at the Service layer.
     Operator identity from environment (COUNCIL_OPERATOR_ID), not from
-    client-supplied parameters (operator-surface §AuthN).
+    client-supplied parameters (operator-ingress §AuthN).
 
 Design (mvp-contract §1 transport rationale): the MCP server constructs
 the Service composition root directly (no parallel wiring). CLI and MCP
@@ -51,7 +51,7 @@ _OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
 def _resolve_operator_id(environ):
     """Resolve the authenticated operator from process environment.
 
-    AuthN decision (mvp-contract §AuthN; operator-surface §Caller Identity and
+    AuthN decision (mvp-contract §AuthN; operator-ingress §Caller Identity and
     Authorization): operator_id NEVER comes from client-supplied parameters.
     The trusted ingress is the process environment variable COUNCIL_OPERATOR_ID.
 
@@ -65,7 +65,7 @@ def _resolve_operator_id(environ):
         raise StructuredError(
             "unknown",
             "authenticated operator ingress missing: set COUNCIL_OPERATOR_ID "
-            "(operator-surface §AuthN; expected "
+            "(operator-ingress §AuthN; expected "
             r"^op-[a-z0-9][a-z0-9-]{2,63}$)")
     return oid
 
@@ -203,7 +203,7 @@ TOOLS_LIST = {
             "description": (
                 "approve: approve a pending write proposal (Tier 2+). "
                 "Operator identity from environment (COUNCIL_OPERATOR_ID), "
-                "not from client parameters (operator-surface §AuthN). "
+                "not from client parameters (operator-ingress §AuthN). "
                 "For a solo (self-)approval under ADR-017, pass "
                 "\"acknowledge\": \"CONFIRMED_SOLE_REVIEWER\" to confirm "
                 "sole-reviewer awareness; missing or wrong value → "
@@ -542,7 +542,7 @@ def _handle_tools_call(service, request_id, params):
 
     # --- Tool-specific: resolve operator from env (authN) ----------
     if method_name in ("approve", "override_gate"):
-        # AuthN: operator from env, NOT from args (operator-surface §AuthN).
+        # AuthN: operator from env, NOT from args (operator-ingress §AuthN).
         # Extra args like "operator_id" are rejected by schema validation
         # (additionalProperties: false) → -32602.
         try:

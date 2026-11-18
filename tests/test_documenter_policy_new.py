@@ -23,9 +23,9 @@ FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures",
 MANIFEST_IDS = {"alpha", "beta", "gamma"}
 
 
-def _enable_operator_surface(root):
-    """Create the ADR-013 Operator Surface readiness sentinel under root."""
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+def _enable_operator_ingress(root):
+    """Create the ADR-013 Operator Ingress readiness sentinel under root."""
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -107,9 +107,9 @@ class TestCheckTier2Authorized(unittest.TestCase):
             with self.assertRaises(StructuredError) as ctx:
                 check_tier2_authorized(inner, root)
             self.assertEqual(ctx.exception.error_category, "tier_interlock")
-            self.assertIn("Operator Surface not built", ctx.exception.message)
+            self.assertIn("Operator Ingress not built", ctx.exception.message)
             # ...and passes once the sentinel is present.
-            _enable_operator_surface(root)
+            _enable_operator_ingress(root)
             # Should not raise
             check_tier2_authorized(inner, root)
 
@@ -167,7 +167,7 @@ class TestCheckTier3Authorized(unittest.TestCase):
                 allowed_operations=[{"type": "operation", "change_type": "update",
                                      "trust_level": "safe", "targets": []}],
             )
-            _enable_operator_surface(root)
+            _enable_operator_ingress(root)
             check_tier3_authorized(policy["documenter_policy"], root)
 
     def test_tier2_fails_tier3(self):
@@ -181,7 +181,7 @@ class TestCheckTier3Authorized(unittest.TestCase):
                 allowed_operations=[{"type": "operation", "change_type": "update",
                                      "trust_level": "safe", "targets": []}],
             )
-            _enable_operator_surface(root)
+            _enable_operator_ingress(root)
             with self.assertRaises(StructuredError) as ctx:
                 check_tier3_authorized(policy["documenter_policy"], root)
             self.assertEqual(ctx.exception.error_category, "tier_interlock")

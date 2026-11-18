@@ -994,7 +994,7 @@ def _setup_approve_mcp_test():
 
     sentinel_dir = os.path.join(FIXTURE_CORPUS, "documenter")
     os.makedirs(sentinel_dir, exist_ok=True)
-    sentinel_path = os.path.join(sentinel_dir, ".operator_surface_ready")
+    sentinel_path = os.path.join(sentinel_dir, ".operator_ingress_ready")
     with open(sentinel_path, "w"):
         pass
 

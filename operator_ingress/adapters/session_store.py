@@ -1,5 +1,5 @@
 # STUB: replaced by real Layer 1 at Phase 3
-"""MVP disk-backed JSONL session store for Operator Surface.
+"""MVP disk-backed JSONL session store for Operator Ingress.
 
 OD-1 convention: sessions stored under <root>/sessions/<session-id>/
 with session.jsonl (session record) and intent.jsonl (intent log).

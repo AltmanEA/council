@@ -93,9 +93,9 @@ def _make_briefing(tmpdir):
     return path
 
 
-def _enable_operator_surface(root):
-    """Create the ADR-013 Operator Surface readiness sentinel under root."""
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+def _enable_operator_ingress(root):
+    """Create the ADR-013 Operator Ingress readiness sentinel under root."""
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -446,8 +446,8 @@ class TestScanCursorAsApprovalId(unittest.TestCase):
                 "scan_cursor", "cur-1",
                 {"audit_id": "a1", "target_id": "alpha"})
 
-            # Enable operator surface (sentinel) — Tier-2 policy requires it
-            _enable_operator_surface(corpus)
+            # Enable Operator Ingress (sentinel) — Tier-2 policy requires it
+            _enable_operator_ingress(corpus)
 
             # apply_write with scan_cursor as approval_id -> audit_mismatch
             encoded = _encode_diff(_make_diff())
@@ -487,8 +487,8 @@ class TestLegitCycle(unittest.TestCase):
             events = StdoutEventSink()
             engine = StdDiffEngine()
 
-            # Enable operator surface (sentinel) — Tier-2 policy requires it
-            _enable_operator_surface(corpus)
+            # Enable Operator Ingress (sentinel) — Tier-2 policy requires it
+            _enable_operator_ingress(corpus)
 
             # Seed audit record
             now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

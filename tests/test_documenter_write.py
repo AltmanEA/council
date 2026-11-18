@@ -123,14 +123,14 @@ def _make_briefing(tmpdir):
     return path
 
 
-def _enable_operator_surface(root):
-    """Create the ADR-013 Operator Surface readiness sentinel under root.
+def _enable_operator_ingress(root):
+    """Create the ADR-013 Operator Ingress readiness sentinel under root.
 
     Tier 2+ test corpora must opt into surface-readiness explicitly:
     check_tier2_authorized refuses (tier_interlock) while the sentinel is
     absent. Tests asserting the second interlock level omit this call.
     """
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -569,7 +569,7 @@ class TestProposeWrite(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")
         with open(alpha_path, "w") as f:
             f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
@@ -881,7 +881,7 @@ class TestApprove(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.root = os.path.join(self.tmpdir, "corpus")
         os.makedirs(self.root, exist_ok=True)
-        _enable_operator_surface(self.root)
+        _enable_operator_ingress(self.root)
         self.registry = _make_registry(self.tmpdir)
         self.policy = _make_tier2_policy(_make_briefing(self.tmpdir))
         self.events = StdoutEventSink()
@@ -1084,7 +1084,7 @@ class TestApplyWrite(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")
         with open(alpha_path, "w") as f:
             f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
@@ -1536,7 +1536,7 @@ class TestReconcile(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         with open(os.path.join(self.corpus, "docs", "en", "alpha", "index.md"), "w") as f:
             f.write("# Alpha\nid: alpha\nVersion: 1.0.0\nStatus: active\nchangelog-path: CHANGELOGS/alpha.md\n")
         _init_git_repo(self.corpus)
@@ -1694,7 +1694,7 @@ class TestServiceWriteBranch(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         with open(os.path.join(self.corpus, "docs", "en", "alpha",
                                "index.md"), "w") as f:
             f.write(self.DOC)
@@ -1888,8 +1888,8 @@ class TestProposeWritePolicyFloor(unittest.TestCase):
         self.briefing_path = os.path.join(self.tmpdir, "_briefing.md")
         with open(self.briefing_path, "w") as f:
             f.write("# Briefing\n\nAuthorised operational context.\n")
-        # _enable_operator_surface
-        _enable_operator_surface(self.tmpdir)
+        # _enable_operator_ingress
+        _enable_operator_ingress(self.tmpdir)
         _init_git_repo(self.tmpdir)
 
     def tearDown(self):

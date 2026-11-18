@@ -1,4 +1,4 @@
-"""Notices subsystem for the Operator Surface.
+"""Notices subsystem for the Operator Ingress.
 
 Provides ``default_notices(policy_info=None, layer1_stub=True)`` that
 returns a list of notice dicts with keys {type, severity, text}.

@@ -4,18 +4,18 @@ id: documenter-service-approval-surface
 Version: 0.1.0
 Status: draft
 Abstraction: protocol
-references: [documenter-service-mvp-contract, operator-surface]
+references: [documenter-service-mvp-contract, operator-ingress]
 allow_non_index_paths: true
 has_translation: docs/ru/documenter-service/approval-surface-RU.md
 changelog-path: CHANGELOGS/approval-surface.changes.md
 
 ---
 
-> **Граница AuthN/AuthZ определена исключительно в `operator-surface/index.md` §Caller Identity and Authorization.** Этот документ не определяет, не расширяет и не переформулирует, кто считается оператором, и не описывает проверку учётных данных; при любом кажущемся противоречии приоритет остаётся за `operator-surface/index.md`.
+> **Граница AuthN/AuthZ определена исключительно в `operator-ingress/index.md` §Caller Identity and Authorization.** Этот документ не определяет, не расширяет и не переформулирует, кто считается оператором, и не описывает проверку учётных данных; при любом кажущемся противоречии приоритет остаётся за `operator-ingress/index.md`.
 
 ## Область применения
 
-Определяет рабочий процесс согласования Tier 2+ и обхода шлюза со стороны оператора, отображаемый и доставляемый через Operator Surface: представление запроса на согласование, рукопожатие согласования и запись обхода. Нормативный контракт для каждого механизма, упомянутого здесь, — семантика `approval_id`, привязка хэша различий, однократное использование, `approval_expiry_window`, недействительность изменённых различий, approver ≠ proposer — задан в `documenter-service/mvp-contract.md` §4, **каноническом источнике**; при расхождении этого документа с §4 **приоритет у §4** (Каноническое правило, sess-operator-surface-split). Ворота `pre_check` здесь не рассматриваются: они принадлежат `operator-surface/index.md` §pre_check Gate (SUBJ-004, sess-operator-surface-split).
+Определяет рабочий процесс согласования Tier 2+ и обхода шлюза со стороны оператора, отображаемый и доставляемый через Точку входа оператора: представление запроса на согласование, рукопожатие согласования и запись обхода. Нормативный контракт для каждого механизма, упомянутого здесь, — семантика `approval_id`, привязка хэша различий, однократное использование, `approval_expiry_window`, недействительность изменённых различий, approver ≠ proposer — задан в `documenter-service/mvp-contract.md` §4, **каноническом источнике**; при расхождении этого документа с §4 **приоритет у §4** (Каноническое правило, sess-operator-surface-split). Ворота `pre_check` здесь не рассматриваются: они принадлежат `operator-ingress/index.md` §pre_check Gate (SUBJ-004, sess-operator-surface-split).
 
 <!-- STATUS: реализовано на Tier 0–1 за транспортом stdio (p3 MVP); ветвь записи Tier 2+ находится в состоянии «Реализовано, не активировано» за двойной блокировкой ADR-013 (гейт политики + не активированный sentinel поверхности оператора); MCP не зарегистрирован (решение оператора, AGENTS.md §1.7). «Реализовано, не активировано» означает «реализовано, но заблокировано», а не «только спецификация». -->
 
@@ -33,17 +33,17 @@ changelog-path: CHANGELOGS/approval-surface.changes.md
 
 - `documenter.override_gate(reason, operator_id)` обходит один сбой шлюза аудита с записанной причиной и аутентифицированным `operator_id`; он привязан к одной паре `(target_id, diff_hash)`, расходуется один раз и недоступен для находок `critical` (`documenter-service/mvp-contract.md` §4).
 - Обход порождает событие `documenter.override_gate` в каноническом конверте (схема в §4); пока Tier 2+ «Реализовано, не активировано», обход записывает событие без вызова порта записи Документатора.
-- Глагол `council.override_precheck` принадлежит `operator-surface/index.md` и этим документом не затрагивается.
+- Глагол `council.override_precheck` принадлежит `operator-ingress/index.md` и этим документом не затрагивается.
 
 ## Уведомление о блокировке и деградация
 
-- Пока Tier 2+ заблокирован, поверхность показывает рекомендательное уведомление `notice.documenter_tier2_interlock`; отображение уведомлений в события находится в `operator-surface/index.md` §Notices.
-- Когда `documenter_service` не импортируется, глаголы `documenter.*` возвращают честную оболочку `IO.004` с указанием `council.status` как действия резервного режима; поверхность всё равно запускается (семантика деградации — в `operator-surface/index.md` §Security and Threat Model (MVP)).
-- Присутствие sentinel (`documenter/.operator_surface_ready`) — следствие кода успешного рукопожатия READY, и оно ничего не предоставляет: активация остаётся исключительно актом состояния файла политики (ADR-016).
+- Пока Tier 2+ заблокирован, поверхность показывает рекомендательное уведомление `notice.documenter_tier2_interlock`; отображение уведомлений в события находится в `operator-ingress/index.md` §Notices.
+- Когда `documenter_service` не импортируется, глаголы `documenter.*` возвращают честную оболочку `IO.004` с указанием `council.status` как действия резервного режима; поверхность всё равно запускается (семантика деградации — в `operator-ingress/index.md` §Security and Threat Model (MVP)).
+- Присутствие sentinel (`documenter/.operator_ingress_ready`) — следствие кода успешного рукопожатия READY, и оно ничего не предоставляет: активация остаётся исключительно актом состояния файла политики (ADR-016).
 
 ## Перекрёстные ссылки
 
 - `documenter-service/mvp-contract.md` §4 — канонический контракт согласования Tier 2+ и схемы событий `documenter.approval` / `documenter.override_gate`
-- `operator-surface/index.md` — транспорт, граница AuthN/AuthZ, реестр глаголов, ворота `pre_check`, уведомления
+- `operator-ingress/index.md` — транспорт, граница AuthN/AuthZ, реестр глаголов, ворота `pre_check`, уведомления
 - `documenter-service/policy-reference.md` — поля политики и рабочий процесс авторизации
 - `documenter-service/index.md` — интерфейсы Документатора и уровни доверия

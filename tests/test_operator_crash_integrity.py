@@ -21,7 +21,7 @@ import tempfile
 import unittest
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # type: ignore[misc,assignment]
 
@@ -50,7 +50,7 @@ def _make_token(secret="crash-test-secret", sub="op-alice"):
 # ---------------------------------------------------------------------------
 
 def _spawn_subprocess(root_dir, timeout=10):
-    """Spawn `python3 -m operator_surface` with test env.
+    """Spawn `python3 -m operator_ingress` with test env.
 
     The READY line is consumed before returning so that the first
     ``_safe_readline`` call returns the actual response.
@@ -60,7 +60,7 @@ def _spawn_subprocess(root_dir, timeout=10):
     env["COUNCIL_STATE_ROOT"] = root_dir
     env["COUNCIL_TEST_MODE"] = "1"
     proc = subprocess.Popen(
-        [sys.executable, "-m", "operator_surface"],
+        [sys.executable, "-m", "operator_ingress"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -119,7 +119,7 @@ class TestCrashIntegritySIGKILL(unittest.TestCase):
     def test_sigkill_mid_flight(self):
         """Kill subprocess after sending request; restart must cold-start OK."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc = _spawn_subprocess(self.root)
         try:
             token = _make_token(sub="op-alice")
@@ -176,7 +176,7 @@ class TestCrashIntegritySIGKILL(unittest.TestCase):
     def test_sigkill_then_submit(self):
         """After SIGKILL kill and restart, submit_task still works."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc = _spawn_subprocess(self.root)
         try:
             token = _make_token(sub="op-alice")
@@ -244,7 +244,7 @@ class TestCrashIntegrityStoreLevel(unittest.TestCase):
         is malformed, json.loads raises — list_sessions must catch that and
         skip the session (no crash).
         """
-        from operator_surface.adapters.session_store import MvpSessionStore
+        from operator_ingress.adapters.session_store import MvpSessionStore
 
         store = MvpSessionStore(self.root)
 
@@ -270,7 +270,7 @@ class TestCrashIntegrityStoreLevel(unittest.TestCase):
     def test_malformed_trailing_line_intent_jsonl(self):
         """Truncated JSON in intent.jsonl: append_record + get_session must
         not crash; list_sessions unaffected."""
-        from operator_surface.adapters.session_store import MvpSessionStore
+        from operator_ingress.adapters.session_store import MvpSessionStore
 
         store = MvpSessionStore(self.root)
         store.create_session("sess-good2")
@@ -300,7 +300,7 @@ class TestCrashIntegrityStoreLevel(unittest.TestCase):
     def test_stale_intent_without_session(self):
         """Intent record exists but no corresponding session: list_sessions
         / get_session unaffected, no crash, no roll-forward."""
-        from operator_surface.adapters.session_store import MvpSessionStore
+        from operator_ingress.adapters.session_store import MvpSessionStore
 
         store = MvpSessionStore(self.root)
 

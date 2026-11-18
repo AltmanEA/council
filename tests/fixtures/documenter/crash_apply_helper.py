@@ -123,8 +123,8 @@ def main():
     corpus = os.path.join(tmpdir, "corpus")
     os.makedirs(os.path.join(corpus, "docs", "en", "alpha"), exist_ok=True)
 
-    # ADR-013: Tier 2+ requires the Operator Surface readiness sentinel.
-    sentinel = os.path.join(corpus, "documenter", ".operator_surface_ready")
+    # ADR-013: Tier 2+ requires the Operator Ingress readiness sentinel.
+    sentinel = os.path.join(corpus, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")

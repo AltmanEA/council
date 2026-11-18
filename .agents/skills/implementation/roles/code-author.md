@@ -28,7 +28,7 @@
 - Правка существующих файлов — только явно перечисленных в `target-task.md`.
 - Не «лечи» всё красное вокруг: твоя область — целевая задача. Неизвестный сбой чужого
   файла — в `notes`, не в правку.
-- Tier 2+ Documenter (write-хуки, registry-операции активации, Operator Surface) — запрещено
+- Tier 2+ Documenter (write-хуки, registry-операции активации, Operator Ingress (ранее Operator Surface)) — запрещено
   (ADR-013). При потребности — вернись с `critical_blocker` в notes.
 - Запрещённые пути: docs/, fallback/, AGENTS.md, CHANGELOGS/, defaults/, .opencode/,
   documenter_policy.yml, archive/, .agents/skills/documentation/.

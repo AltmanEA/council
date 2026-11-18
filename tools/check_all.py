@@ -37,7 +37,7 @@ ONLY the deterministic side:
                                           (hard fail — ADR-003 precedent for a
                                           prose invariant enforced by CI)
           code→docs            warning comments/docstrings under documenter_service/
-                                          (and operator_surface/ when it exists)
+                                          (and operator_ingress/ when it exists)
                                           referencing a missing/unregistered docs/
                                           path: WARN-ONLY by contract (worktree
                                           drift must not block legitimate
@@ -171,9 +171,9 @@ _GENERIC_MD_NAMES = {"index.md", "readme.md"}
 _LINK_DOC_PATH_RE = re.compile(r"(?<![\w/.-])(docs/(?:en|ru)/[\w./-]+\.md)(?![\w-])")
 
 #: Package directories whose Python comments/docstrings are scanned for
-#: code→docs references. `operator_surface` joins the list when the package
+#: code→docs references. `operator_ingress` joins the list when the package
 #: appears (p3 plan Steps 0-9); a missing directory is skipped silently.
-LINK_INTEGRITY_CODE_DIRS = ("documenter_service", "operator_surface")
+LINK_INTEGRITY_CODE_DIRS = ("documenter_service", "operator_ingress")
 
 
 def _registered_doc_paths(root: str) -> set:
@@ -472,7 +472,7 @@ class _Corpus:
     def _ensure_corpus_indexes(self):
         """Lazy corpus-wide indexes: token-normalized heading text -> files,
         basename -> files, H1 title -> files, and the set of first-segment
-        directory names under docs/en (for prose hints like 'operator-surface')."""
+        directory names under docs/en (for prose hints like 'operator-ingress')."""
         if self._heading_unique is not None:
             return
         self._heading_unique = {}
@@ -718,7 +718,7 @@ class _Corpus:
 
     def _prose_hint_files(self, line: str) -> list:
         """Canonical ids mentioned on the line (bare or backticked), e.g.
-        'protocol-core §Outcome-to-Transition' or '(`operator-surface`)':
+        'protocol-core §Outcome-to-Transition' or '(`operator-ingress`)':
         tokens matching a first-level docs/en directory name resolve to that
         folder's index.md. Context hints only — never a missing-file signal."""
         self._ensure_corpus_indexes()

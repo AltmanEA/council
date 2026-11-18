@@ -31,7 +31,7 @@ Activate only when the operator explicitly asks to implement a programmatic elem
 
 - Any edit to `docs/`, `docs-manifest.yaml`, `CHANGELOGS/` → use the `documentation` skill (Write Rule, `AGENTS.md` §2).
 - Fixes of `fallback/`, `AGENTS.md`, `.opencode/`, `defaults/`, `archive/`, `.agents/skills/documentation/` → forbidden (see §Governance Gates); require explicit operator handling.
-- Tier 2+ Documenter functionality (write branch, registry activation, Operator Surface) → dormant per ADR-013; escalate, do not implement.
+- Tier 2+ Documenter functionality (write branch, registry activation, Operator Ingress, formerly Operator Surface) → dormant per ADR-013; escalate, do not implement.
 - One-line or cosmetic changes; the cycle's cost is unjustified.
 
 ### Pre-gate (mandatory before cycle start)

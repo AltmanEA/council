@@ -1,7 +1,7 @@
 # Documenter Service
 
 id: documenter-service
-Version: 0.22.1-draft
+Version: 0.23.0-draft
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -21,11 +21,11 @@ Scope boundary: Documenter operates exclusively on manifest-tracked documentatio
 
 ## Architecture Position
 
-Documenter is a **Supporting service** outside the three-layer chain. It is invoked by the Layer 2 operator surface (an explicit MCP tool call) and, for LLM-backed writes, uses a **Layer 1 execution port** to reach the Documentation Worker. It never calls Layer 2 or Layer 0 directly, and Layer 2 never invokes an LLM on Documenter's behalf. Events and verdicts are returned synchronously to the invoking surface; Documenter keeps no event loop, no subscription, and no filesystem watcher.
+Documenter is a **Supporting service** outside the three-layer chain. It is invoked by the Layer 2 operator ingress (an explicit MCP tool call) and, for LLM-backed writes, uses a **Layer 1 execution port** to reach the Documentation Worker. It never calls Layer 2 or Layer 0 directly, and Layer 2 never invokes an LLM on Documenter's behalf. Events and verdicts are returned synchronously to the invoking surface; Documenter keeps no event loop, no subscription, and no filesystem watcher.
 
-It is not part of the Layer 1 role-agent path: ScenarioLoader and RoleAgentFactory belong to Layer 1 (`planned-architecture/layer-1.md`), so no peer or subordinate relationship with ScenarioLoader exists. Documenter does not orchestrate Council sessions and holds no causal dependency on the orchestration flow. Every invocation is explicit and operator-originated. **Exception:** read-only operations (`audit()`) are accessible by Operator, Agent, and Service within permitted scope per the authZ matrix (§Caller Identity and Authorization, operator-surface); write operations (`delegate()`) originate from the operator or a delegated agent. Write intent requires tier validation against the `allowed_operations` policy; preview calls (`preview: true`) bypass tier checks entirely (§Preview Exemption).
+It is not part of the Layer 1 role-agent path: ScenarioLoader and RoleAgentFactory belong to Layer 1 (`planned-architecture/layer-1.md`), so no peer or subordinate relationship with ScenarioLoader exists. Documenter does not orchestrate Council sessions and holds no causal dependency on the orchestration flow. Every invocation is explicit and operator-originated. **Exception:** read-only operations (`audit()`) are accessible by Operator, Agent, and Service within permitted scope per the authZ matrix (§Caller Identity and Authorization, operator-ingress); write operations (`delegate()`) originate from the operator or a delegated agent. Write intent requires tier validation against the `allowed_operations` policy; preview calls (`preview: true`) bypass tier checks entirely (§Preview Exemption).
 
-Sync mode (`pre_check`, see §Interfaces) is a mid-session integrity gate. The gate request arrives through the Layer 2 operator surface, invokes Documenter, and returns a synchronous verdict to that surface. Documenter never accepts invocations from Layer 0 or Layer 1; sync mode preserves idle-until-invoked semantics. All modes perform an independent full scan of the target documents. When Documenter is unavailable (network failure, timeout, service down), the audit invocation returns `unavailable` synchronously; the surface emits `precheck.unavailable` event and defers the transition until override via `council.override_precheck`.
+Sync mode (`pre_check`, see §Interfaces) is a mid-session integrity gate. The gate request arrives through the Layer 2 operator ingress, invokes Documenter, and returns a synchronous verdict to that surface. Documenter never accepts invocations from Layer 0 or Layer 1; sync mode preserves idle-until-invoked semantics. All modes perform an independent full scan of the target documents. When Documenter is unavailable (network failure, timeout, service down), the audit invocation returns `unavailable` synchronously; the surface emits `precheck.unavailable` event and defers the transition until override via `council.override_precheck`.
 
 ---
 
@@ -39,7 +39,7 @@ Returns a structured report without touching any write path. Scans documents aga
 |-----------|------|-------------|
 | target_id | string | Document identifier from manifest, or `"*"` for all |
 | severity_min | enum | Minimum severity to include: `low`, `medium`, `high`, `critical`. Default: `low` |
-| pre_check | bool | Mid-session integrity gate flag, set by the Layer 2 operator surface at phase boundaries (see `operator-surface/index.md`, §pre_check Gate). Identical scan semantics; the report is additionally returned as a synchronous gate verdict to the caller. No write path involved. Default: `false` |
+| pre_check | bool | Mid-session integrity gate flag, set by the Layer 2 operator ingress at phase boundaries (see `operator-ingress/index.md`, §pre_check Gate). Identical scan semantics; the report is additionally returned as a synchronous gate verdict to the caller. No write path involved. Default: `false` |
 | scan_cursor | string \| null | Continuation token from a prior partial scan (when `has_remaining` was `true`). Causes `audit()` to resume scanning from the stored position. Absent or `null` means start a fresh full scan. |
 
 | Returns | Type | Description |
@@ -113,7 +113,7 @@ Four deployment tiers governing progressively greater write capability. Each tie
 | 2 | Confirm-per-change | No | Yes, per-item | Apply changes only after individual approve |
 | 3 | Batch approve | Pattern-based | Yes, per-batch with group summaries | Approved patterns auto-apply; critical items require per-item expanded review |
 
-Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Surface exists as code providing an authenticated, out-of-band approval channel — the `operator-surface/index.md` specification is a necessary but not sufficient condition (ADR-013). A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field), AND (c) an implemented Operator Surface providing authenticated operator ingress (ADR-013). All conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Editing the policy file (`active_tier`, `allowed_operations`, `briefing_ref`) is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
+Tier 0–1 ship with MVP. Tier 2+ enters production only after a documented policy file authorizing specific `change_type` + `trust_level` combinations exists. Tier 2+ is additionally interlocked at the architecture level: no Tier 2+ invocation is accepted until the Operator Ingress exists as code providing an authenticated, out-of-band approval channel — the `operator-ingress/index.md` specification is a necessary but not sufficient condition (ADR-013). A policy file alone is not sufficient. Advancement to Tier 2+ requires: (a) an authored policy file per `documenter-service/policy-reference.md`, AND (b) an archived operator briefing referenced by the policy file (`briefing_ref` field), AND (c) an implemented Operator Ingress providing authenticated operator ingress (ADR-013). All conditions MUST be satisfied before the first Tier 2+ invocation. See §Authorization Workflow for the step-by-step procedure. Editing the policy file (`active_tier`, `allowed_operations`, `briefing_ref`) is an activation act reserved to the operator out-of-session; agents MUST NOT modify it (ADR-013). Pattern-based auto-apply at Tier 3 is the only auto-execution path in the system; it derives from the operator's prior pattern authorization, not from elapsed time (see §Approval semantics).
 
 ### Tier Selection Guidance
 
@@ -161,7 +161,7 @@ documenter.delegate {
 }
 ```
 
-At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays dormant behind the dual interlock until the Operator Surface exists as code providing an out-of-band approval channel (ADR-013). See §Authorization Workflow and `documentation-rules` for documentation rules this service enforces.
+At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ stays dormant behind the dual interlock until the Operator Ingress exists as code providing an out-of-band approval channel (ADR-013). See §Authorization Workflow and `documentation-rules` for documentation rules this service enforces.
 
 ---
 
@@ -186,7 +186,7 @@ At Tier 1 `delegate()` returns a diff preview only; it does not write. Tier 2+ s
 
 ## Cross-References
 
-- **`documenter-service/mvp-contract.md`** — Implementation contract: stack, safety protocol, Tier 2+ reserved interfaces, testing strategy. Tier 0–1 read-only surface is operational; the Tier 2+ write branch is implemented but dormant behind the dual interlock (policy gate + Operator Surface not built, ADR-013).
+- **`documenter-service/mvp-contract.md`** — Implementation contract: stack, safety protocol, Tier 2+ reserved interfaces, testing strategy. Tier 0–1 read-only surface is operational; the Tier 2+ write branch is implemented but dormant behind the dual interlock (policy gate + Operator Ingress not built, ADR-013).
 - **`documenter-service/mvp-interfaces.md`** — Machine-readable interface schemas: `audit()`, `delegate(preview: true)`, `documenter.status()`, error categories, `next_action` enum.
 - **`documenter-service/mvp-data-models.md`** — Runtime data structures: audit registry format, token model, policy file schema, event channel.
 - **`documenter-service/policy-reference.md`** — Policy file schema and field reference, operational tuning parameters, authorization workflow checklist

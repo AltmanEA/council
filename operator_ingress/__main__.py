@@ -1,8 +1,8 @@
-"""Operator Surface MVP entry point — stdio JSON-RPC server (Step 4+).
+"""Operator Ingress MVP entry point — stdio JSON-RPC server (Step 4+).
 
 Rewrites the Step 0 placeholder as a full assembly root that:
   - Exposes ``handle_request(request, deps)`` at module level for tests
-  - Runs a stdio loop when invoked as ``python3 -m operator_surface``
+  - Runs a stdio loop when invoked as ``python3 -m operator_ingress``
   - AuthN before verb routing; unknown → CONFIG.002; deferred → CONFIG.001
   - Emits a verb.dispatch event after every successful verb routing.
   - Creates the readiness sentinel at READY (post-READY, non-blocking).
@@ -265,7 +265,7 @@ def _error_response(request_id, envelope: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def build_deps(*, env: dict, state_root: str) -> dict:
-    """Build production dependencies for the Operator Surface.
+    """Build production dependencies for the Operator Ingress.
 
     Args:
         env: environment dict (copy of os.environ or test custom dict).
@@ -353,7 +353,7 @@ def build_deps(*, env: dict, state_root: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# stdio loop — runs when invoked as ``python3 -m operator_surface``
+# stdio loop — runs when invoked as ``python3 -m operator_ingress``
 # ---------------------------------------------------------------------------
 
 def main() -> int:
@@ -363,7 +363,7 @@ def main() -> int:
     # Fail-closed: secret is required, no default.
     if not os.environ.get("COUNCIL_OPERATOR_SECRET"):
         sys.stderr.write(
-            "operator_surface: missing required env var "
+            "operator_ingress: missing required env var "
             "COUNCIL_OPERATOR_SECRET\n"
         )
         return 1
@@ -442,12 +442,12 @@ def main() -> int:
             from .core.sentinel import ensure_sentinel
             if not ensure_sentinel(state_root):
                 sys.stderr.write(
-                    "operator_surface: sentinel creation failed "
+                    "operator_ingress: sentinel creation failed "
                     "(non-fatal)\n"
                 )
         except Exception:
             sys.stderr.write(
-                "operator_surface: sentinel creation failed "
+                "operator_ingress: sentinel creation failed "
                 "(non-fatal)\n"
             )
 
@@ -483,7 +483,7 @@ def main() -> int:
 
     except Exception:
         # Fatal: write to stderr only, never to stdout.
-        sys.stderr.write("operator_surface: fatal error\n")
+        sys.stderr.write("operator_ingress: fatal error\n")
         return 1
 
     return 0

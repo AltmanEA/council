@@ -14,7 +14,7 @@ Contract:
   7. council.override_precheck → override_granted
   8. documenter.override_gate → overridden
   9. Event log contains required event types (verified in-process via handle_request)
- 10. Sentinel file exists at documenter/.operator_surface_ready (created by surface)
+ 10. Sentinel file exists at documenter/.operator_ingress_ready (created by surface)
  11. REGISTRATION.md presence test → FAILS (code author must create it)
 
 Red baseline: REGISTRATION.md missing; sentinel may not be created yet;
@@ -32,7 +32,7 @@ import tempfile
 import unittest
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # type: ignore[misc,assignment]
 
@@ -69,7 +69,7 @@ def _spawn_subprocess(root_dir, timeout=15):
     env["COUNCIL_STATE_ROOT"] = root_dir
     env["COUNCIL_TEST_MODE"] = "1"
     proc = subprocess.Popen(
-        [sys.executable, "-m", "operator_surface"],
+        [sys.executable, "-m", "operator_ingress"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -144,7 +144,7 @@ class TestE2EStdioSession(unittest.TestCase):
         resolve_escalation (VAL.003) → override_precheck → override_gate
         → sentinel → REGISTRATION.md (failing test)."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
 
         proc = _spawn_subprocess(self.root)
         self._proc = proc
@@ -276,27 +276,27 @@ class TestE2EStdioSession(unittest.TestCase):
             self.assertEqual(resp7["result"]["status"], "overridden")
 
             # --- 8. Check sentinel file ---
-            # The operator surface should have created the sentinel.
-            sentinel_path = os.path.join(self.root, "documenter", ".operator_surface_ready")
+            # The Operator Ingress should have created the sentinel.
+            sentinel_path = os.path.join(self.root, "documenter", ".operator_ingress_ready")
             self.assertTrue(
                 os.path.isfile(sentinel_path),
-                "Sentinel file must exist at documenter/.operator_surface_ready after operations",
+                "Sentinel file must exist at documenter/.operator_ingress_ready after operations",
             )
 
             # --- 9. REGISTRATION.md presence test ---
             # ORCHESTRATOR-AUTHORIZED EDIT (cycle 10): the runbook lives in the
-            # package (target-task: operator_surface/REGISTRATION.md, an
+            # package (target-task: operator_ingress/REGISTRATION.md, an
             # implementation file), NOT in the state root; production startup
             # must not copy files around. Presence + content checks per the
             # target-task acceptance criteria.
-            import operator_surface as _pkg
+            import operator_ingress as _pkg
             registration_path = os.path.join(
                 os.path.dirname(os.path.abspath(_pkg.__file__)),
                 "REGISTRATION.md",
             )
             self.assertTrue(
                 os.path.isfile(registration_path),
-                "REGISTRATION.md must exist in the operator_surface package",
+                "REGISTRATION.md must exist in the operator_ingress package",
             )
             with open(registration_path, "r", encoding="utf-8") as fh:
                 reg_text = fh.read()

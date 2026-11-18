@@ -1,4 +1,4 @@
-"""Layer-2-only architecture-enforcing tests for operator_surface/.
+"""Layer-2-only architecture-enforcing tests for operator_ingress/.
 
 Step 0 DoD (plan-draft-v2.md Step 0):
   (a) no import of any layer-1 module  (import scan)
@@ -20,11 +20,11 @@ import tempfile
 import unittest
 
 # ---------------------------------------------------------------------------
-# Helper: resolve operator_surface root from tests/ directory
+# Helper: resolve operator_ingress root from tests/ directory
 # ---------------------------------------------------------------------------
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(TESTS_DIR)
-OPERATOR_SURFACE_DIR = os.path.join(ROOT_DIR, "operator_surface")
+OPERATOR_INGRESS_DIR = os.path.join(ROOT_DIR, "operator_ingress")
 
 # ---------------------------------------------------------------------------
 # Synthetic bad sources -- fed to checker functions in meta-tests
@@ -138,13 +138,13 @@ def check_no_layer1_imports(root_dir, imports):
 
 
 def check_core_no_adapter_imports(root_dir, imports):
-    """Return list of core/* files that import operator_surface.adapters.*."""
+    """Return list of core/* files that import operator_ingress.adapters.*."""
     violations = []
     for relpath, module, _kind in imports:
         if re.match(r"^core/", relpath) and \
-           module == "operator_surface.adapters":
+           module == "operator_ingress.adapters":
             violations.append(
-                f"{relpath}: imports operator_surface.adapters.* "
+                f"{relpath}: imports operator_ingress.adapters.* "
                 f"(assembly root __main__.py may, but core/ must not)")
     return violations
 
@@ -242,46 +242,46 @@ def _create_temp_with_file(source: str, rel_path: str) -> str:
 # ---------------------------------------------------------------------------
 
 class TestPackageLayout(unittest.TestCase):
-    """Verify operator_surface/ package layout mirrors documenter_service/."""
+    """Verify operator_ingress/ package layout mirrors documenter_service/."""
 
-    def test_operator_surface_dir_exists(self):
-        self.assertTrue(os.path.isdir(OPERATOR_SURFACE_DIR),
-                        "operator_surface/ directory must exist")
+    def test_operator_ingress_dir_exists(self):
+        self.assertTrue(os.path.isdir(OPERATOR_INGRESS_DIR),
+                        "operator_ingress/ directory must exist")
 
     def test_init_py(self):
         self.assertTrue(os.path.isfile(
-            os.path.join(OPERATOR_SURFACE_DIR, "__init__.py")),
-                        "operator_surface/__init__.py must exist")
+            os.path.join(OPERATOR_INGRESS_DIR, "__init__.py")),
+                        "operator_ingress/__init__.py must exist")
 
     def test_ports_py(self):
         self.assertTrue(os.path.isfile(
-            os.path.join(OPERATOR_SURFACE_DIR, "ports.py")),
-                        "operator_surface/ports.py must exist")
+            os.path.join(OPERATOR_INGRESS_DIR, "ports.py")),
+                        "operator_ingress/ports.py must exist")
 
     def test_main_py(self):
         self.assertTrue(os.path.isfile(
-            os.path.join(OPERATOR_SURFACE_DIR, "__main__.py")),
-                        "operator_surface/__main__.py must exist")
+            os.path.join(OPERATOR_INGRESS_DIR, "__main__.py")),
+                        "operator_ingress/__main__.py must exist")
 
     def test_core_dir_exists(self):
-        core_dir = os.path.join(OPERATOR_SURFACE_DIR, "core")
+        core_dir = os.path.join(OPERATOR_INGRESS_DIR, "core")
         self.assertTrue(os.path.isdir(core_dir),
-                        "operator_surface/core/ directory must exist")
+                        "operator_ingress/core/ directory must exist")
 
     def test_core_init_py(self):
         self.assertTrue(os.path.isfile(
-            os.path.join(OPERATOR_SURFACE_DIR, "core", "__init__.py")),
-                        "operator_surface/core/__init__.py must exist")
+            os.path.join(OPERATOR_INGRESS_DIR, "core", "__init__.py")),
+                        "operator_ingress/core/__init__.py must exist")
 
     def test_adapters_dir_exists(self):
-        adapters_dir = os.path.join(OPERATOR_SURFACE_DIR, "adapters")
+        adapters_dir = os.path.join(OPERATOR_INGRESS_DIR, "adapters")
         self.assertTrue(os.path.isdir(adapters_dir),
-                        "operator_surface/adapters/ directory must exist")
+                        "operator_ingress/adapters/ directory must exist")
 
     def test_adapters_init_py(self):
         self.assertTrue(os.path.isfile(
-            os.path.join(OPERATOR_SURFACE_DIR, "adapters", "__init__.py")),
-                        "operator_surface/adapters/__init__.py must exist")
+            os.path.join(OPERATOR_INGRESS_DIR, "adapters", "__init__.py")),
+                        "operator_ingress/adapters/__init__.py must exist")
 
 
 class TestPortDefinitions(unittest.TestCase):
@@ -289,7 +289,7 @@ class TestPortDefinitions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        ports_path = os.path.join(OPERATOR_SURFACE_DIR, "ports.py")
+        ports_path = os.path.join(OPERATOR_INGRESS_DIR, "ports.py")
         with open(ports_path, "r", encoding="utf-8") as f:
             cls.ports_source = f.read()
 
@@ -352,7 +352,7 @@ class TestOD1ConventionStrings(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        ports_path = os.path.join(OPERATOR_SURFACE_DIR, "ports.py")
+        ports_path = os.path.join(OPERATOR_INGRESS_DIR, "ports.py")
         with open(ports_path, "r", encoding="utf-8") as f:
             cls.ports_source = f.read()
 
@@ -383,11 +383,11 @@ class TestOD1ConventionStrings(unittest.TestCase):
 
 
 class TestNoForbiddenImports(unittest.TestCase):
-    """(a) No forbidden layer-1 imports anywhere in operator_surface/."""
+    """(a) No forbidden layer-1 imports anywhere in operator_ingress/."""
 
     def test_no_forbidden_imports(self):
-        imports = scan_imports(OPERATOR_SURFACE_DIR)
-        violations = check_no_layer1_imports(OPERATOR_SURFACE_DIR, imports)
+        imports = scan_imports(OPERATOR_INGRESS_DIR)
+        violations = check_no_layer1_imports(OPERATOR_INGRESS_DIR, imports)
         self.assertEqual(violations, [],
                          f"Layer-2 must not import layer-1 modules. "
                          f"Violations: {violations}")
@@ -424,14 +424,14 @@ class TestNoForbiddenImports(unittest.TestCase):
 
 
 class TestCoreNoAdapterImports(unittest.TestCase):
-    """(b) core/* modules never import operator_surface.adapters.*."""
+    """(b) core/* modules never import operator_ingress.adapters.*."""
 
     def test_core_no_adapter_imports(self):
-        imports = scan_imports(OPERATOR_SURFACE_DIR)
-        violations = check_core_no_adapter_imports(OPERATOR_SURFACE_DIR,
+        imports = scan_imports(OPERATOR_INGRESS_DIR)
+        violations = check_core_no_adapter_imports(OPERATOR_INGRESS_DIR,
                                                    imports)
         self.assertEqual(violations, [],
-                         f"core/ must not import operator_surface.adapters.*. "
+                         f"core/ must not import operator_ingress.adapters.*. "
                          f"Violations: {violations}")
 
 
@@ -439,8 +439,8 @@ class TestNoVerbAssignments(unittest.TestCase):
     """(c) No assignments to phase_state / mode / consensus in core/."""
 
     def test_no_forbidden_assignments(self):
-        source_pairs = _get_source_lines(OPERATOR_SURFACE_DIR)
-        violations = check_no_phase_state_assignments(OPERATOR_SURFACE_DIR,
+        source_pairs = _get_source_lines(OPERATOR_INGRESS_DIR)
+        violations = check_no_phase_state_assignments(OPERATOR_INGRESS_DIR,
                                                       source_pairs)
         self.assertEqual(violations, [],
                          f"core/ must not assign to phase_state/mode/"
@@ -499,8 +499,8 @@ class TestNoSessionAttrAccess(unittest.TestCase):
     """(d) No direct attribute access on session objects in core/."""
 
     def test_no_session_attr_access(self):
-        source_pairs = _get_source_lines(OPERATOR_SURFACE_DIR)
-        violations = check_no_session_attr_access(OPERATOR_SURFACE_DIR,
+        source_pairs = _get_source_lines(OPERATOR_INGRESS_DIR)
+        violations = check_no_session_attr_access(OPERATOR_INGRESS_DIR,
                                                   source_pairs)
         self.assertEqual(violations, [],
                          f"core/ must not do direct session attr access. "

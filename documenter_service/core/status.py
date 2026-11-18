@@ -17,9 +17,9 @@ import os
 
 from .audit import _utc
 from . import registry as reg
-from .policy import OPERATOR_SURFACE_SENTINEL, operator_surface_ready
+from .policy import OPERATOR_INGRESS_SENTINEL, operator_ingress_ready
 
-__all__ = ["status", "TIER_INTERLOCK_REASON", "OPERATOR_SURFACE_SENTINEL"]
+__all__ = ["status", "TIER_INTERLOCK_REASON", "OPERATOR_INGRESS_SENTINEL"]
 
 #: Static fallback reason (dual interlock, ADR-013). Used when the readiness
 #: state cannot be probed (root unknown); status() prefers the dynamic
@@ -27,16 +27,16 @@ __all__ = ["status", "TIER_INTERLOCK_REASON", "OPERATOR_SURFACE_SENTINEL"]
 TIER_INTERLOCK_REASON = (
     "Tier 2+ is dormant behind the dual interlock (ADR-013): the write branch "
     "is implemented but gated by policy (active_tier >= 2, allowed_operations, "
-    "briefing_ref) AND by the unbuilt Operator Surface — not activatable until "
+    "briefing_ref) AND by the unbuilt Operator Ingress — not activatable until "
     "the surface exists as code providing authenticated operator ingress "
-    "(the operator-surface specification alone is not sufficient).")
+    "(the Operator Ingress specification alone is not sufficient).")
 
 
 def _tier_interlock_state(policy, root) -> dict:
     """Dynamic tier_interlock per mvp-interfaces §3 (dual interlock, ADR-013).
 
     tier_2_plus_locked is true while EITHER interlock level holds: policy tier
-    below 2, or the Operator Surface readiness sentinel missing under root.
+    below 2, or the Operator Ingress readiness sentinel missing under root.
     The reason names the blocking level so the operator sees "why is the gate
     rejecting right now?".
     """
@@ -45,16 +45,16 @@ def _tier_interlock_state(policy, root) -> dict:
         return {"tier_2_plus_locked": True,
                 "reason": f"active_tier={tier} < 2 — policy gate holds "
                           "Tier 2+ dormant (first interlock level, ADR-013)"}
-    if root is None or not operator_surface_ready(root):
-        sentinel = (os.path.join(root, OPERATOR_SURFACE_SENTINEL)
-                    if root else OPERATOR_SURFACE_SENTINEL)
+    if root is None or not operator_ingress_ready(root):
+        sentinel = (os.path.join(root, OPERATOR_INGRESS_SENTINEL)
+                    if root else OPERATOR_INGRESS_SENTINEL)
         return {"tier_2_plus_locked": True,
-                "reason": "Operator Surface not built (ADR-013): Tier 2+ is "
+                "reason": "Operator Ingress not built (ADR-013): Tier 2+ is "
                           f"not activatable until the surface exists as code — "
                           f"sentinel missing at {sentinel}"}
     return {"tier_2_plus_locked": False,
             "reason": "both interlock levels released (policy gate open, "
-                      "Operator Surface sentinel present) — Tier 2+ calls "
+                      "Operator Ingress sentinel present) — Tier 2+ calls "
                       "still pass the full guard chain in delegate()"}
 
 

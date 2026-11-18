@@ -1,7 +1,7 @@
 # Layer 2 — External Interfaces / Adapters
 
 id: planned-architecture-layer-2
-Version: 0.4.4
+Version: 0.5.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/planned-architecture/layer-2-RU.md
@@ -17,7 +17,7 @@ All external-facing interfaces between human operators and the internal layers. 
 
 ## Transport (MVP: MCP stdio)
 
-The operator surface exposes a small set of MCP tools: submit a task, inspect session status, resolve an escalation, retrieve artifacts, and invoke Documenter (`audit`, `delegate`). Each tool validates its input, authenticates the caller, and calls Layer 1. No tool calls Layer 0 directly.
+The Operator Ingress (formerly Operator Surface) exposes a small set of MCP tools: submit a task, inspect session status, resolve an escalation, retrieve artifacts, and invoke Documenter (`audit`, `delegate`). Each tool validates its input, authenticates the caller, and calls Layer 1. No tool calls Layer 0 directly.
 
 ## Structured Input Validation
 
@@ -52,9 +52,9 @@ Operator-configurable verbosity level: minimal (highly summarized), balanced (de
 
 Codified gate enforcement: every new error code requires PR adding both code entry and localization entry simultaneously. CI check fails if new code exists without corresponding localization.
 
-## Operator Surface
+## Operator Ingress
 
-The operator surface is an adapter, not an orchestrator. It authenticates the caller, validates the request, and calls Layer 1. Operator verbs, identity classes, escalation delivery, and the `pre_check` gate are specified in the Operator Surface & Escalation specification. Escalation is stop-and-resume: the session is durable, and the operator resolves it in a later invocation.
+Operator Ingress is an adapter, not an orchestrator. It authenticates the caller, validates the request, and calls Layer 1. Operator verbs, identity classes, escalation delivery, and the `pre_check` gate are specified in the Operator Ingress & Escalation specification. Escalation is stop-and-resume: the session is durable, and the operator resolves it in a later invocation.
 
 ## Typer CLI (deferred to Phase 2)
 
@@ -76,7 +76,7 @@ The following are control-plane concerns and belong to Layer 1, not Layer 2:
 
 ## Supporting Services
 
-Documenter is not a Layer 2 component. It is a Supporting service invoked through this layer's operator surface; LLM-backed writes use a Layer 1 execution port. Layer 2 never invokes an LLM on Documenter's behalf. Full specification: `../documenter-service/index.md`; placement: `../index.md`.
+Documenter is not a Layer 2 component. It is a Supporting service invoked through this layer's Operator Ingress; LLM-backed writes use a Layer 1 execution port. Layer 2 never invokes an LLM on Documenter's behalf. Full specification: `../documenter-service/index.md`; placement: `../index.md`. See: `operator-ingress/index.md`.
 
 ## Cross-References
 

@@ -49,7 +49,7 @@ _REQUEST_ID_RE = re.compile(
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.approval import (  # noqa: F401
+    from operator_ingress.core.approval import (  # noqa: F401
         ApprovalError,
         ApprovalRegistry,
         hash_diff,
@@ -61,7 +61,7 @@ except ImportError:
 
 # Verbs — may be red if approval not yet implemented
 try:
-    from operator_surface.core.verbs import (  # noqa: F401
+    from operator_ingress.core.verbs import (  # noqa: F401
         documenter_delegate,
         documenter_approve,
     )
@@ -71,35 +71,35 @@ except ImportError:
 
 # envelope + auth helpers (pre-existing, should be green)
 try:
-    from operator_surface.core.envelope import error_envelope  # noqa: F401
+    from operator_ingress.core.envelope import error_envelope  # noqa: F401
 except ImportError:
     error_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.events import make_envelope  # noqa: F401
+    from operator_ingress.core.events import make_envelope  # noqa: F401
 except ImportError:
     make_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.__main__ import handle_request  # noqa: F401
+    from operator_ingress.__main__ import handle_request  # noqa: F401
 except ImportError:
     handle_request = None  # type: ignore[misc,assignment]
 
 # Ports ABCs
 try:
-    from operator_surface.ports import DocumenterPort, EventSink  # noqa: F401
+    from operator_ingress.ports import DocumenterPort, EventSink  # noqa: F401
 except ImportError:
     DocumenterPort = None  # type: ignore[misc,assignment]
     EventSink = None  # type: ignore[misc,assignment]
 
 # MvpSessionStore for handle_request test deps
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # type: ignore[misc,assignment]
 
@@ -783,7 +783,7 @@ class TestTransportRouting(unittest.TestCase):
         (documenter.delegate and documenter.approve are now routed, but the other
         deferred tools like council.get_artifacts, council.resolve_escalation,
         council.override_precheck, and documenter.override_gate still do.)"""
-        from operator_surface.core.envelope import deferred_response
+        from operator_ingress.core.envelope import deferred_response
         if deferred_response is None:
             self.skipTest("deferred_response not yet implemented")
             return
@@ -838,16 +838,16 @@ class TestEnvelopeBackCompat(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 @unittest.skipIf(not os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                  "..", "operator_surface", "core", "approval.py")),
+                                                  "..", "operator_ingress", "core", "approval.py")),
                  "red baseline: approval.py not yet created")
 class TestArchitectureGuard(unittest.TestCase):
-    """approval.py must not import layer-1 or operator_surface.adapters."""
+    """approval.py must not import layer-1 or operator_ingress.adapters."""
 
     def test_no_adapter_imports_in_approval(self):
         import ast
         approval_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "operator_surface", "core", "approval.py",
+            "operator_ingress", "core", "approval.py",
         )
         if not os.path.isfile(approval_path):
             self.skipTest("approval.py does not exist (red baseline)")

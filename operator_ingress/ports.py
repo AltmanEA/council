@@ -1,4 +1,4 @@
-"""Ports (hexagon face) for the Operator Surface MVP.
+"""Ports (hexagon face) for the Operator Ingress MVP.
 
 Layer-2 only: core/ knows ONLY these abstractions; adapters/ supplies
 the concrete implementations.  No direct imports of Layer-1 modules

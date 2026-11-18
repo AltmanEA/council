@@ -1,7 +1,7 @@
-"""Pure-function verb handlers for the Operator Surface.
+"""Pure-function verb handlers for the Operator Ingress.
 
 Core modules know only the ports defined in ports.py; they never import
-operator_surface.adapters.* (assembly wiring in __main__.py).
+operator_ingress.adapters.* (assembly wiring in __main__.py).
 """
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Unit tests for operator_surface.core.envelope (Step 2 — Error envelope + lookup table + deferred stubs).
+"""Unit tests for operator_ingress.core.envelope (Step 2 — Error envelope + lookup table + deferred stubs).
 
 Acceptance criteria (target-task.md, plan Step 2):
   - 12 registry codes each have CODE_TABLE entry with non-empty str message AND
@@ -75,7 +75,7 @@ _DEFERRED_TOOLS = [
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.envelope import (  # noqa: F401
+    from operator_ingress.core.envelope import (  # noqa: F401
         CODE_TABLE,
         deferred_response,
         error_envelope,

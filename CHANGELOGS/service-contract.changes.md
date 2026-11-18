@@ -1,3 +1,4 @@
+<!-- CHANGES v0.3.0: Term renamed to Operator Ingress in Scope and localization lines; cross-reference updated (ADR-018) -->
 # Changelog — Cross-Service Artifact & Event Contract
 <!-- CHANGES v0.2.3 (error-management.md): Removed stray Source: line from body (compliance fix, AGENTS.md §7.2) (sess-doc-reliability-algo Stage A). -->
 <!-- CHANGES v0.2.2 (error-management.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->

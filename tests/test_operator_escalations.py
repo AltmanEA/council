@@ -29,7 +29,7 @@ import unittest
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.escalations import (  # noqa: F401
+    from operator_ingress.core.escalations import (  # noqa: F401
         EscalationStore,
         render,
     )
@@ -38,17 +38,17 @@ except ImportError:
     render = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.events import make_envelope  # noqa: F401
+    from operator_ingress.core.events import make_envelope  # noqa: F401
 except ImportError:
     make_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.ports import EventSink  # noqa: F401
+    from operator_ingress.ports import EventSink  # noqa: F401
 except ImportError:
     EventSink = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.verbs import status  # noqa: F401
+    from operator_ingress.core.verbs import status  # noqa: F401
 except ImportError:
     status = None  # type: ignore[misc,assignment]
 
@@ -641,7 +641,7 @@ class TestNoDiskWrites(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # type: ignore[misc,assignment]
 

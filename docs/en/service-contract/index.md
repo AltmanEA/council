@@ -1,7 +1,7 @@
 # Cross-Service Artifact & Event Contract
 
 id: service-contract
-Version: 0.2.2
+Version: 0.3.0
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/index-RU.md
@@ -13,7 +13,7 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 
 ## Scope
 
-Field-level schemas for artifacts that cross a service boundary, the canonical event envelope, frozen enumerations, and the error-code registry. Only fields that a protocol rule reads or the operator surface renders are specified; prose remains authoritative for everything else.
+Field-level schemas for artifacts that cross a service boundary, the canonical event envelope, frozen enumerations, and the error-code registry. Only fields that a protocol rule reads or the Operator Ingress renders are specified; prose remains authoritative for everything else.
 
 Non-goals: full JSON Schema for every artifact, a schema migration chain, and provider-specific payloads (`SUBJ-006`, deferred).
 
@@ -28,7 +28,7 @@ Non-goals: full JSON Schema for every artifact, a schema migration chain, and pr
 
 ## Frozen Enumerations
 
-Wire values are lowercase kebab-case; display strings are localized by the operator surface and never stored.
+Wire values are lowercase kebab-case; display strings are localized by the Operator Ingress and never stored.
 
 | Enum | Values |
 |------|--------|
@@ -192,5 +192,5 @@ Error codes, configuration precedence, schema versioning, critical finding valid
 - `planned-architecture/layer-0.md` — functions consuming these schemas
 - `planned-architecture/layer-1.md` — producers of role artifacts
 - `execution-runtime/index.md` — phase and persistence semantics
-- `operator-surface/index.md` — rendering and escalation delivery
+- `operator-ingress/index.md` — rendering and escalation delivery
 - `documenter-service/configuration-guide.md` — Documenter event payloads

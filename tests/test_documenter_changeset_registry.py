@@ -31,8 +31,8 @@ from documenter_service.core import write as core_write  # noqa: E402
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _enable_operator_surface(root: str) -> str:
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+def _enable_operator_ingress(root: str) -> str:
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -204,7 +204,7 @@ class TestChangesetRegistry(unittest.TestCase):
                   "w") as f:
             f.write("## Alpha Changelog\n\nOriginal content.\n")
         _init_git_repo(self.corpus)
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         self.data_dir = os.path.join(self.tmpdir, "documenter")
         self.briefing = os.path.join(self.tmpdir, "_briefing.md")
         with open(self.briefing, "w") as f:

@@ -17,7 +17,7 @@ import unittest
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.verbs import (  # noqa: F401
+    from operator_ingress.core.verbs import (  # noqa: F401
         resolve_escalation,
         override_precheck,
         override_gate,
@@ -30,38 +30,38 @@ except ImportError:
     consume_precheck_override = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.envelope import error_envelope  # noqa: F401
+    from operator_ingress.core.envelope import error_envelope  # noqa: F401
 except ImportError:
     error_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.events import make_envelope  # noqa: F401
+    from operator_ingress.core.events import make_envelope  # noqa: F401
 except ImportError:
     make_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.escalations import EscalationStore  # noqa: F401
+    from operator_ingress.core.escalations import EscalationStore  # noqa: F401
 except ImportError:
     EscalationStore = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.ports import DocumenterPort, EventSink  # noqa: F401
+    from operator_ingress.ports import DocumenterPort, EventSink  # noqa: F401
 except ImportError:
     DocumenterPort = None  # type: ignore[misc,assignment]
     EventSink = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.__main__ import handle_request  # noqa: F401
+    from operator_ingress.__main__ import handle_request  # noqa: F401
 except ImportError:
     handle_request = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # type: ignore[misc,assignment]
 
@@ -172,7 +172,7 @@ def _build_deps(root=None, escalation_store=None):
 
     approval_reg = None
     try:
-        from operator_surface.core.approval import ApprovalRegistry
+        from operator_ingress.core.approval import ApprovalRegistry
         approval_reg = ApprovalRegistry()
     except ImportError:
         pass
@@ -893,17 +893,17 @@ class TestTransportRouting(unittest.TestCase):
 
 @unittest.skipIf(
     not os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                     "..", "operator_surface", "core", "verbs.py")),
-    "red baseline: operator_surface/core/verbs.py not found",
+                                     "..", "operator_ingress", "core", "verbs.py")),
+    "red baseline: operator_ingress/core/verbs.py not found",
 )
 class TestArchitectureGuard(unittest.TestCase):
-    """Case N: operator_surface/core/verbs.py must contain NO 'open('
+    """Case N: operator_ingress/core/verbs.py must contain NO 'open('
     and NO 'Path(' occurrences (disk I/O forbidden in core verbs)."""
 
     def _get_verbs_source(self):
         tests_dir = os.path.dirname(os.path.abspath(__file__))
         root = os.path.dirname(tests_dir)
-        verbs_path = os.path.join(root, "operator_surface", "core", "verbs.py")
+        verbs_path = os.path.join(root, "operator_ingress", "core", "verbs.py")
         with open(verbs_path, "r", encoding="utf-8") as f:
             return f.read()
 

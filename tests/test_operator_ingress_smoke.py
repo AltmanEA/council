@@ -1,6 +1,6 @@
-"""Smoke test: python3 -m operator_surface exits cleanly.
+"""Smoke test: python3 -m operator_ingress exits cleanly.
 
-Step 0: operator_surface/__main__.py must have a placeholder entry point that
+Step 0: operator_ingress/__main__.py must have a placeholder entry point that
 exits with code 0 and produces no traceback on stderr.
 
 Anti-reversed-TDD: before implementation, the module does not exist → the test
@@ -30,7 +30,7 @@ def _temp_state_root():
 
 
 class TestOperatorSurfaceSmoke(unittest.TestCase):
-    """Spawn python3 -m operator_surface and check exit behaviour."""
+    """Spawn python3 -m operator_ingress and check exit behaviour."""
 
     def test_exit_code_is_zero(self):
         """__main__.py must return exit code 0."""
@@ -40,7 +40,7 @@ class TestOperatorSurfaceSmoke(unittest.TestCase):
         env["COUNCIL_STATE_ROOT"] = state_root
         try:
             result = subprocess.run(
-                ["python3", "-m", "operator_surface"],
+                ["python3", "-m", "operator_ingress"],
                 capture_output=True, text=True,
                 cwd=ROOT, timeout=10,
                 env=env,
@@ -60,7 +60,7 @@ class TestOperatorSurfaceSmoke(unittest.TestCase):
         env["COUNCIL_STATE_ROOT"] = state_root
         try:
             result = subprocess.run(
-                ["python3", "-m", "operator_surface"],
+                ["python3", "-m", "operator_ingress"],
                 capture_output=True, text=True,
                 cwd=ROOT, timeout=10,
                 env=env,

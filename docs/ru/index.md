@@ -15,7 +15,7 @@
 | `documenter-service-policy-reference` | [Documenter Policy Reference](../en/documenter-service/policy-reference.md) | [Справочник политик Документатора](documenter-service/policy-reference-RU.md) |
 | `execution-runtime` | [Execution Runtime & Session Lifecycle](../en/execution-runtime/index.md) | [Среда исполнения и жизненный цикл сессии](execution-runtime/index-RU.md) |
 | `glossary` | [Glossary](../en/glossary/index.md) | [Глоссарий](glossary/index-RU.md) |
-| `operator-surface` | [Operator Surface & Escalation](../en/operator-surface/index.md) | [Поверхность оператора и эскалация](operator-surface/index-RU.md) |
+| `operator-ingress` | [Operator Ingress & Escalation](../en/operator-ingress/index.md) | [Точка входа оператора и эскалация](operator-ingress/index-RU.md) |
 | `planned-architecture` | [Planned Architecture](../en/planned-architecture/index.md) | [Планируемая архитектура](planned-architecture/index-RU.md) |
 | `planned-architecture-layer-0` | [Layer 0 — Protocol Enforcement](../en/planned-architecture/layer-0.md) | [Слой 0 — Enforcement протокола](planned-architecture/layer-0-RU.md) |
 | `planned-architecture-layer-1` | [Layer 1 — Execution Runtime](../en/planned-architecture/layer-1.md) | [Слой 1 — Среда исполнения](planned-architecture/layer-1-RU.md) |

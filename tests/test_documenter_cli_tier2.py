@@ -94,7 +94,7 @@ def _make_corpus(tmpdir):
         f.write("<!-- CHANGES 1.0.0: initial -->\n")
     # ADR-013: surface-readiness sentinel — Tier 2+ CLI paths require it;
     # tier < 2 refusal tests still refuse at the first interlock level.
-    sentinel = os.path.join(corpus, "documenter", ".operator_surface_ready")
+    sentinel = os.path.join(corpus, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")

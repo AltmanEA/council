@@ -40,7 +40,7 @@ _SESS_RE = re.compile(r"^sess-[a-z0-9]{12}$")
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.precheck import (  # noqa: F401
+    from operator_ingress.core.precheck import (  # noqa: F401
         RegistryIntegrityError,
         run_precheck,
         PRE_CHECK_TIMEOUT_SECONDS,
@@ -51,28 +51,28 @@ except ImportError:
     PRE_CHECK_TIMEOUT_SECONDS = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.events import make_envelope  # noqa: F401
+    from operator_ingress.core.events import make_envelope  # noqa: F401
 except ImportError:
     make_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.envelope import error_envelope  # noqa: F401
+    from operator_ingress.core.envelope import error_envelope  # noqa: F401
 except ImportError:
     error_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.ports import DocumenterPort, EventSink  # noqa: F401
+    from operator_ingress.ports import DocumenterPort, EventSink  # noqa: F401
 except ImportError:
     DocumenterPort = None  # type: ignore[misc,assignment]
     EventSink = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.verbs import submit_task  # noqa: F401
+    from operator_ingress.core.verbs import submit_task  # noqa: F401
 except ImportError:
     submit_task = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # type: ignore[misc,assignment]
 
@@ -401,7 +401,7 @@ class TestRunPrecheckVerdicts(unittest.TestCase):
             # Set the env var.
             os.environ["PRE_CHECK_TIMEOUT"] = "7.5"
             # Reload the module so it reads the new value.
-            import operator_surface.core.precheck as premod  # noqa: F811
+            import operator_ingress.core.precheck as premod  # noqa: F811
             importlib.reload(premod)
             self.assertEqual(premod.PRE_CHECK_TIMEOUT_SECONDS, 7.5)
             # Change the env var — reload NOT performed, value stays.
@@ -643,7 +643,7 @@ class TestGreenBaselineImport(unittest.TestCase):
 
     def test_boot_constant_is_default_float(self):
         """PRE_CHECK_TIMEOUT_SECONDS is 5.0 under clean env."""
-        import operator_surface.core.precheck as premod  # noqa: F811
+        import operator_ingress.core.precheck as premod  # noqa: F811
         self.assertIsInstance(premod.PRE_CHECK_TIMEOUT_SECONDS, float)
         # Verify no PRE_CHECK_TIMEOUT env was set in this process:
         # if env were set, reload would be needed (case_9 covers that).

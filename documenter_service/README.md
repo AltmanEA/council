@@ -1,4 +1,4 @@
-# documenter_service — Documenter Service MVP (Tier 0–1 operational; Tier 2+ implemented, dormant behind the dual interlock — policy gate + Operator Surface not built, ADR-013)
+# documenter_service — Documenter Service MVP (Tier 0–1 operational; Tier 2+ implemented, dormant behind the dual interlock — policy gate + Operator Ingress (formerly Operator Surface) not built, ADR-013)
 
 Stage 4 scaffold (plan `sess-doc-reliability-algo`, session
 `sess-doc-reliability-algo`). Contract documents (normative, under `docs/`):
@@ -28,7 +28,7 @@ covered because audit() invokes the tools checker. **Rules 3 (glossary terms)
 and 5 (abstraction consistency) are skill/AI-reserved and not implemented
 here** — this package never claims "rules 1–6" coverage (documentation-rules §8).
 
-## Tier 2+ (implemented; dormant behind the dual interlock — policy gate + Operator Surface not built)
+## Tier 2+ (implemented; dormant behind the dual interlock — policy gate + Operator Ingress not built)
 
 - **Write branch** — `--delegate-write` / MCP `delegate_write`: full guard
   chain (tier authorization → registry health → `audit_id` gate rules 1–5 →
@@ -85,7 +85,7 @@ here** — this package never claims "rules 1–6" coverage (documentation-rules
   Layer 2 surface. With `documenter_policy.yml` at Tier 0–1 and
   `briefing_ref: null`, every non-preview call fails closed
   (`tier_interlock`). Per ADR-013 the runtime policy gate is only the first
-  interlock level: Tier 2+ is **not activatable** until the Operator Surface
+  interlock level: Tier 2+ is **not activatable** until the Operator Ingress
   exists as code providing authenticated ingress — a policy edit alone is
   prohibited as an activation act (AGENTS.md §1.7; operator out-of-session
   action per policy-reference §Authorization Workflow and

@@ -7,7 +7,7 @@ MCP tools/call call the very core functions, no parallel logic.
 
 Tier 2+ write branch (preview=False): --delegate-write, --approve,
 --override-gate. Operator identity from environment (COUNCIL_OPERATOR_ID),
-never from client-supplied parameters (operator-surface §AuthN).
+never from client-supplied parameters (operator-ingress §AuthN).
 
 Usage:
     python3 -m documenter_service --status [--json]
@@ -125,7 +125,7 @@ _OPERATOR_ID_RE = re.compile(r"^op-[a-z0-9][a-z0-9-]{2,63}$")
 def resolve_operator_id(environ) -> str:
     """Resolve the authenticated operator from process environment.
 
-    AuthN decision (mvp-contract §AuthN; operator-surface §Caller Identity and
+    AuthN decision (mvp-contract §AuthN; operator-ingress §Caller Identity and
     Authorization): operator_id NEVER comes from client-supplied parameters.
     The trusted ingress is the process environment variable COUNCIL_OPERATOR_ID,
     validated against ``^op-[a-z0-9][a-z0-9-]{2,63}$``.
@@ -143,7 +143,7 @@ def resolve_operator_id(environ) -> str:
         raise StructuredError(
             "unknown",
             "authenticated operator ingress missing: set COUNCIL_OPERATOR_ID "
-            "(operator-surface §AuthN; expected "
+            "(operator-ingress §AuthN; expected "
             r"^op-[a-z0-9][a-z0-9-]{2,63}$)")
     return oid
 
@@ -334,7 +334,7 @@ class Service:
 
         if approval_id:
             # Re-invocation after approve: apply the write. operator_id comes
-            # from authenticated ingress ONLY (operator-surface §AuthN):
+            # from authenticated ingress ONLY (operator-ingress §AuthN):
             # COUNCIL_OPERATOR_ID in the environment. The target_id is NEVER
             # a stand-in principal.
             operator_id = self._env.get("COUNCIL_OPERATOR_ID")
@@ -342,7 +342,7 @@ class Service:
                 raise StructuredError(
                     "unknown",
                     "apply requires authenticated operator ingress: set "
-                    "COUNCIL_OPERATOR_ID (operator-surface §AuthN); "
+                    "COUNCIL_OPERATOR_ID (operator-ingress §AuthN); "
                     "this is a deployment defect, not operator action")
             if not _OPERATOR_ID_RE.match(operator_id):
                 raise StructuredError(

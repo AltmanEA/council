@@ -40,9 +40,9 @@ FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures',
 CORPUS_FIXTURES = os.path.join(FIXTURES, 'corpus')
 
 
-def _enable_operator_surface(root: str) -> str:
-    """Create the ADR-013 Operator Surface readiness sentinel."""
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+def _enable_operator_ingress(root: str) -> str:
+    """Create the ADR-013 Operator Ingress readiness sentinel."""
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -176,7 +176,7 @@ class TestChangesetCreateOperations(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "documenter"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
 
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
         alpha_path = os.path.join(self.corpus, "docs", "en", "alpha", "index.md")

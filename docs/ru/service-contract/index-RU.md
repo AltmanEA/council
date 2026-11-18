@@ -192,5 +192,5 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 - `planned-architecture/layer-0.md` — функции, потребляющие эти схемы
 - `planned-architecture/layer-1.md` — производители артефактов Роли
 - `execution-runtime/index.md` — семантика Фазы и персистентности
-- `operator-surface/index.md` — рендеринг и доставка Эскалации
+- `operator-ingress/index.md` — рендеринг и доставка Эскалации
 - `documenter-service/configuration-guide.md` — полезная нагрузка событий Документатора

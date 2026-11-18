@@ -1,4 +1,4 @@
-"""Unit tests for operator_surface.core.events (Step 3 — Event delivery, JSONL envelope).
+"""Unit tests for operator_ingress.core.events (Step 3 — Event delivery, JSONL envelope).
 
 Acceptance criteria (target-task.md, plan Step 3):
   - make_envelope produces canonical envelope with all required fields,
@@ -76,7 +76,7 @@ _VALID_EVENT_TYPES = (
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.events import (  # noqa: F401
+    from operator_ingress.core.events import (  # noqa: F401
         FileEventSink,
         make_envelope,
     )

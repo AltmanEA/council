@@ -4,7 +4,7 @@ Cycle 10 Step 9 — Test Author.
 
 Contract (C): when ``documenter_service`` cannot be imported, the adapter
 ``Tier01Documenter`` returns ``{"available": False, "reason": ...}`` from
-every method.  The operator surface must NOT crash — verbs that call through
+every method.  The Operator Ingress must NOT crash — verbs that call through
 to the port get ``IO.004`` error envelopes, and the precheck path returns
 ``verdict: "unavailable"`` which triggers auto-proceed with
 ``"precheck": "unavailable"`` in the submit_task response.
@@ -23,7 +23,7 @@ import tempfile
 import unittest
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # type: ignore[misc,assignment]
 
@@ -63,7 +63,7 @@ def _spawn_subprocess(root_dir, timeout=10):
     env["COUNCIL_STATE_ROOT"] = root_dir
     env["COUNCIL_TEST_MODE"] = "1"
     proc = subprocess.Popen(
-        [sys.executable, "-m", "operator_surface"],
+        [sys.executable, "-m", "operator_ingress"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -121,7 +121,7 @@ class TestDegradationInProcess(unittest.TestCase):
 
     def test_adapter_audit_returns_available_false(self):
         """Tier01Documenter.audit() returns available=False when service absent."""
-        from operator_surface.adapters.documenter_adapter import Tier01Documenter
+        from operator_ingress.adapters.documenter_adapter import Tier01Documenter
 
         adapter = Tier01Documenter(self.tmpdir)
         result = adapter.audit(target_id="*")
@@ -132,7 +132,7 @@ class TestDegradationInProcess(unittest.TestCase):
 
     def test_adapter_status_returns_healthy_false(self):
         """Tier01Documenter.status() returns healthy=False when service absent."""
-        from operator_surface.adapters.documenter_adapter import Tier01Documenter
+        from operator_ingress.adapters.documenter_adapter import Tier01Documenter
 
         adapter = Tier01Documenter(self.tmpdir)
         result = adapter.status(target_id=None)
@@ -143,7 +143,7 @@ class TestDegradationInProcess(unittest.TestCase):
 
     def test_adapter_delegate_preview_returns_available_false(self):
         """Tier01Documenter.delegate_preview() returns available=False when service absent."""
-        from operator_surface.adapters.documenter_adapter import Tier01Documenter
+        from operator_ingress.adapters.documenter_adapter import Tier01Documenter
 
         adapter = Tier01Documenter(self.tmpdir)
         result = adapter.delegate_preview(
@@ -173,7 +173,7 @@ class TestPrecheckDegradation(unittest.TestCase):
 
     def test_run_precheck_no_port_returns_unavailable(self):
         """run_precheck with documenter_port=None → verdict: unavailable."""
-        from operator_surface.core.precheck import run_precheck
+        from operator_ingress.core.precheck import run_precheck
 
         result = run_precheck(
             target_id="scen-deg",
@@ -193,7 +193,7 @@ class TestPrecheckDegradation(unittest.TestCase):
 
     def test_precheck_unavailable_event_emitted(self):
         """run_precheck unavailable → precheck.unavailable event via sink."""
-        from operator_surface.core.precheck import run_precheck
+        from operator_ingress.core.precheck import run_precheck
 
         class _Sink:
             def __init__(self):
@@ -219,8 +219,8 @@ class TestPrecheckDegradation(unittest.TestCase):
 
     def test_submit_task_auto_proceed_unavailable(self):
         """submit_task with precheck unavailable → returns precheck: unavailable."""
-        from operator_surface.adapters.session_store import MvpSessionStore
-        from operator_surface.core.verbs import submit_task
+        from operator_ingress.adapters.session_store import MvpSessionStore
+        from operator_ingress.core.verbs import submit_task
 
         store = MvpSessionStore(self.tmpdir)
         events = []  # simple list as event sink
@@ -243,8 +243,8 @@ class TestPrecheckDegradation(unittest.TestCase):
 
     def test_submit_task_event_emitted_on_auto_proceed(self):
         """submit_task auto-proceed on unavailable → verb.submit_task event."""
-        from operator_surface.adapters.session_store import MvpSessionStore
-        from operator_surface.core.verbs import submit_task
+        from operator_ingress.adapters.session_store import MvpSessionStore
+        from operator_ingress.core.verbs import submit_task
 
         store = MvpSessionStore(self.tmpdir)
         events = []
@@ -281,7 +281,7 @@ class TestDegradationSubprocess(unittest.TestCase):
     def test_status_healthy_false_with_test_mode(self):
         """council.status under COUNCIL_TEST_MODE → valid response (test mode stubs)."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc = _spawn_subprocess(self.root)
         try:
             token = _make_token(sub="op-alice")
@@ -313,7 +313,7 @@ class TestDegradationSubprocess(unittest.TestCase):
     def test_submit_task_auto_proceed_via_stdio(self):
         """council.submit_task under COUNCIL_TEST_MODE → precheck: unavailable."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc = _spawn_subprocess(self.root)
         try:
             token = _make_token(sub="op-alice")
@@ -347,7 +347,7 @@ class TestDegradationSubprocess(unittest.TestCase):
     def test_documenter_audit_no_crash(self):
         """documenter.audit under COUNCIL_TEST_MODE → does not crash, returns error or stub."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc = _spawn_subprocess(self.root)
         try:
             token = _make_token(sub="op-alice")
@@ -379,7 +379,7 @@ class TestDegradationSubprocess(unittest.TestCase):
         The contract is: no unhandled exception.
         """
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc = _spawn_subprocess(self.root)
         try:
             token = _make_token(sub="op-alice")

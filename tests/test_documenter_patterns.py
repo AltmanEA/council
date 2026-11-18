@@ -47,14 +47,14 @@ from documenter_service.__main__ import Service  # noqa: E402
 # ---------------------------------------------------------------------------
 
 
-def _enable_operator_surface(root):
-    """Create the ADR-013 Operator Surface readiness sentinel under root.
+def _enable_operator_ingress(root):
+    """Create the ADR-013 Operator Ingress readiness sentinel under root.
 
     Tier 2+ test corpora must opt into surface-readiness explicitly:
     check_tier2_authorized refuses (tier_interlock) while the sentinel is
     absent. Tests asserting the second interlock level omit this call.
     """
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -474,7 +474,7 @@ class TestApplyPatternBatch(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         os.makedirs(os.path.join(self.corpus, "docs", "en", "beta"))
         self.alpha_path = os.path.join(
             self.corpus, "docs", "en", "alpha", "index.md")
@@ -1073,7 +1073,7 @@ class TestServicePattern(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         self.alpha_path = os.path.join(
             self.corpus, "docs", "en", "alpha", "index.md")
         self.doc_text = (
@@ -1181,7 +1181,7 @@ class TestNoSelfApprovalRegression(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.corpus = os.path.join(self.tmpdir, "corpus")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         self.alpha_path = os.path.join(
             self.corpus, "docs", "en", "alpha", "index.md")
         self.doc_template = (

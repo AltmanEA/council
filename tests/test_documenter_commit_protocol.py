@@ -92,8 +92,8 @@ def _make_briefing(tmpdir):
     return path
 
 
-def _enable_operator_surface(root):
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+def _enable_operator_ingress(root):
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")

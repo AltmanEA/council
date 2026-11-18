@@ -1,4 +1,4 @@
-"""Tier 0-1 Documenter adapter for the Operator Surface.
+"""Tier 0-1 Documenter adapter for the Operator Ingress.
 
 Binds the real ``documenter_service`` (audit/status/delegate-preview)
 with lazy import inside methods — ImportError produces graceful

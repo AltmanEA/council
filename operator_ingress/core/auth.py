@@ -1,4 +1,4 @@
-"""HMAC-SHA256 token issue/verify for Operator Surface AuthN — Step 1.
+"""HMAC-SHA256 token issue/verify for Operator Ingress AuthN — Step 1.
 
 Provides ``issue_token`` and ``verify_token`` with minimal JWT-like format:
 canonical-json claims + HMAC-SHA256 signature, base64url-encoded.

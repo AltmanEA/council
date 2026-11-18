@@ -28,27 +28,27 @@ import unittest
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.__main__ import handle_request  # noqa: F401
+    from operator_ingress.__main__ import handle_request  # noqa: F401
 except ImportError:
     handle_request = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.events import make_envelope  # noqa: F401
+    from operator_ingress.core.events import make_envelope  # noqa: F401
 except ImportError:
     make_envelope = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.ports import EventSink  # noqa: F401
+    from operator_ingress.ports import EventSink  # noqa: F401
 except ImportError:
     EventSink = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # type: ignore[misc,assignment]
 
@@ -136,7 +136,7 @@ def _build_handle_request_deps(root=None, escalation_store=None):
 
     approval_reg = None
     try:
-        from operator_surface.core.approval import ApprovalRegistry
+        from operator_ingress.core.approval import ApprovalRegistry
         approval_reg = ApprovalRegistry()
     except ImportError:
         pass
@@ -313,7 +313,7 @@ class TestEmissionDiscipline(unittest.TestCase):
     # --- 7. council.resolve_escalation ---
     def test_07_resolve_escalation_emits(self):
         """council.resolve_escalation → ≥1 verb./precheck. event (transport layer)."""
-        from operator_surface.core.escalations import EscalationStore
+        from operator_ingress.core.escalations import EscalationStore
         esc_store = EscalationStore(self.tmpdir)
         rec = esc_store.open(
             session_id="sess-esc001",

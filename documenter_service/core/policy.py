@@ -386,20 +386,20 @@ def operator_id_valid(operator_id: str) -> bool:
 
 
 #: ADR-013 readiness precondition: the Tier 2+ write branch is implemented but
-#: dormant until the Operator Surface exists as code providing authenticated
+#: dormant until the Operator Ingress exists as code providing authenticated
 #: operator ingress. The runtime proxy for "the surface is installed" is this
 #: sentinel file, created by the surface installation and absent by default.
-#: The operator-surface specification alone is NOT sufficient (ADR-013).
-OPERATOR_SURFACE_SENTINEL = os.path.join("documenter", ".operator_surface_ready")
+#: The Operator Ingress specification alone is NOT sufficient (ADR-013).
+OPERATOR_INGRESS_SENTINEL = os.path.join("documenter", ".operator_ingress_ready")
 
 
-def operator_surface_ready(root) -> bool:
-    """True when the Operator Surface readiness sentinel exists under root.
+def operator_ingress_ready(root) -> bool:
+    """True when the Operator Ingress readiness sentinel exists under root.
 
     Absence is the fail-closed default: Tier 2+ stays not activatable until
     the surface installation creates the file (ADR-013).
     """
-    return os.path.isfile(os.path.join(root, OPERATOR_SURFACE_SENTINEL))
+    return os.path.isfile(os.path.join(root, OPERATOR_INGRESS_SENTINEL))
 
 
 def check_tier2_authorized(policy, root) -> None:
@@ -435,16 +435,16 @@ def check_tier2_authorized(policy, root) -> None:
             "tier_interlock",
             f"briefing file not found at {path} — Tier 2+ requires an archived briefing",
             next_action="preview_denied")
-    # Second interlock level (ADR-013): the Operator Surface must exist as
+    # Second interlock level (ADR-013): the Operator Ingress must exist as
     # code providing authenticated operator ingress. The specification alone
     # is a necessary but not sufficient condition; the sentinel below is the
     # runtime proxy for surface installation.
-    if not operator_surface_ready(root):
+    if not operator_ingress_ready(root):
         raise StructuredError(
             "tier_interlock",
-            "Operator Surface not built (ADR-013): Tier 2+ is not activatable "
+            "Operator Ingress not built (ADR-013): Tier 2+ is not activatable "
             f"until the surface exists as code — sentinel missing at "
-            f"{os.path.join(root, OPERATOR_SURFACE_SENTINEL)}",
+            f"{os.path.join(root, OPERATOR_INGRESS_SENTINEL)}",
             next_action="preview_denied")
 
 

@@ -1,4 +1,4 @@
-"""Unit tests for operator_surface.adapters.session_store (MvpSessionStoreAsStub).
+"""Unit tests for operator_ingress.adapters.session_store (MvpSessionStoreAsStub).
 
 Step 4 — MVP session store: CRUD-only JSONL under root/sessions/<sid>/.
 Classes MUST be named TestMvpSessionStoreAsStub* (DoD f).
@@ -13,7 +13,7 @@ import tempfile
 import unittest
 
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # will fail with NameError in anti-reversed-TDD
 

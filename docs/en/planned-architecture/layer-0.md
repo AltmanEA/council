@@ -1,7 +1,7 @@
 # Layer 0 — Protocol Enforcement
 
 id: planned-architecture-layer-0
-Version: 0.2.4
+Version: 0.2.5
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/planned-architecture/layer-0-RU.md
@@ -45,7 +45,7 @@ Produced by Layer 0 `extract_role_status()` when the review text cannot be parse
 
 ## Boundary Rules
 
-- Only called by Layer 1 (role execution). Never directly accessed by Layer 2 (surface tools). If Layer 2 needs protocol behavior, it calls through Layer 1.
+- Only called by Layer 1 (role execution). Never directly accessed by Layer 2 (Operator Ingress tools). If Layer 2 needs protocol behavior, it calls through Layer 1.
 - No framework imports allowed at this layer. No LangChain, no LangGraph, no FastAPI, no SQLite dependencies.
 
 ## Invariants (ADR-001: Structural assertions + property-based tests)

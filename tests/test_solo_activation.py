@@ -37,7 +37,7 @@ except ImportError:
     _apply_write_changeset = None
 
 try:
-    from operator_surface.core.approval import (
+    from operator_ingress.core.approval import (
         ApprovalError, ApprovalRegistry, hash_diff,
     )
 except ImportError:
@@ -46,7 +46,7 @@ except ImportError:
     hash_diff = None
 
 try:
-    from operator_surface.core.verbs import (
+    from operator_ingress.core.verbs import (
         documenter_approve, documenter_delegate, consume_precheck_override,
         override_precheck,
     )
@@ -77,8 +77,8 @@ def _policy(**over):
     return base
 
 
-def _enable_operator_surface(root):
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+def _enable_operator_ingress(root):
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -226,7 +226,7 @@ class TestSoloApprovalBlocked(unittest.TestCase):
         policy_dict = _policy(briefing_ref=bp, active_tier=2,
                               allowed_operations=[], allow_solo_approval=False)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         # Create an approval with proposer==operator (self-approval scenario).
@@ -274,7 +274,7 @@ class TestSoloApproveAllowed(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=0)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -313,7 +313,7 @@ class TestSoloApproveAllowed(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=0)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -353,7 +353,7 @@ class TestSoloApproveAllowed(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=0)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -392,7 +392,7 @@ class TestSoloApproveAllowed(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=0)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -431,7 +431,7 @@ class TestSoloApproveAllowed(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=0)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -479,7 +479,7 @@ class TestMinDelay(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=600)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -519,7 +519,7 @@ class TestMinDelay(unittest.TestCase):
                               ], allow_solo_approval=True,
                               min_approval_delay_seconds=600)
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -644,7 +644,7 @@ class TestProtectedPaths(unittest.TestCase):
                                     {"change_type": "update", "targets": [],
                                      "trust_level": "safe"}
                                 ], allow_solo_approval=True))
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         # Init git repo so _apply_write_changeset can capture git snapshot
         subprocess.run(["git", "init", "-q", self.tmpdir],
@@ -712,7 +712,7 @@ class TestProtectedPaths(unittest.TestCase):
                                     {"change_type": "update", "targets": [],
                                      "trust_level": "safe"}
                                 ], allow_solo_approval=True))
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         subprocess.run(["git", "init", "-q", self.tmpdir],
                        capture_output=True, timeout=10)
@@ -791,7 +791,7 @@ class TestFailClosed(unittest.TestCase):
                                    "trust_level": "safe"}
                               ])
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -856,7 +856,7 @@ class TestSoloApprovalFailClosed(unittest.TestCase):
             min_approval_delay_seconds=0  # no delay, isolate change_type check
         )
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -899,7 +899,7 @@ class TestSoloApprovalFailClosed(unittest.TestCase):
             min_approval_delay_seconds=60  # requires delay check
         )
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -951,7 +951,7 @@ class TestSoloApprovalFailClosed(unittest.TestCase):
             min_approval_delay_seconds=60  # requires delay check
         )
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         registry.issue_approval(
@@ -1006,7 +1006,7 @@ class TestSoloApprovalFailClosed(unittest.TestCase):
             min_approval_delay_seconds=0  # no delay, isolate change_type check
         )
         policy = Policy(policy_dict)
-        _enable_operator_surface(self.tmpdir)
+        _enable_operator_ingress(self.tmpdir)
 
         registry = JsonlAuditRegistry(self.tmpdir)
         # Bare issue_approval: no extra dict, so no change_type in the record.

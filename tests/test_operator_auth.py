@@ -1,4 +1,4 @@
-"""Unit tests for operator_surface.core.auth (Step 1 — HMAC-SHA256 AuthN).
+"""Unit tests for operator_ingress.core.auth (Step 1 — HMAC-SHA256 AuthN).
 
 Acceptance criteria (target-task.md, plan Step 1):
   - round-trip issue→verify returns claims;
@@ -81,7 +81,7 @@ def _craft_token(claims: dict, secret: str) -> str:
 # Import the module under test — must fail before implementation exists
 # ---------------------------------------------------------------------------
 try:
-    from operator_surface.core.auth import (  # noqa: F401
+    from operator_ingress.core.auth import (  # noqa: F401
         HS256,
         AuthError,
         issue_token,

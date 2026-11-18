@@ -1,7 +1,7 @@
 # Planned Architecture
 
 id: planned-architecture
-Version: 0.4.3
+Version: 0.5.0
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/planned-architecture/index-RU.md
@@ -17,7 +17,7 @@ Council uses three core layers plus supporting services. Dependencies point down
 
 ```
 Layer 2 ─ External Interfaces / Adapters
-          MCP stdio transport · input validation · error localization · operator surface
+          MCP stdio transport · input validation · error localization · Operator Ingress
               │ invoke
               ▼
 Layer 1 ─ Execution Runtime
@@ -37,7 +37,7 @@ FALLBACK NOTICE — see §Operational Modes
 
 | Layer | Name | Responsibility | Determinism |
 |-------|------|----------------|-------------|
-| 2 | External Interfaces / Adapters | Transport, ingress validation, error localization, operator surface | Adapters only; no LLM |
+| 2 | External Interfaces / Adapters | Transport, ingress validation, error localization, Operator Ingress | Adapters only; no LLM |
 | 1 | Execution Runtime | Phase orchestration, agent instantiation, scenario loading, session persistence | Mixed: deterministic Moderator, non-deterministic agents |
 | 0 | Protocol Enforcement | Consensus evaluation, subject validation, status extraction, justification format | Fully deterministic; no LLM |
 
@@ -55,7 +55,7 @@ Supporting services sit outside the layer chain. They may call Layer 1 and MUST 
 
 | Service | Role | Call surface |
 |---------|------|--------------|
-| Documenter | Documentation audit and delegated writes | Invoked by the Layer 2 operator surface; LLM-backed writes use a Layer 1 execution port |
+| Documenter | Documentation audit and delegated writes | Invoked by the Layer 2 Operator Ingress; LLM-backed writes use a Layer 1 execution port |
 | JSON persistence | Session state store (`sessions/<id>/`) | Used by Layer 1 `persistence/`; local-only, not committed |
 
 ## Operational Modes

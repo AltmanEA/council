@@ -8,7 +8,7 @@ trigger, condition O-1(ii)):
                    docs-manifest.yaml → HIGH (hard fail, exit 1; ADR-003
                    precedent for a prose invariant enforced by CI).
   code→docs      — comments/docstrings under documenter_service/ (and
-                   operator_surface/ when present) referencing missing
+                   operator_ingress/ when present) referencing missing
                    docs/... paths → WARN-ONLY (exit stays 0); --strict-links
                    promotes them to blocking for clean pre-merge runs.
 
@@ -238,15 +238,15 @@ class TestCodeToDocs(unittest.TestCase):
         self.assertEqual(len(hits), 1)
         self.assertIn("registered", hits[0]["description"])
 
-    def test_operator_surface_dir_scanned_when_present(self):
+    def test_operator_ingress_dir_scanned_when_present(self):
         root = _clean_root()
-        _write(root, "operator_surface/core/thing.py",
+        _write(root, "operator_ingress/core/thing.py",
                '"""Per docs/en/gone/index.md."""\n')
         rc, findings = _json_findings(root, "--rule", "link-integrity")
         self.assertEqual(rc, 0)
         hits = [f for f in findings if f["rule"] == "code-docs-link"]
         self.assertEqual(len(hits), 1)
-        self.assertEqual(hits[0]["file"], "operator_surface/core/thing.py")
+        self.assertEqual(hits[0]["file"], "operator_ingress/core/thing.py")
 
     def test_syntax_error_file_falls_back_to_comment_lines(self):
         """Broken file must not crash the step; `#` lines still scanned."""

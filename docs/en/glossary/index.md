@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.17.0
+Version: 0.18.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -91,6 +91,10 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 **Blocked Escalation** (Заблокировано для эскалации) Identifies a fundamental issue matching a defined escalation reason. Triggers the Escalation Protocol. See also: **Escalation**.
 
 ---
+
+**Operator Ingress** (Точка входа оператора) The Layer 2 authenticated adapter through which the human operator reaches the Council runtime: authenticates the caller, validates input, enforces deny-by-default authorization, renders the operator status projection and escalation view, and hosts the `pre_check` gate. It contains no protocol logic and no LLM invocation. The operator — a human principal — exercises sovereign governance authority at this boundary; agent read-only verbs are an intentional design feature, not a permission leak. Despite earlier naming, it is not a network gateway and not a login screen. Formerly "Operator Surface" (renamed per ADR-018, 2026-11-18). See also: **Approval Surface**, **Escalation**.
+
+**Operator Surface** (Поверхность оператора) *Deprecated.* Former name of **Operator Ingress**; retained only for historical reference (ADR-018). Do not use in new text.
 
 ## Escalation
 

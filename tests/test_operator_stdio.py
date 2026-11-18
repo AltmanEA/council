@@ -1,6 +1,6 @@
-"""Subprocess smoke tests for operator_surface stdio JSON-RPC (Step 4 DoD a-c).
+"""Subprocess smoke tests for operator_ingress stdio JSON-RPC (Step 4 DoD a-c).
 
-Spawns ``python3 -m operator_surface`` as a subprocess, sends newline-delimited
+Spawns ``python3 -m operator_ingress`` as a subprocess, sends newline-delimited
 JSON-RPC 2.0 requests on stdin, reads responses from stdout.
 
 Environment:
@@ -23,7 +23,7 @@ import time
 import unittest
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None
 
@@ -40,7 +40,7 @@ _MIN_CLAIMS = {
 
 
 def _spawn_subprocess(root_dir, timeout=10):
-    """Spawn ``python3 -m operator_surface`` with test env.
+    """Spawn ``python3 -m operator_ingress`` with test env.
 
     Returns ``(process, env_dict)`` for caller management.
     The READY line is consumed before returning so that the first
@@ -51,7 +51,7 @@ def _spawn_subprocess(root_dir, timeout=10):
     env["COUNCIL_STATE_ROOT"] = root_dir
     env["COUNCIL_TEST_MODE"] = "1"
     proc = subprocess.Popen(
-        ["python3", "-m", "operator_surface"],
+        ["python3", "-m", "operator_ingress"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -95,7 +95,7 @@ class TestStdioSmokeRoundTrip(unittest.TestCase):
     def test_council_status_round_trip(self):
         """council.status → result dict with jsonrpc envelope."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()
@@ -125,7 +125,7 @@ class TestStdioSmokeRoundTrip(unittest.TestCase):
     def test_submit_task_has_session_id(self):
         """council.submit_task → result.session_id matches sess-regex."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()
@@ -160,7 +160,7 @@ class TestStdioSmokeRoundTrip(unittest.TestCase):
     def test_submit_task_has_operator_id(self):
         """council.submit_task → result.operator_id == 'op-alice'."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()
@@ -190,7 +190,7 @@ class TestStdioSmokeRoundTrip(unittest.TestCase):
     def test_council_list_sessions(self):
         """council.list_sessions → result with sessions list."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()
@@ -217,7 +217,7 @@ class TestStdioSmokeRoundTrip(unittest.TestCase):
     def test_multiple_round_trips(self):
         """Two sequential round trips succeed."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()
@@ -404,7 +404,7 @@ class TestStdioUnknownMethod(unittest.TestCase):
     def test_unknown_method_config_002(self):
         """council.nonexistent → CONFIG.002 error."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()
@@ -441,7 +441,7 @@ class TestStdioNoSecretLeak(unittest.TestCase):
     def test_stdout_no_secret(self):
         """Good response stdout must not contain the HMAC secret."""
         if issue_token is None:
-            self.skipTest("operator_surface.core.auth not available yet")
+            self.skipTest("operator_ingress.core.auth not available yet")
         proc, _env = _spawn_subprocess(self.root)
         try:
             token = _make_token()

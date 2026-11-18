@@ -1,3 +1,4 @@
+<!-- CHANGES v0.4.0: Layer 2 term renamed to Operator Ingress; cross-reference paths updated (ADR-018) -->
 # Changelog — Execution Runtime & Session Lifecycle
 <!-- CHANGES v0.3.5 (index.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->
 <!-- CHANGES v0.3.4: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged; bump origin was sess-services-readiness path-move series. -->

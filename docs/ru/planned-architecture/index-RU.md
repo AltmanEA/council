@@ -17,7 +17,7 @@ changelog-path: CHANGELOGS/planned-architecture.changes.md
 
 ```
 Layer 2 ─ External Interfaces / Adapters
-          MCP stdio transport · input validation · error localization · operator surface
+          MCP stdio transport · input validation · error localization · точка входа оператора
               │ invoke
               ▼
 Layer 1 ─ Execution Runtime
@@ -55,7 +55,7 @@ FALLBACK NOTICE — see §Operational Modes
 
 | Сервис | Роль | Поверхность вызова |
 |---------|------|--------------|
-| Документатор | Аудит документации и делегированные записи | Вызывается поверхностью оператора уровня 2; записи с поддержкой LLM используют порт исполнения уровня 1 |
+| Документатор | Аудит документации и делегированные записи | Вызывается точкой входа оператора уровня 2; записи с поддержкой LLM используют порт исполнения уровня 1 |
 | Сохранение JSON | Хранилище состояния сессии (`sessions/<id>/`) | Используется `persistence/` уровня 1; только локально, не фиксируется |
 
 ## Режимы работы

@@ -1,8 +1,8 @@
-"""Unit tests for operator_surface.core.verbs + __main__.handle_request (Step 4).
+"""Unit tests for operator_ingress.core.verbs + __main__.handle_request (Step 4).
 
 Frozen API:
-  - operator_surface.core.verbs: submit_task, status, list_sessions, documenter_audit
-  - operator_surface.__main__: handle_request(request, deps)
+  - operator_ingress.core.verbs: submit_task, status, list_sessions, documenter_audit
+  - operator_ingress.__main__: handle_request(request, deps)
 
 Uses injected fake ports; all state on tempfile roots.
 """
@@ -20,7 +20,7 @@ import unittest
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.verbs import (  # noqa: F401
+    from operator_ingress.core.verbs import (  # noqa: F401
         submit_task,
         status as status_verb,
         list_sessions as list_sessions_verb,
@@ -33,18 +33,18 @@ except ImportError:
     documenter_audit = None
 
 try:
-    from operator_surface.__main__ import handle_request  # noqa: F401
+    from operator_ingress.__main__ import handle_request  # noqa: F401
 except ImportError:
     handle_request = None
 
 # Also import the helpers we need from earlier steps
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None
 
 try:
-    from operator_surface.core.envelope import deferred_response, error_envelope  # noqa: F401
+    from operator_ingress.core.envelope import deferred_response, error_envelope  # noqa: F401
 except ImportError:
     deferred_response = None
     error_envelope = None
@@ -52,7 +52,7 @@ except ImportError:
 # MvpSessionStore — needed at module level by test methods (DoD f: test classes
 # named TestMvp*AsStub use it directly; anti-reversed-TDD guard).
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # will fail with NameError in anti-reversed-TDD
 
@@ -177,7 +177,7 @@ class _Deps:
 
 def _make_deps(root=None, policy_info=None):
     """Create a full deps object with temp-dir store."""
-    from operator_surface.adapters.session_store import MvpSessionStore
+    from operator_ingress.adapters.session_store import MvpSessionStore
     store = MvpSessionStore(root or tempfile.mkdtemp())
     events = _FakeEvents()
     documenter = _FakeDocumenter()
@@ -371,7 +371,7 @@ class TestStatusVerb(unittest.TestCase):
         self.assertIsNone(result["session_id"])
 
     def test_notices_layer1_stub_active(self):
-        from operator_surface.core.notices import default_notices
+        from operator_ingress.core.notices import default_notices
         store = MvpSessionStore(self.root)
         notices = _FakeNoticesProvider(notices=default_notices(layer1_stub=True))
         result = status_verb(
@@ -591,7 +591,7 @@ class TestHandleRequestAuthFailureNoSession(unittest.TestCase):
         return req
 
     def test_bad_token_no_session_dir(self):
-        from operator_surface.adapters.session_store import MvpSessionStore
+        from operator_ingress.adapters.session_store import MvpSessionStore
         store = MvpSessionStore(self.root)
         deps = _Deps(store, _FakeEvents(), _FakeDocumenter(),
                      _FakeSecretStore(), _FakeNoticesProvider())
@@ -606,7 +606,7 @@ class TestHandleRequestAuthFailureNoSession(unittest.TestCase):
             self.assertEqual(len(os.listdir(sessions_dir)), 0)
 
     def test_no_params_auth_no_session_dir(self):
-        from operator_surface.adapters.session_store import MvpSessionStore
+        from operator_ingress.adapters.session_store import MvpSessionStore
         store = MvpSessionStore(self.root)
         deps = _Deps(store, _FakeEvents(), _FakeDocumenter(),
                      _FakeSecretStore(), _FakeNoticesProvider())

@@ -1,14 +1,16 @@
-# Operator Surface & Escalation
+# Operator Ingress & Escalation
 
-id: operator-surface
-Version: 0.5.0
+id: operator-ingress
+Version: 1.0.1
 Status: draft
 Abstraction: protocol
-has_translation: docs/ru/operator-surface/index-RU.md
+has_translation: docs/ru/operator-ingress/index-RU.md
 references: [service-contract, execution-runtime]
-changelog-path: CHANGELOGS/operator-surface.changes.md
+changelog-path: CHANGELOGS/operator-ingress.changes.md
 
 ---
+
+> Formerly "Operator Surface" — renamed per ADR-018 (Council session sess-term-operator-surface, 2026-11-18). Tool verbs (council.*, documenter.*), event names, wire strings and environment variables are unchanged code-level identifiers; the sentinel path was later renamed documenter/.operator_ingress_ready per ADR-019; "Operator Surface" in earlier ADR text (ADR-013/015/016) denotes this same component.
 
 ## Scope
 
@@ -20,14 +22,14 @@ Defines the single MVP transport, caller identity, operator verbs, the `pre_chec
 
 <span style="color:red;font-weight:bold">⚠ MCP UNREGISTERED — stdio ONLY</span> This section describes the transport contract; the MCP server is not registered in the workspace configuration (operator decision). Sessions run in fallback mode per `AGENTS.md` §1.7 until a Moderator adapter is available.
 
-MVP ships one transport: MCP over stdio. The operator surface is an adapter in Layer 2: it authenticates the caller, validates input, and calls Layer 1. It contains no protocol logic and no LLM invocation. CLI and REST remain deferred adapters over the same library functions.
+MVP ships one transport: MCP over stdio. Operator Ingress (formerly Operator Surface) is an adapter in Layer 2: it authenticates the caller, validates input, and calls Layer 1. It contains no protocol logic and no LLM invocation. CLI and REST remain deferred adapters over the same library functions.
 
 ## Caller Identity and Authorization
 
 Three caller classes: `operator`, `agent`, `service`.
 
 - AuthN: local stdio process plus `COUNCIL_OPERATOR_ID` and `COUNCIL_OPERATOR_TOKEN` from the environment. The surface verifies the token and never forwards it to Layer 1.
-- AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in `operator-surface/index.md` §Caller Identity and Authorization; structural schema violations remain `VAL.001`.
+- AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in `operator-ingress/index.md` §Caller Identity and Authorization; structural schema violations remain `VAL.001`.
 - `operator_id` is a human principal. Agent principals MUST NOT approve Documenter writes or resolve escalations at MVP.
 - Operator identity is defined **exclusively** in this section. The `operator_id` that resolves escalations (§Resolution Binding and Resume) and approves Documenter writes (`documenter.approve`, `documenter-service/approval-surface.md`) is the same human principal, valid cross-document. No other document may define or extend who counts as an operator.
 
@@ -70,7 +72,7 @@ This table is the single transport-level permission registry owned by this docum
 
 - **Ingress.** The only entry point is the local stdio JSON-RPC server. Authentication is enforced before any verb route; unauthenticated requests receive AUTH.* envelopes and no verb executes. Only the `operator` caller class may exercise governance verbs; `agent` and `service` are denied by default per the permission table above. The HMAC secret comes from `COUNCIL_OPERATOR_SECRET` (fail-closed: missing or empty aborts startup).
 - **No write path.** The Tier 2+ write branch is unreachable from the surface (ADR-013 dual interlock). `documenter.delegate` is preview-only; `documenter.override_gate` records the override event without invoking the Documenter port.
-- **Sentinel is not activation.** `documenter/.operator_surface_ready` is a code consequence of a successful READY handshake; activation remains exclusively a policy-file state act (ADR-016). Sentinel presence grants nothing.
+- **Sentinel is not activation.** `documenter/.operator_ingress_ready` is a code consequence of a successful READY handshake; activation remains exclusively a policy-file state act (ADR-016). Sentinel presence grants nothing.
 - **Volatile state.** Escalation and approval registries are in-memory; they are lost on restart. The surface reports this through the advisory `notice.fallback-deferred` notice.
 - **Degradation.** When `documenter_service` is unimportable the surface still starts; `documenter.*` verbs return an honest IO.004 envelope naming `council.status` as the fallback action; the pre_check gate returns `unavailable` and submit auto-proceeds with a `precheck.unavailable` event (ADR-015).
 - **Crash integrity.** The session store silently skips malformed trailing lines on cold start and ignores stale intent records; roll-forward recovery is deferred (OD-3).
@@ -101,7 +103,7 @@ This table is the single transport-level permission registry owned by this docum
 
 ### Scope and Enforcement Point
 
-The `pre_check` gate is an integrity check on documentation artifacts before protocol state transitions are committed. It runs in Layer 2 (operator surface) as a synchronous call to Documenter's `audit(pre_check=true)` and returns a verdict to the caller within the same invocation.
+The `pre_check` gate is an integrity check on documentation artifacts before protocol state transitions are committed. It runs in Layer 2 (operator ingress) as a synchronous call to Documenter's `audit(pre_check=true)` and returns a verdict to the caller within the same invocation.
 
 - **Target scope:** all manifest documents relevant to the current session (identified by `target_id` from the active scenario).
 - **Enforcement point:** invoked at every phase boundary transition (`2 → 3`, `3 → 4`, `4 → 5`) before committing the new phase state in Layer 1.
@@ -117,7 +119,7 @@ The `pre_check` gate is an integrity check on documentation artifacts before pro
 | Documenter is unavailable (timeout, service down) | `unavailable` | Timeout-and-continue: proceed with the transition, emit `precheck.unavailable` warning event synchronously (roadmap decision 3); the action applies to timeout-induced unavailability only, not to registry-integrity `fail` |
 | Documenter audit registry is absent/corrupted/unreadable | `fail` | Block transition (fail-closed per C-03) |
 
-The gate timeout is a boot-time constant: default 5 seconds, overridable once at startup via the `PRE_CHECK_TIMEOUT` environment variable; it is immutable for the process lifetime. Exceeding the timeout produces the `unavailable` verdict. A `precheck.running` event is emitted when the gate starts, so observers can distinguish an in-progress check from a stalled surface. (Operator Surface MVP plan p3, ADR-015.)
+The gate timeout is a boot-time constant: default 5 seconds, overridable once at startup via the `PRE_CHECK_TIMEOUT` environment variable; it is immutable for the process lifetime. Exceeding the timeout produces the `unavailable` verdict. A `precheck.running` event is emitted when the gate starts, so observers can distinguish an in-progress check from a stalled surface. (Operator Ingress MVP plan p3, ADR-015.)
 
 ### Documenter Unavailable — Override Mode
 

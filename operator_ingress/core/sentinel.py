@@ -1,18 +1,18 @@
 """Tier 2+ readiness sentinel — file creation and check.
 
-Creates/verifies the readiness sentinel at ``<root>/documenter/.operator_surface_ready``.
+Creates/verifies the readiness sentinel at ``<root>/documenter/.operator_ingress_ready``.
 
 Cross-package contract: ``SENTINEL_PATH`` must equal the value of
-``documenter_service.core.policy.OPERATOR_SURFACE_SENTINEL`` so that the
-documenter_service consumer and the operator surface agree on the sentinel file
+``documenter_service.core.policy.OPERATOR_INGRESS_SENTINEL`` so that the
+documenter_service consumer and the Operator Ingress agree on the sentinel file
 location without importing each other.
 """
 from __future__ import annotations
 
 import os
 
-# The sentinel path — must match documenter_service.core.policy.OPERATOR_SURFACE_SENTINEL.
-SENTINEL_PATH = "documenter/.operator_surface_ready"
+# The sentinel path — must match documenter_service.core.policy.OPERATOR_INGRESS_SENTINEL.
+SENTINEL_PATH = "documenter/.operator_ingress_ready"
 
 
 def ensure_sentinel(state_root: str) -> bool:
@@ -43,7 +43,7 @@ def ensure_sentinel(state_root: str) -> bool:
 
         # Touch the file with content.
         with open(sentinel_path, "w", encoding="utf-8") as fh:
-            fh.write("operator_surface_ready\n")
+            fh.write("operator_ingress_ready\n")
 
         return True
 
@@ -52,7 +52,7 @@ def ensure_sentinel(state_root: str) -> bool:
         return False
 
 
-def operator_surface_ready(state_root: str) -> bool:
+def operator_ingress_ready(state_root: str) -> bool:
     """Check whether the readiness sentinel exists under *state_root*.
 
     Returns True if the sentinel file is present, False otherwise.

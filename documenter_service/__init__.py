@@ -6,7 +6,7 @@ Stage 4 scaffold of the Council Documenter Service per
 `documenter.status()`. The write branch of `delegate()`, `documenter.approve`,
 `override_gate` and the Multi-file Commit Protocol are implemented in the
 build but POLICY-GATED and DORMANT behind the dual interlock: the Tier 0/1
-policy gate plus the unbuilt Operator Surface (ADR-013) — every non-preview
+policy gate plus the unbuilt Operator Ingress (ADR-013) — every non-preview
 call fails closed with `tier_interlock` (mvp-contract §MVP boundary).
 
 Rule coverage (AGENTS.md §8): audit() REUSES `tools/check_all.scan` and

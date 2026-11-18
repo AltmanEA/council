@@ -1,3 +1,5 @@
+<!-- CHANGES v1.0.1: ADR-019 sentinel-path citation synchronized (documenter/.operator_ingress_ready); provenance note clarified (ADR-018/019) -->
+<!-- CHANGES v1.0.0: Renamed Operator Surface to Operator Ingress per ADR-018 (sess-term-operator-surface 2026-11-18): title, id, provenance note, term and path updates EN+RU -->
 <!-- CHANGES v0.5.0: Phase 2 physical split (sess-operator-surface-split): Documenter Integration approval-lifecycle moved to documenter-service/approval-surface.md; canonical contract mvp-contract.md §4; cross-references updated -->
 <!-- CHANGES v0.4.0: Approve P1-P3+P5(a) sess-operator-surface-split AI-3: threat-model annex, A10 deferred-items list, stub-swap contract note, banner truth-update (stdio Tier 0-1 implemented, MCP unregistered, Tier 2+ dormant ADR-013) -->
 <!-- CHANGES v0.3.0: Phase 1 canonical-source fix (sess-operator-surface-split): Documenter Integration approval detail replaced with canonical reference to mvp-contract §4; verbs table gains Owner column with DORMANT (ADR-013) on documenter.* rows; exclusive operator-identity guard added to Caller Identity; Cross-References extended -->

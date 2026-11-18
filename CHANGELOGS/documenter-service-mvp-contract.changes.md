@@ -1,3 +1,5 @@
+<!-- CHANGES v0.11.1-draft: Tier 2+ sentinel path synchronized to documenter/.operator_ingress_ready (ADR-019) -->
+<!-- CHANGES v0.11.0-draft: Operator Ingress readiness sentinel wording synchronized; sentinel path unchanged (ADR-018) -->
 <!-- CHANGES v0.10.0-draft: AI-2 tail: §4 approve row gains acknowledge? parameter (ADR-017 solo token CONFIRMED_SOLE_REVIEWER, inert on non-solo path) -->
 <!-- CHANGES v0.9.0-draft: AI-2 per sess-solo-operator-activation: §4 solo-operator risk-acceptance exception (ADR-017: allow_solo_approval + safe-only + CONFIRMED_SOLE_REVIEWER + min delay + bias banner + ramp/review); interlock wording synchronized to ADR-015/ADR-016 (surface exists as code, readiness sentinel gate); ADR-017 row in §5 -->
 <!-- CHANGES v0.8.1-draft: Phase 2 (sess-operator-surface-split): canonical paragraph now names approval-surface.md as the moved operator-side prose -->

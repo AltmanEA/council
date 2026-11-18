@@ -45,14 +45,14 @@ class CrashHere(Exception):
     """Fault seam raise for deterministic crash injection."""
 
 
-def _enable_operator_surface(root):
-    """Create the ADR-013 Operator Surface readiness sentinel under root.
+def _enable_operator_ingress(root):
+    """Create the ADR-013 Operator Ingress readiness sentinel under root.
 
     Tier 2+ test corpora must opt into surface-readiness explicitly:
     check_tier2_authorized refuses (tier_interlock) while the sentinel is
     absent. Tests asserting the second interlock level omit this call.
     """
-    sentinel = os.path.join(root, "documenter", ".operator_surface_ready")
+    sentinel = os.path.join(root, "documenter", ".operator_ingress_ready")
     os.makedirs(os.path.dirname(sentinel), exist_ok=True)
     with open(sentinel, "w") as f:
         f.write("")
@@ -147,7 +147,7 @@ class _Harness(unittest.TestCase):
         self.state = os.path.join(self.tmpdir, "state")
         self.data_dir = os.path.join(self.tmpdir, "documenter")
         os.makedirs(os.path.join(self.corpus, "docs", "en", "alpha"))
-        _enable_operator_surface(self.corpus)
+        _enable_operator_ingress(self.corpus)
         self.target = os.path.join(self.corpus, "docs", "en", "alpha",
                                    "index.md")
         with open(self.target, "w") as fh:

@@ -1,9 +1,9 @@
-"""ADR-013 dual interlock — Operator Surface readiness sentinel (CS-2).
+"""ADR-013 dual interlock — Operator Ingress readiness sentinel (CS-2).
 
 check_tier2_authorized enforces TWO independent levels:
   1. policy gate: active_tier >= 2, briefing_ref, archived briefing file;
-  2. surface gate: sentinel documenter/.operator_surface_ready under root
-     (runtime proxy for "the Operator Surface exists as code providing
+  2. surface gate: sentinel documenter/.operator_ingress_ready under root
+     (runtime proxy for "the Operator Ingress exists as code providing
      authenticated ingress" — the spec alone is not sufficient, ADR-013).
 
 Matrix covered here: sentinel absent/present × tier < 2 / tier >= 2, plus
@@ -24,7 +24,7 @@ from documenter_service.core.errors import StructuredError  # noqa: E402
 from documenter_service.core.policy import (  # noqa: E402
     Policy, check_tier2_authorized,
     check_tier3_authorized,
-    OPERATOR_SURFACE_SENTINEL, operator_surface_ready)
+    OPERATOR_INGRESS_SENTINEL, operator_ingress_ready)
 from documenter_service.core.status import status as status_core  # noqa: E402
 
 
@@ -50,7 +50,7 @@ def _briefing(root):
 
 
 def _sentinel(root):
-    return os.path.join(root, "documenter", ".operator_surface_ready")
+    return os.path.join(root, "documenter", ".operator_ingress_ready")
 
 
 class TestSurfaceSentinel(unittest.TestCase):
@@ -78,8 +78,8 @@ class TestSurfaceSentinel(unittest.TestCase):
             check_tier2_authorized(_policy(2, bp), self.tmpdir)
         self.assertEqual(ctx.exception.error_category, "tier_interlock")
         self.assertEqual(ctx.exception.next_action, "preview_denied")
-        self.assertIn("Operator Surface not built", ctx.exception.message)
-        self.assertIn(OPERATOR_SURFACE_SENTINEL, ctx.exception.message)
+        self.assertIn("Operator Ingress not built", ctx.exception.message)
+        self.assertIn(OPERATOR_INGRESS_SENTINEL, ctx.exception.message)
 
     def test_empty_sentinel_file_counts(self):
         """The proxy is existence, not content."""
@@ -91,7 +91,7 @@ class TestSurfaceSentinel(unittest.TestCase):
     def test_sentinel_as_directory_refuses(self):
         """isfile semantics: a directory at the sentinel path is not ready."""
         os.makedirs(_sentinel(self.tmpdir), exist_ok=True)
-        self.assertFalse(operator_surface_ready(self.tmpdir))
+        self.assertFalse(operator_ingress_ready(self.tmpdir))
 
     # -- policy gate precedes the sentinel ------------------------------------
 
@@ -113,7 +113,7 @@ class TestSurfaceSentinel(unittest.TestCase):
         bp = _briefing(self.tmpdir)
         with self.assertRaises(StructuredError) as ctx:
             check_tier3_authorized(_policy(3, bp), self.tmpdir)
-        self.assertIn("Operator Surface not built", ctx.exception.message)
+        self.assertIn("Operator Ingress not built", ctx.exception.message)
         self._create_sentinel()
         check_tier3_authorized(_policy(3, bp), self.tmpdir)  # no raise
 
@@ -129,9 +129,9 @@ class TestSurfaceSentinel(unittest.TestCase):
         reg = JsonlAuditRegistry(os.path.join(self.tmpdir, "state"))
         out = status_core(reg, _policy(2, "_briefing.md"), root=self.tmpdir)
         self.assertTrue(out["tier_interlock"]["tier_2_plus_locked"])
-        self.assertIn("Operator Surface not built",
+        self.assertIn("Operator Ingress not built",
                       out["tier_interlock"]["reason"])
-        self.assertIn(OPERATOR_SURFACE_SENTINEL,
+        self.assertIn(OPERATOR_INGRESS_SENTINEL,
                       out["tier_interlock"]["reason"])
 
     def test_status_both_released(self):

@@ -1,4 +1,4 @@
-"""Unit tests for operator_surface.core.notices (Step 4 — notices subsystem).
+"""Unit tests for operator_ingress.core.notices (Step 4 — notices subsystem).
 
 Frozen API:
   default_notices(policy_info=None, layer1_stub=True) -> list[dict]
@@ -11,7 +11,7 @@ from __future__ import annotations
 import unittest
 
 try:
-    from operator_surface.core.notices import (  # noqa: F401
+    from operator_ingress.core.notices import (  # noqa: F401
         default_notices,
     )
 except ImportError:

@@ -51,35 +51,35 @@ _MIN_CLAIMS = {
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.__main__ import build_deps  # noqa: F401
+    from operator_ingress.__main__ import build_deps  # noqa: F401
 except ImportError:
     build_deps = None  # red baseline: build_deps doesn't exist yet
 
 try:
-    from operator_surface.adapters.documenter_adapter import (  # noqa: F401
+    from operator_ingress.adapters.documenter_adapter import (  # noqa: F401
         Tier01Documenter,
     )
 except ImportError:
     Tier01Documenter = None  # red baseline: doesn't exist yet
 
 try:
-    from operator_surface.core.auth import issue_token  # noqa: F401
+    from operator_ingress.core.auth import issue_token  # noqa: F401
 except ImportError:
     issue_token = None  # may be unavailable in very early cycles
 
 try:
-    from operator_surface.core.events import make_envelope, FileEventSink  # noqa: F401
+    from operator_ingress.core.events import make_envelope, FileEventSink  # noqa: F401
 except ImportError:
     make_envelope = None  # noqa: F401
     FileEventSink = None  # noqa: F401
 
 try:
-    from operator_surface.ports import DocumenterPort  # noqa: F401
+    from operator_ingress.ports import DocumenterPort  # noqa: F401
 except ImportError:
     DocumenterPort = None  # noqa: F401
 
 try:
-    from operator_surface.adapters.session_store import MvpSessionStore  # noqa: F401
+    from operator_ingress.adapters.session_store import MvpSessionStore  # noqa: F401
 except ImportError:
     MvpSessionStore = None  # red baseline
 
@@ -117,7 +117,7 @@ def _make_agent_token(secret="test-secret-key"):
 
 
 def _spawn_main(root_dir, extra_env=None, timeout=10):
-    """Spawn `python3 -m operator_surface` as a subprocess.
+    """Spawn `python3 -m operator_ingress` as a subprocess.
 
     The caller must send requests via proc.stdin and read from proc.stdout,
     then call proc.communicate() (which sends EOF).
@@ -132,7 +132,7 @@ def _spawn_main(root_dir, extra_env=None, timeout=10):
     if extra_env:
         env.update(extra_env)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "operator_surface"],
+        [sys.executable, "-m", "operator_ingress"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -160,7 +160,7 @@ def _run_main_exit_test(root_dir, extra_env=None, timeout=10):
     if extra_env:
         env.update(extra_env)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "operator_surface"],
+        [sys.executable, "-m", "operator_ingress"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -277,7 +277,7 @@ def _make_deps(root=None, policy_info=None):
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.__main__ import handle_request  # noqa: F401
+    from operator_ingress.__main__ import handle_request  # noqa: F401
 except ImportError:
     handle_request = None  # should not fail in iteration 2
 
@@ -576,10 +576,10 @@ class TestDegradedDocumenterNoImport(unittest.TestCase):
             f.write("raise ImportError('no documenter_service available')\n")
 
         try:
-            # Force re-import: clear any cached import of operator_surface
-            if "operator_surface" in sys.modules:
+            # Force re-import: clear any cached import of operator_ingress
+            if "operator_ingress" in sys.modules:
                 for key in list(sys.modules.keys()):
-                    if key.startswith("operator_surface"):
+                    if key.startswith("operator_ingress"):
                         del sys.modules[key]
 
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -1025,7 +1025,7 @@ class TestTier01RealBinding(unittest.TestCase):
         self._root = tmpdir
 
         try:
-            from operator_surface.adapters.documenter_adapter import (
+            from operator_ingress.adapters.documenter_adapter import (
                 Tier01Documenter,
             )
             doc = Tier01Documenter(tmpdir)
@@ -1054,7 +1054,7 @@ class TestTier01RealBinding(unittest.TestCase):
         self._root = tmpdir
 
         try:
-            from operator_surface.adapters.documenter_adapter import (
+            from operator_ingress.adapters.documenter_adapter import (
                 Tier01Documenter,
             )
             doc = Tier01Documenter(tmpdir)
@@ -1080,7 +1080,7 @@ class TestTier01RealBinding(unittest.TestCase):
         self._root = tmpdir
 
         try:
-            from operator_surface.adapters.documenter_adapter import (
+            from operator_ingress.adapters.documenter_adapter import (
                 Tier01Documenter,
             )
             doc = Tier01Documenter(tmpdir)

@@ -108,5 +108,5 @@ When specifications conflict across documents, the following precedence order ap
 - `planned-architecture/layer-0.md` — functions consuming these schemas
 - `planned-architecture/layer-1.md` — producers of role artifacts
 - `execution-runtime/index.md` — phase and persistence semantics
-- `operator-surface/index.md` — rendering and escalation delivery
+- `operator-ingress/index.md` — rendering and escalation delivery
 - `documenter-service/configuration-guide.md` — Documenter event payloads

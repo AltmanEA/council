@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.8.0-draft
+Version: 0.9.0-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -12,7 +12,7 @@ changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
 
 ## Purpose
 
-Machine-readable interface schemas for the Documenter Service MVP. Core operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface — write-branch `delegate(preview: false)`, `documenter.approve`, `documenter.override_gate` — is specified in `documenter-service/mvp-contract.md` §4 (operator-side workflow: `documenter-service/approval-surface.md`) and IMPLEMENTED in the build; it is gated at runtime by the policy interlock (`active_tier >= 2` + non-null `briefing_ref` + archived briefing file + authenticated operator ingress + Operator Surface readiness sentinel, ADR-016). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`.
+Machine-readable interface schemas for the Documenter Service MVP. Core operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface — write-branch `delegate(preview: false)`, `documenter.approve`, `documenter.override_gate` — is specified in `documenter-service/mvp-contract.md` §4 (operator-side workflow: `documenter-service/approval-surface.md`) and IMPLEMENTED in the build; it is gated at runtime by the policy interlock (`active_tier >= 2` + non-null `briefing_ref` + archived briefing file + authenticated operator ingress + Operator Ingress readiness sentinel, ADR-016). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`.
 
 Data models behind these interfaces: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
 
@@ -100,7 +100,7 @@ Preview only. Returns a diff without write intent; exempt from `allowed_operatio
 
 The operator approves **`diff_text` as rendered by Documenter**, not the base64 input. Documenter decodes `diff_input`, normalizes (CRLF→LF, trailing whitespace, final newline), computes `diff_hash` over the normalized bytes, and renders `diff_text`. This makes the approved object and the hash-bound object identical.
 
-**Rendering responsibility.** Documenter returns `diff_text`; the Layer 2 surface or MCP client renders it to the human. If neither does, Tier 1 "diff preview" is an unverifiable requirement — this obligation belongs in the Operator Surface spec.
+**Rendering responsibility.** Documenter returns `diff_text`; the Layer 2 operator ingress or MCP client renders it to the human. If neither does, Tier 1 "diff preview" is an unverifiable requirement — this obligation belongs in the Operator Ingress spec.
 
 **Redaction boundary.** `diff_text` appears only in the `delegate()` **response**. It MUST NOT appear in `EventEnvelope.payload`, where document text is prohibited.
 

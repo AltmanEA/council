@@ -1,7 +1,7 @@
 # Execution Runtime & Session Lifecycle
 
 id: execution-runtime
-Version: 0.3.5
+Version: 0.4.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/execution-runtime/index-RU.md
@@ -12,7 +12,7 @@ changelog-path: CHANGELOGS/execution-runtime.changes.md
 
 ## Scope
 
-Defines Layer 1 as the Execution Runtime: module boundaries, the deterministic control plane, the phase state machine, artifact assembly, session persistence, escalation routing, and the namespace rule between fallback and code Moderator. Artifact fields are defined in `service-contract/index.md`; operator delivery is defined in `operator-surface/index.md`.
+Defines Layer 1 as the Execution Runtime: module boundaries, the deterministic control plane, the phase state machine, artifact assembly, session persistence, escalation routing, and the namespace rule between fallback and code Moderator. Artifact fields are defined in `service-contract/index.md`; operator delivery is defined in `operator-ingress/index.md`.
 
 ## Layer 1 Boundaries
 
@@ -50,7 +50,7 @@ States: `1` task submission, `2` individual review, `3` discussion, `4` consensu
 | N → N+1 | Mandatory at phase boundaries per layer definition. Fails fast on high/critical Documenter finding (percheck failed). Precheck unavailable → override permitted via council.override_precheck (precheck.overridden event). Override recorded in manifest as pre_check_override; permits exactly one transition after which another pass or new override required. |
 | any | failed | Unrecoverable IO or protocol violation |
 
-Only `orchestrator/` advances a phase. The operator never edits phase state directly; resolution arrives through the operator surface. The `SUBJ-007` quick-review upgrade hook is reserved but not implemented at MVP.
+Only `orchestrator/` advances a phase. The operator never edits phase state directly; resolution arrives through the Operator Ingress (formerly Operator Surface). The `SUBJ-007` quick-review upgrade hook is reserved but not implemented at MVP.
 
 ## Role Status Handling
 
@@ -69,7 +69,7 @@ A failed step aborts the remaining steps. The session remains at the last comple
 
 ## Escalation Routing
 
-Escalation is stop-and-resume. The runtime writes an `EscalationRecord`, sets `phase_state = awaiting-operator`, emits `escalation.opened`, and returns control to the operator. No blocking stdin or background waiter at MVP: the runtime checks `timeout_at` on each subsequent session invocation. When the current time exceeds `timeout_at`, the runtime automatically applies the `fallback_strategy` defined in the `EscalationRecord` and transitions the phase forward. On manual invocation before timeout, the operator surface owns the clock; the operator can also override via explicit approval.
+Escalation is stop-and-resume. The runtime writes an `EscalationRecord`, sets `phase_state = awaiting-operator`, emits `escalation.opened`, and returns control to the operator. No blocking stdin or background waiter at MVP: the runtime checks `timeout_at` on each subsequent session invocation. When the current time exceeds `timeout_at`, the runtime automatically applies the `fallback_strategy` defined in the `EscalationRecord` and transitions the phase forward. On manual invocation before timeout, the Operator Ingress owns the clock; the operator can also override via explicit approval.
 
 Resume requires an authenticated resolution bound to `escalation_id` and `operator_id`. On resume, the runtime applies the decision, sets `current_phase = resume_phase`, records the resolution in the escalation record and event log, and continues. A rejected or superseded escalation follows its `fallback_strategy`.
 
@@ -127,7 +127,7 @@ Both modes share the session directory structure (`sessions/<session_id>/`) but 
 
 ## Supporting Service Rule (D3)
 
-Documenter, fallback mode, and JSON persistence are Supporting services outside the layer chain. Documenter is invoked by the Layer 2 operator surface and uses a Layer 1 execution port for LLM-backed writes (Documentation Worker). Supporting services never call Layer 2 or Layer 0 directly. Layer 2 contains no direct LLM invocation.
+Documenter, fallback mode, and JSON persistence are Supporting services outside the layer chain. Documenter is invoked by the Layer 2 Operator Ingress and uses a Layer 1 execution port for LLM-backed writes (Documentation Worker). Supporting services never call Layer 2 or Layer 0 directly. Layer 2 contains no direct LLM invocation.
 
 ## Operator Status Projection
 
@@ -139,7 +139,7 @@ The runtime exposes a read-only projection answering three questions:
 | What needs me? | `pending_operator_action`, open `escalation_id`, `resume_phase` |
 | What changed since last look? | `last_event_id`, `changed_since_last_view`, `artifacts` |
 
-A hash chain proves integrity, not comprehensibility. This projection is mandatory and is rendered by the operator surface.
+A hash chain proves integrity, not comprehensibility. This projection is mandatory and is rendered by the Operator Ingress.
 
 ## Migration Path
 
@@ -148,7 +148,7 @@ If orchestration outgrows Layer 1, extract an Orchestration Core behind Layer 1'
 ## Cross-References
 
 - `service-contract/index.md` — artifact and event schemas
-- `operator-surface/index.md` — transport, identity, escalation delivery
+- `operator-ingress/index.md` — transport, identity, escalation delivery
 - `planned-architecture/layer-1.md` — architecture summary
 - `planned-architecture/layer-0.md` — deterministic protocol functions
 - `fallback/index.md` — manual fallback procedure

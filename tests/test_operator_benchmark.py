@@ -23,12 +23,12 @@ import unittest
 # ---------------------------------------------------------------------------
 
 try:
-    from operator_surface.core.precheck import run_precheck  # noqa: F401
+    from operator_ingress.core.precheck import run_precheck  # noqa: F401
 except ImportError:
     run_precheck = None  # type: ignore[misc,assignment]
 
 try:
-    from operator_surface.core.precheck import PRE_CHECK_TIMEOUT_SECONDS  # noqa: F401
+    from operator_ingress.core.precheck import PRE_CHECK_TIMEOUT_SECONDS  # noqa: F401
 except ImportError:
     PRE_CHECK_TIMEOUT_SECONDS = None  # type: ignore[misc,assignment]
 
