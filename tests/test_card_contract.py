@@ -39,12 +39,13 @@ SKILL_PATH = str(
 class TestConformantCards(unittest.TestCase):
     """Conformant cards must pass validation (empty findings list)."""
 
-    def test_card_fields_order_is_seven(self):
-        """CARD_FIELDS has exactly 7 ordered field names, no unknown field allowed."""
-        self.assertEqual(len(CARD_FIELDS), 7)
+    def test_card_fields_order_is_eight(self):
+        """CARD_FIELDS has exactly 8 ordered field names, no unknown field allowed."""
+        self.assertEqual(len(CARD_FIELDS), 8)
         self.assertEqual(
             CARD_FIELDS,
-            ["Files", "Category", "Delta", "Classification", "Audit", "Translations", "State"],
+            ["Files", "Category", "Delta", "Classification", "Audit", "Archive",
+             "Translations", "State"],
         )
 
     def test_required_fields_are_four(self):
@@ -84,6 +85,18 @@ class TestConformantCards(unittest.TestCase):
             "State: intermediate",
         ]
         # 7 lines only — that's fine, the max is 10, not a fixed size
+        self.assertEqual(validate_card(card), [])
+
+    def test_conformant_card_with_archive_line(self):
+        """A card with the Archive: line (sess-archive-design-2026-11-19) passes."""
+        card = [
+            "Files: docs/en/archive/foo/index.md, docs/en/documenter-service/index.md",
+            "Category: update",
+            "Delta: +4 / \u22120 / net +4",
+            "Classification: semantic",
+            "Archive: 1 file entering archive",
+            "State: final",
+        ]
         self.assertEqual(validate_card(card), [])
 
     def test_conformant_10_line_all_fields(self):
@@ -750,6 +763,18 @@ class TestAnchorStep5Approve(unittest.TestCase):
             "Audit:",
             self.section,
             "SKILL.md Step-(5) must contain 'Audit:' card field label",
+        )
+
+    def test_anchor_card_template_archive_label(self):
+        """The Step-(5) section must contain 'Archive:' label (card template).
+
+        sess-archive-design-2026-11-19: the Archive line surfaces any write
+        entering docs/en/archive/ or docs/ru/archive/ at the approve moment.
+        """
+        self.assertIn(
+            "Archive:",
+            self.section,
+            "SKILL.md Step-(5) must contain 'Archive:' card field label",
         )
 
     def test_anchor_card_template_translations_label(self):

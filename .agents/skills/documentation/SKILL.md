@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # Documentation Worker
@@ -50,12 +50,14 @@ The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that a
    Delta: +<N> / −<M> / net ±<K>
    Classification: <mechanical | semantic> [agent proposed: <original>]
    Audit: <omitted when clean; else ⚠ findings: N / 🚨 critical: N + hints>
+   Archive: <omitted; else <N files entering archive | archived <N>>>  # only if an archive path is touched
    Translations: <mode> · verified <N> · unverified <M>   # only if translation involved
    State: <final | intermediate>                          # staged work only
    ```
 
-   - `Files`, `Category`, `Delta`, `Classification` are required; `Classification` bracket appears only on operator override (lightweight override log); the `Audit` line is absent entirely when clean (silent when clean); the `Translations` line appears only when a translation is involved; `State: intermediate` warns the card binds to a not-yet-assembled bundle — approval binds to `final` (staged work, §Complex edits).
+   - `Files`, `Category`, `Delta`, `Classification` are required; `Classification` bracket appears only on operator override (lightweight override log); the `Audit` line is absent entirely when clean (silent when clean); the `Archive` line appears only when a file is written into `docs/en/archive/` or `docs/ru/archive/` or an archived file is targeted; the `Translations` line appears only when a translation is involved; `State: intermediate` warns the card binds to a not-yet-assembled bundle — approval binds to `final` (staged work, §Complex edits).
    - `Translations` interpretation key: `M = 0` → no action; `M > 0` → drift needs operator attention.
+   - **Archive-awareness (before any write):** consult the manifest for the target and every affected file; a file under the archive path prefix (`docs/en/archive/`, `docs/ru/archive/`) or a `Status: archive` frontmatter means an archived document. Archived documents are read-only by discipline (`documenter-service/index.md` §Archive): refuse content edits to them and escalate, and render the `Archive:` line for any write that would enter the archive — the operator sees it at the approve moment (accepted risk 7, archive blind spot). Moving a live document into the archive is a **semantic** change.
    - The machine-checkable contract of this template (field order, formats, the silent-when-clean rule, the override bracket form) is verified by `tests/test_card_contract.py` against `tests/card_contract.py`; the agent renders the card, the test suite guards its shape.
 3. **Wait for the operator's reply (approve grammar).** (a) A bare `approve` approves a **mechanical** change. (b) A **semantic** change (substantive rewrite of meaning) requires `approve: <noun phrase>` naming its object (e.g. `approve: rewrite of the Safety section`). (c) Boundary rulings: version bump + changelog = mechanical; glossary term addition = semantic. (d) The agent always renders classification as a labeled card field, never buried in prose; the operator may override. Absence of approval is never consent: without an `approve` reply in the conversation, do not write.
 4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).

@@ -47,6 +47,7 @@ CARD_FIELDS = [
     "Delta",
     "Classification",
     "Audit",
+    "Archive",
     "Translations",
     "State",
 ]
