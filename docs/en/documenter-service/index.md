@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.2.2-draft
+Version: 1.2.3-draft
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -35,7 +35,7 @@ The Documentation Worker skill (`.agents/skills/documentation/SKILL.md`) remains
 
 ### Complex edits
 
-For complex updates spanning multiple steps, the skill may perform intermediate edits before assembling the final bundle. Intermediate states are not commits and do not violate the single-commit invariant (which applies only to the final commit). The operator's `approve` binds to the final assembled state on the summary card — the plan is agent-internal working context, never an approval object. The audit pass runs on the assembled bundle only. Intermediate files live in a session-scoped area outside the `docs/` tree; `sessions/` is gitignored by repository convention.
+For complex updates spanning multiple steps, the skill may perform intermediate edits before assembling the final bundle. Intermediate states are not commits and do not violate the single-commit invariant (which applies only to the final commit). The operator's `approve` binds to the final assembled state on the Approval Card — the plan is agent-internal working context, never an approval object. The audit pass runs on the assembled bundle only. Intermediate files live in a session-scoped area outside the `docs/` tree; `sessions/` is gitignored by repository convention.
 
 ## Error control
 
