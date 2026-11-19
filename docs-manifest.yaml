@@ -23,7 +23,7 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter
-    version: 1.2.0-draft
+    version: 1.2.1-draft
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/documenter-service/index-RU.md

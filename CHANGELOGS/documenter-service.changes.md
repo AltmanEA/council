@@ -1,3 +1,4 @@
+<!-- CHANGES v1.2.1-draft: Phase 0: check_all frozen exit-code contract marked shipped; hook and prose contracts synchronized (operator approve, sess-documenter-impl) -->
 <!-- CHANGES v1.2.0-draft: Added Complex edits subsection (staged work mode, single approval on final assembled state), Evolution stance principle (deterministic actions -> scripts by displacement), accepted risk 6 (abandoned intermediate work), OP-2 ceiling clarification (tools/README.md exempt); consensus sess-documenter-workmode-refinement -->
 <!-- CHANGES v1.1.0-draft: Added Russian translation docs/ru/documenter-service/index-RU.md (explicit operator request, ADR-012 mode a; engine local Qwen3.6-35B-A3B-NVFP4, prompt 2026.11-r5; write-gates: fail=0, parity 72/72, drift clean, glossary OK) -->
 <!-- CHANGES v0.24.1-draft: Marked SUPERSEDED and relocated to legacy/ archive per sess-documenter-concept-revision (2026-11-19); archive-guard references retargeted to legacy/spec-v0.md -->

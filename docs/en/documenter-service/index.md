@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.2.0-draft
+Version: 1.2.1-draft
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -52,7 +52,7 @@ Check battery:
 | Translation staleness EN↔RU | whole tree | missing or structurally drifted RU mirrors |
 | Controlled-file deletion | whole tree | deletion of manifest-tracked documents |
 
-Exit codes are informational metadata, never gating: `0` clean, `1` findings, `2` critical findings. Human-facing rendering: clean is silent; otherwise `⚠ findings: N` or `🚨 critical: N` plus one-line fix hints, grouped and severity-sorted. (Implementation status: the shipped `check_all.py` still uses the legacy codes 0 clean / 1 high+ findings / 2 internal error; migrating to the contract above is part of the pending check_all rewrite.)
+Exit codes are informational metadata, never gating: `0` clean, `1` findings, `2` critical findings. Human-facing rendering: clean is silent; otherwise `⚠ findings: N` or `🚨 critical: N` plus one-line fix hints, grouped and severity-sorted. `--severity` sets the minimum **reported** severity (default `low`; `--strict` ≡ report everything); internal error and bad `--rule` tokens also exit `2` but are distinguished on output (`check_all: INTERNAL ERROR` / `ERROR:`), never by the `🚨` marker. (Implementation status: the frozen contract above is shipped in `tools/check_all.py` as of the Phase 0 rewrite; the pre-commit hook and prose contracts were synchronized in the same changeset.)
 
 ### Recovery
 
