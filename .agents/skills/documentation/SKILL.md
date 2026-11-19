@@ -325,4 +325,4 @@ Fix failures mechanically where a `tools/` script owns the fix; escalate if unfi
 
 ---
 
-*Aligned with project documents v0.9.0.*
+*Aligned with project documents v1.1.0-draft (Documenter reconstruction).*

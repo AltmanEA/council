@@ -23,9 +23,10 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter
-    version: 1.0.0-draft
+    version: 1.1.0-draft
     status: draft
     abstraction: conceptual
+    has_translation: docs/ru/documenter-service/index-RU.md
     changelog-path: CHANGELOGS/documenter-service.changes.md
     allow_non_index_paths: true
 

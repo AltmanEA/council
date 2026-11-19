@@ -1,9 +1,10 @@
 # Documenter
 
 id: documenter-service
-Version: 1.0.0-draft
+Version: 1.1.0-draft
 Status: draft
 Abstraction: conceptual
+has_translation: docs/ru/documenter-service/index-RU.md
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service.changes.md
 
