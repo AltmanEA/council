@@ -40,6 +40,15 @@ consistency)** remain skill/AI-reserved judgments and are NOT implemented
 here — never describe this tool as implementing "rules 1–6"
 (see `documentation-rules` §8).
 
+## Archive exclusion
+
+Documents under `docs/en/archive/` and `docs/ru/archive/` are silently
+excluded from every check pass in `check_all.py` (single source:
+`_ARCHIVE_PREFIXES` constant + `is_archived()` predicate). The predicate
+uses exact prefix matching — paths like `docs/en/archive-notes/` are
+**not** excluded. Future members of the check battery MUST inherit this
+exclusion so archived content is never held to live-document rules.
+
 ## Dependencies
 
 Python **3.11+**, standard library plus **PyYAML** only. No other third-party

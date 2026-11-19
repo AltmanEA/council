@@ -115,6 +115,16 @@ __all__ = ["Finding", "scan", "main"]
 #: Maximum content lines per document (documentation-rules §7.3).
 LINE_LIMIT = 200
 
+#: Archive path prefixes: documents under these prefixes are silently
+#: excluded from every check pass (documenter-service §Archive, §Audit tool).
+_ARCHIVE_PREFIXES = ("docs/en/archive/", "docs/ru/archive/")
+
+
+def is_archived(rel: str) -> bool:
+    """True when *rel* is under an archive path prefix."""
+    return rel.startswith(_ARCHIVE_PREFIXES)
+
+
 #: --rule group tokens -> concrete finding-rule names they enable.
 RULE_GROUPS = {
     "line-count": {"line-count"},
@@ -319,6 +329,8 @@ def check_link_integrity(corpus: "_Corpus", strict_links: bool = False) -> list:
                         continue
                     abs_path = os.path.join(dirpath, name)
                     rel = os.path.relpath(abs_path, corpus.root).replace("\\", "/")
+                    if is_archived(rel):
+                        continue
                     with open(abs_path, encoding="utf-8") as fh:  # OSError -> exit 2
                         text = fh.read()
                     findings.extend(
@@ -407,6 +419,8 @@ class _Corpus:
                 if name.endswith(".md"):
                     abs_path = os.path.join(dirpath, name)
                     rel = os.path.relpath(abs_path, root).replace("\\", "/")
+                    if is_archived(rel):
+                        continue
                     self.docs.append(rel)
         self.docs.sort()
 
