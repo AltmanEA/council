@@ -56,7 +56,7 @@ Error codes for auth failures:
 | `council.submit_task` | allow | deny | deny | `operator-surface` |
 | `council.status` | allow | allow (read-only) | allow (read-only) | `operator-surface` |
 | `council.list_sessions` | allow | allow (read-only) | allow (read-only) | `operator-surface` |
-| `council.get_artifacts` | allow | allow (read-only) | allow (read-only) | `operator-surface` |
+| `council.get_artifacts` | deferred (roadmap KD-1; CONFIG.001 envelope to every caller class) | deferred | deferred | `operator-surface` |
 | `council.resolve_escalation` | allow | deny | deny | `operator-surface` |
 | `council.override_precheck` | allow + reason | deny | deny | `operator-surface` |
 | `documenter.audit` | allow | allow (read-only) | allow (read-only) | mvp-contract.md §4 — DORMANT (ADR-013) |
