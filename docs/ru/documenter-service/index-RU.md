@@ -1,7 +1,7 @@
 # Документатор
 
 id: documenter-service
-Version: 1.2.1-draft
+Version: 1.2.2-draft
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -71,7 +71,7 @@ changelog-path: CHANGELOGS/documenter-service.changes.md
 
 ## Сохранённые инструменты
 
-Сохранены: `tools/gen_manifest.py` (единственный генератор манифестов), `tools/check_all.py` (движок аудита), `tools/check_drift.py` (структурное сравнение EN↔RU), `tools/docmeta.py`, `tools/bump_version.py`, `tools/classify_bump.py`, `tools/translation_status.py`, `tools/sync_translator.sh`, `tools/check_parity.py`, `tools/tests_helpers.py`, а также хук `hooks/pre-commit`, работающий только в режиме предупреждений. Удалены в рамках дизайна v0: пакет `documenter_service/`, `documenter_policy.yml`, наложения активации, сентинел готовности operator-ingress, терминалы согласия, записи намерений, хэш-хранилища и журналы аудита.
+Сохранены: `tools/gen_manifest.py` (единственный генератор манифестов), `tools/check_all.py` (движок аудита), `tools/check_drift.py` (структурное сравнение EN↔RU и write-гейты перевода `--phase4`), `tools/docmeta.py`, `tools/bump_version.py`, `tools/classify_bump.py`, `tools/translation_status.py`, `tools/sync_translator.sh`, `tools/tests_helpers.py`, а также хук `hooks/pre-commit`, работающий только в режиме предупреждений. `tools/check_parity.py` вытеснен гейт-правилами `phase4-*` (impl-guide, фаза 1, 19.11.2026). Удалены в рамках дизайна v0: пакет `documenter_service/`, `documenter_policy.yml`, наложения активации, сентинел готовности operator-ingress, терминалы согласия, записи намерений, хэш-хранилища и журналы аудита.
 
 ## Наследие
 

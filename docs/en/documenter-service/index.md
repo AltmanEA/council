@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.2.1-draft
+Version: 1.2.2-draft
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -71,7 +71,7 @@ These risks are knowingly accepted under OP-3:
 
 ## Surviving tooling
 
-Retained: `tools/gen_manifest.py` (sole manifest writer), `tools/check_all.py` (audit engine), `tools/check_drift.py` (EN↔RU structural comparison), `tools/docmeta.py`, `tools/bump_version.py`, `tools/classify_bump.py`, `tools/translation_status.py`, `tools/sync_translator.sh`, `tools/check_parity.py`, `tools/tests_helpers.py`, the warn-only `hooks/pre-commit`. Deleted with the v0 design: the `documenter_service/` package, `documenter_policy.yml`, activation overlays, the operator-ingress readiness sentinel, consent terminals, intent records, hash stores, and audit registries.
+Retained: `tools/gen_manifest.py` (sole manifest writer), `tools/check_all.py` (audit engine), `tools/check_drift.py` (EN↔RU structural comparison and `--phase4` translation write-gates), `tools/docmeta.py`, `tools/bump_version.py`, `tools/classify_bump.py`, `tools/translation_status.py`, `tools/sync_translator.sh`, `tools/tests_helpers.py`, the warn-only `hooks/pre-commit`. `tools/check_parity.py` was displaced by the `phase4-*` gate rules (impl-guide Phase 1, 2026-11-19). Deleted with the v0 design: the `documenter_service/` package, `documenter_policy.yml`, activation overlays, the operator-ingress readiness sentinel, consent terminals, intent records, hash stores, and audit registries.
 
 ## Legacy
 
