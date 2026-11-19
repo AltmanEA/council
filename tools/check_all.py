@@ -68,17 +68,18 @@ signal worth keeping); numeric §Names (§7.3, §2.2.3) are
 implementation-style and never exceed LOW.
 
 CLI:
-  python3 tools/check_all.py [--root DIR] [--json] [--severity low|medium|high]
+  python3 tools/check_all.py [--root DIR] [--json] [--severity low|medium|high|warning]
                              [--rule ID ...] [--strict] [--strict-links]
 
 Exit codes:
-  0  no findings at or above severity_min (default high; medium and below
-     are warnings unless --strict promotes everything to blocking)
-  1  at least one finding at or above severity_min; --strict-links additionally
-     promotes code→docs link-integrity warnings to blocking
-  2  internal error (crash, unreadable corpus) — FAIL LOUD with traceback
-     and remediation message on stderr. DocMetaError corpus conditions are
-     reported as findings; a defect inside the validator itself is not.
+  0  no reported findings (clean — silent when clean)
+  1  reported findings present, none high-severity
+  2  at least one high-severity reported (critical) — OR — internal error
+     (crash, unreadable corpus), bad --rule token (fail loud, stderr has
+     `check_all: INTERNAL ERROR` / `ERROR:` to distinguish from `🚨`).
+
+--severity SEV sets the minimum severity that is REPORTED (default: low).
+--strict is equivalent to --severity warning (report everything).
 
 --json emits one JSON object per line (EventSink-shaped: flat, no document
 text): {"rule", "severity", "file", "description"}.
@@ -1163,9 +1164,21 @@ Rule coverage (mvp-interfaces.md §Compliance rules scanned):
   consistency) are skill/AI-reserved judgments; this tool makes no claim to
   cover "rules 1-6".
 
-Exit codes: 0 clean at/above severity_min; 1 blocking findings (including
-code→docs under --strict-links); 2 internal error (fail loud, remediation on
-stderr)."""
+Exit codes (computed over REPORTED findings after severity filter):
+  0  clean — no reported findings.
+  1  findings reported, none high.
+  2  at least one high finding reported (critical) — OR — internal error
+     (crash, unreadable corpus) / bad --rule token (distinguished on output).
+
+--json emits one JSON object per line (EventSink-shaped: flat, no document
+text): {"rule", "severity", "file", "description"}.
+
+The DEFAULT human-readable format obeys the token contract with
+tools/hooks/pre-commit: one finding per line as
+`rule=<rule-id> severity=<sev> file=<path> <description>`
+(the hook greps the literal `severity=high` in block mode); no document
+text appears on the line.
+"""
 
 
 def main(argv=None) -> int:
@@ -1184,16 +1197,18 @@ def main(argv=None) -> int:
     parser.add_argument("--json", action="store_true",
                         help="emit one JSON object per line: "
                              "{rule, severity, file, description} (EventSink-shaped)")
-    parser.add_argument("--severity", choices=["low", "medium", "high"],
-                        default="high", metavar="SEV",
-                        help="minimum severity that blocks (default: high; "
-                             "lower findings are warnings with exit 0)")
+    parser.add_argument("--severity", choices=["low", "medium", "high", "warning"],
+                        default="low", metavar="SEV",
+                        help="minimum severity that is REPORTED (default: low; "
+                             "medium/high reported, warnings hidden unless "
+                             "asked via --strict or --severity warning)")
     parser.add_argument("--rule", action="append", dest="rules", metavar="ID",
                         help="restrict to a rule group (repeatable); default: all. "
                              "Note: changelog=rule-2, cross-ref=rule-4, "
                              "manifest-parity=rule-6")
     parser.add_argument("--strict", action="store_true",
-                        help="treat any finding (down to warning) as blocking")
+                        help="report every finding regardless of severity "
+                             "(equivalent to --severity warning)")
     parser.add_argument("--strict-links", action="store_true",
                         help="promote link-integrity code→docs warnings to "
                              "blocking (clean pre-merge runs); docs→manifest "
@@ -1215,44 +1230,43 @@ def main(argv=None) -> int:
         traceback.print_exc()
         return 2
 
-    min_rank = tests_helpers.severity_rank(
-        "warning" if args.strict else args.severity)
-    # Printing: always show every finding (medium/low/warning are visible as
-    # warnings). Blocking (exit code): findings with rank >= min_rank, where
-    # --strict lowers the bar so any finding at all blocks.
-    visible = findings
-    blocking = [f for f in findings
+    # Filter: --severity means minimum REPORTED severity.
+    # --strict is equivalent to --severity warning (report all).
+    min_reported = "warning" if args.strict else args.severity
+    min_rank = tests_helpers.severity_rank(min_reported)
+    reported = [f for f in findings
                 if tests_helpers.severity_rank(f["severity"]) >= min_rank]
 
+    # Exit code computed over REPORTED findings only.
+    has_high = any(f["severity"] == "high" for f in reported)
+    if has_high:
+        rc = 2
+    elif reported:
+        rc = 1
+    else:
+        rc = 0
+
     if args.json:
-        for f in visible:
+        for f in reported:
             print(json.dumps({"rule": f["rule"], "severity": f["severity"],
                               "file": f["file"], "description": f["description"]},
                              ensure_ascii=False))
     else:
-        if visible:
-            # Token contract with tools/hooks/pre-commit: every finding line
-            # carries `rule=<id> severity=<sev> file=<path>` literals (the
-            # hook greps `severity=high` for block mode). One finding per
-            # line, no document text.
-            for f in visible:
+        if reported:
+            # Human rendering per frozen audit contract §4:
+            # Header line(s) based on high severity, then hint lines.
+            n_high = sum(1 for f in reported if f["severity"] == "high")
+            if n_high:
+                print(f"\U0001f6a8 critical: {n_high}")
+            print(f"\u26a0 findings: {len(reported)}")
+            # Hint lines sorted by severity (high → medium → low → warning),
+            # each carrying the stable token contract.
+            for f in reported:
                 print(f"rule={f['rule']} severity={f['severity']} "
                       f"file={f['file']} {f['description']}")
-        else:
-            print("OK — no findings "
-                  "(rules 3 and 5 are skill/AI-reserved and not checked here).")
-        counts = {}
-        for f in visible:
-            counts[f["severity"]] = counts.get(f["severity"], 0) + 1
-        summary = ", ".join(
-            f"{counts[s]} {s}" for s in ("high", "medium", "low", "warning")
-            if counts.get(s)) or "none"
-        threshold_label = "warning" if args.strict else args.severity
-        print(f"check_all: {len(visible)} finding(s) ({summary}); "
-              f"blocking at severity>={threshold_label}: {len(blocking)}"
-              + ("" if blocking else " — PASS"))
+        # Clean: no output at all (silent when clean).
 
-    return 1 if blocking else 0
+    return rc
 
 
 if __name__ == "__main__":

@@ -90,14 +90,14 @@ class TestLinkIntegrityCleanCorpus(unittest.TestCase):
 
 
 class TestDocsToManifest(unittest.TestCase):
-    """docs→manifest: HARD FAIL (high, exit 1) — O-3 first half."""
+    """docs→manifest: HARD FAIL (high → exit 2) — O-3 first half."""
 
     def test_missing_file_reference_blocks(self):
         root = _clean_root()
         _append_ref(root, "docs/en/alpha/index.md",
                     "See docs/en/gamma/index.md for context.")
         rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
         hits = [f for f in findings if f["rule"] == "docs-manifest-link"]
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0]["severity"], "high")
@@ -114,7 +114,7 @@ class TestDocsToManifest(unittest.TestCase):
         _append_ref(root, "docs/en/alpha/index.md",
                     "See docs/en/beta/extra.md for context.")
         rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
         hits = [f for f in findings if f["rule"] == "docs-manifest-link"]
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0]["severity"], "high")
@@ -150,7 +150,7 @@ class TestDocsToManifest(unittest.TestCase):
         _append_ref(root, "docs/en/alpha/index.md",
                     "См. docs/ru/beta/index-RU.md.")
         rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
         hits = [f for f in findings if f["rule"] == "docs-manifest-link"]
         self.assertEqual(len(hits), 1)
         self.assertIn("docs/ru/beta/index-RU.md", hits[0]["description"])
@@ -175,7 +175,9 @@ class TestDocsToManifest(unittest.TestCase):
                   encoding="utf-8") as fh:
             fh.write("\t: : not yaml [\n")
         rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)
+        # parity-skipped is medium severity (link-integrity skips, no
+        # docs-manifest-link findings emitted); rc=1 for medium finding.
+        self.assertEqual(rc, 1)
         self.assertEqual([f for f in findings
                           if f["rule"] == "docs-manifest-link"], [])
 
@@ -202,7 +204,10 @@ class TestLiveCorpus(unittest.TestCase):
         baseline (28 low at the time of the O-3 implementation, operator
         may re-baseline; here we assert only the blocking count)."""
         rc, findings = _json_findings(self.REPO_ROOT)
-        self.assertEqual(rc, 0)
+        # default severity=low: low findings in live repo → rc=1 is normal;
+        # 0 = clean corpus, 1 = low/medium only (no high = good).
+        # Exit 2 would indicate internal error — should never happen.
+        self.assertIn(rc, (0, 1))
         blocking = [f for f in findings
                     if f["severity"] in ("high", "medium")]
         self.assertEqual(blocking, [])

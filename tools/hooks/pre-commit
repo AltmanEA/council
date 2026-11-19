@@ -10,26 +10,38 @@
 # In BOTH modes all findings are printed — no silent failure.
 #
 # check_all exit-code contract (per its spec):
-#   0 = clean, 1 = findings present, 2 = internal error (crash).
+#   0 = clean (silent when clean),
+#   1 = findings reported, none high-severity,
+#   2 = at least one high-severity reported (critical) — OR —
+#       internal error (crash, unreadable corpus), bad --rule token
+#       (distinguished on output).
 #
 # TOKEN CONTRACT with tools/check_all.py (reconciliation point for the
 # check_all author — the human-readable findings lines MUST comply):
-#   every finding line on check_all's stdout MUST contain the literal
-#   tokens `rule=<rule-name>`, `severity=<low|medium|high>` and
-#   `file=<path>`, e.g.:
-#     rule=line-count severity=high file=docs/en/foo/index.md line count 250 > 200
-#   The block-mode high filter greps for `severity=high`; findings are
-#   printed verbatim so the rejection message names rule and file.
+#   On findings, check_all prints one header line per severity tier
+#   present:
+#     🚨 critical: N       (when ≥1 high-severity finding reported)
+#     ⚠ findings: M        (M = total reported)
+#   Then one hint line per finding carrying the stable token contract:
+#     rule=<rule-name> severity=<low|medium|high|warning> file=<path> <desc>
+#   The block-mode high filter greps for `severity=high` in the hint lines.
+#   Clean output is silently empty (no "OK" line).
 #
 # Exit-code contract of THIS hook (MODE × check_all outcome):
 #   check_all absent / python3 absent / crash / non-contract exit code:
 #       warn-mode → exit 0 (loud)      block-mode → exit 1 (fail-closed)
-#   check_all exit 0 (clean):           both modes → exit 0
-#   check_all exit 2 (crash):           warn-mode → exit 0 (loud banner)
-#                                       block-mode → exit 1
-#   check_all exit 1, any severity=high line:
-#       warn-mode → exit 0 (printed)   block-mode → exit 1
-#   check_all exit 1, only low/medium:  both modes → exit 0 (printed)
+#   check_all exit 0 (clean, silent):   both modes → exit 0
+#   check_all exit 1 (findings, no high):
+#       warn-mode → exit 0 (printed)   block-mode → exit 0 too
+#       (belt-and-braces: grep severity=high in output, block if found)
+#   check_all exit 2:
+#       If output contains `🚨 critical` → critical findings:
+#           warn-mode → exit 0 (soak, prints output)
+#           block-mode → exit 1 (block)
+#       If output contains `check_all: INTERNAL ERROR` → crash:
+#           warn-mode → exit 0 (loud)  block-mode → exit 1 (fail-closed)
+#       If neither marker present → non-contract crash:
+#           warn-mode → exit 0 (loud)  block-mode → exit 1 (fail-closed)
 set -u
 
 MODE=warn
@@ -88,16 +100,18 @@ fi
 
 case "$RC" in
   0)
-    # Clean: checker already ran; its own output (if any) was printed above.
+    # Clean: checker ran cleanly (may be silent output). Both modes pass.
     exit 0
     ;;
   1)
-    # Findings present. Full output printed verbatim above; each line names
-    # rule and file per the token contract.
+    # Findings present, none high by definition. Full output printed
+    # verbatim above; each line names rule and file per the token contract.
     if [ "$MODE" = warn ]; then
       echo "[pre-commit] WARN-ONLY (soak): findings above do not block this commit."
       exit 0
     fi
+    # Block mode: belt-and-braces grep for severity=high in output;
+    # if it appears (non-contract code), block.
     if printf '%s\n' "$OUTPUT" | grep -q 'severity=high'; then
       echo "[pre-commit] BLOCKED: high-severity documentation findings (rule + file named in lines above)." >&2
       echo "[pre-commit] remediation: fix the documents listed, then commit again; last resort 'git commit --no-verify'." >&2
@@ -107,8 +121,25 @@ case "$RC" in
     exit 0
     ;;
   2)
-    echo "[pre-commit] CHECK_ALL INTERNAL ERROR — remediation: run python3 tools/check_all.py and report the traceback; do not debug the hook itself" >&2
-    fail_closed_exit
+    # Exit 2: could be critical findings (critical marker) or internal
+    # error/crash (check_all: INTERNAL ERROR) or non-contract output.
+    if printf '%s\n' "$OUTPUT" | grep -q '🚨 critical'; then
+      # Critical findings path: differentiate from crash (warn 0 / block 1).
+      if [ "$MODE" = warn ]; then
+        echo "[pre-commit] WARN-ONLY (soak): critical findings above."
+        exit 0
+      fi
+      echo "[pre-commit] BLOCKED: critical (high-severity) documentation findings — remediation: fix the documents listed, then commit again; last resort 'git commit --no-verify'." >&2
+      exit 1
+    elif printf '%s\n' "$OUTPUT" | grep -q 'check_all: INTERNAL ERROR'; then
+      # Internal error / crash path: fail-closed as today (warn 0 / block 1).
+      echo "[pre-commit] CHECK_ALL INTERNAL ERROR — remediation: run python3 tools/check_all.py and report the traceback; do not debug the hook itself" >&2
+      fail_closed_exit
+    else
+      # Non-contract output / crash: fail-closed (warn 0 / block 1).
+      echo "[pre-commit] CHECK_ALL INTERNAL ERROR (unexpected output) — remediation: run python3 tools/check_all.py and report the traceback; do not debug the hook itself" >&2
+      fail_closed_exit
+    fi
     ;;
   *)
     # Non-contract exit code: treat as validator failure, fail loud.

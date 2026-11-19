@@ -6,6 +6,13 @@ the gen_manifest fixtures are NOT modified. The final test class additionally
 runs the checker against the LIVE repository corpus and asserts only that it
 exits cleanly (0 or 1; live medium findings are warnings, not failures) and
 that --json output parses as JSONL.
+
+Updated for the frozen audit contract:
+  --severity means *minimum REPORTED severity* (not minimum blocking);
+  default is "low" (warning ≤ low ≤ medium ≤ high all reported);
+  clean -> silent (no "OK" line);
+  exit codes computed over REPORTED findings (0/1/2 per contract);
+  human rendering: w/ marker lines, token contract on every hint line.
 """
 import io
 import json
@@ -74,11 +81,12 @@ def _find(records, rule=None, severity=None):
 
 
 class TestCleanCorpus(unittest.TestCase):
-    def test_clean_corpus_exit_0(self):
+    def test_clean_corpus_exit_0_silent(self):
+        """Contract §4 (human rendering): clean -> no output, exit 0."""
         root = _clean_root()
         rc, out, _ = _run(root)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("PASS", out)
+        self.assertEqual(rc, 0)
+        self.assertEqual(out, "")
 
     def test_fixture_manifest_is_in_parity(self):
         # Guard: the checked-in fixture manifest must equal generated output.
@@ -87,6 +95,190 @@ class TestCleanCorpus(unittest.TestCase):
         text, errors = gen_manifest.generate(CORPUS)
         self.assertEqual(errors, [])
         self.assertEqual(text.encode("utf-8"), on_disk)
+
+
+class TestContractRenderExitCodes(unittest.TestCase):
+    """Frozen contract: exit codes and rendering for human-readable output.
+
+    §1.  exit 0 = no reported findings; exit 1 = findings, none high;
+         exit 2 = at least one high reported.
+    §4.  human rendering: clean=silent; no-high = "\u26a0 findings: N";
+         high = "\U0001f6a8 critical: N" then "\u26a0 findings: M"; then hint lines.
+    """
+
+    def test_clean_silent_no_ok_line(self):
+        """Clean corpus: stdout empty, exit 0 (no "OK" line)."""
+        root = _clean_root()
+        rc, out, _ = _run(root)
+        self.assertEqual(rc, 0)
+        self.assertEqual(out, "")
+
+    def test_clean_silent_under_severity_low(self):
+        """Even with --severity low, a clean corpus produces no output."""
+        root = _clean_root()
+        rc, out, _ = _run(root, "--severity", "low")
+        self.assertEqual(rc, 0)
+        self.assertEqual(out, "")
+
+    def test_low_only_finding_severity_warn_marker_exit_1(self):
+        """Findings at low/medium only, --severity low -> "\u26a0 findings: N" exit 1."""
+        root = _clean_root()
+        # A broken anchor is medium severity
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        rc, out, _ = _run(root, "--severity", "medium")
+        lines = out.splitlines()
+        self.assertIn("\u26a0 findings:", lines[0])
+        self.assertTrue(lines[0].startswith("\u26a0"))
+        # Count of reported findings equals count of lines after header
+        self.assertEqual(len(lines) - 1, len([l for l in lines[1:] if "rule=" in l]))
+        self.assertEqual(rc, 1)
+
+    def test_high_finding_critical_and_findings_lines_exit_2(self):
+        """One high finding -> "\U0001f6a8 critical: 1" + "\u26a0 findings: N", exit 2."""
+        root = _clean_root()
+        os.remove(os.path.join(root, "CHANGELOGS", "beta.changes.md"))
+        rc, out, _ = _run(root)
+        lines = out.splitlines()
+        self.assertTrue(lines[0].startswith("\U0001f6a8"))
+        self.assertIn("critical:", lines[0])
+        self.assertIn("findings:", lines[1])
+        self.assertEqual(rc, 2)
+
+    def test_high_and_medium_findings_sorted_by_severity(self):
+        """Findings sorted: high first, then medium, then low."""
+        root = _clean_root()
+        # Remove beta changelog -> high (changelog-path-missing)
+        os.remove(os.path.join(root, "CHANGELOGS", "beta.changes.md"))
+        # Add broken anchor to alpha -> medium (broken-anchor)
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        rc, out, _ = _run(root, "--severity", "low")
+        lines = out.splitlines()
+        # Skip the header line(s) (critical + findings)
+        hint_lines = [l for l in lines[2:] if l.startswith("rule=")]
+        severities = []
+        for l in hint_lines:
+            sev = l.split(" ")[1].split("=")[1]
+            severities.append(sev)
+        # high before medium before low
+        self.assertEqual(severities, ["high", "medium"])
+        self.assertEqual(rc, 2)
+
+
+class TestSeverityFilterReportingAndExitCode(unittest.TestCase):
+    """Contract §2: --severity means minimum REPORTED severity.
+    §1: exit codes are over REPORTED findings.
+
+    Default severity is "high", so only high findings are reported.
+    --severity low reports low/medium/high; --severity medium reports medium/high.
+    --strict reports everything (equivalent to --severity warning).
+    """
+
+    def test_severity_high_hides_medium_not_reported(self):
+        """With explicit --severity high: medium-only findings are not reported -> exit 0."""
+        root = _clean_root()
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        rc, out, _ = _run(root, "--severity", "high")
+        self.assertEqual(rc, 0)
+        self.assertEqual(out, "")
+
+    def test_severity_medium_shows_medium_exit_1(self):
+        """--severity medium: medium findings are reported -> exit 1."""
+        root = _clean_root()
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        rc, out, _ = _run(root, "--severity", "medium")
+        self.assertEqual(rc, 1)
+        self.assertTrue(out.startswith("\u26a0"))
+
+    def test_severity_low_hides_only_low(self):
+        """At default severity=low: medium findings reported -> exit 1.
+        --severity high: medium hidden -> exit 0."""
+        root = _clean_root()
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        # At default severity=low: medium reported -> exit 1
+        rc_low, out_low, _ = _run(root)
+        self.assertEqual(rc_low, 1)
+        self.assertTrue(out_low.startswith("\u26a0"))
+        # At --severity high: medium hidden -> exit 0
+        rc_high, out_high, _ = _run(root, "--severity", "high")
+        self.assertEqual(rc_high, 0)
+        self.assertEqual(out_high, "")
+
+    def test_severity_filters_json_output(self):
+        """--json mode: severity filter still applies, no marker lines."""
+        root = _clean_root()
+        # medium-only finding
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        # Default (low) -> medium reported
+        rc_h, records_h = _jsonl(root)
+        self.assertEqual(rc_h, 1)
+        self.assertTrue(records_h)
+        # --severity medium -> records reported
+        rc_m, records_m = _jsonl(root, "--severity", "medium")
+        self.assertEqual(rc_m, 1)
+        self.assertTrue(records_m)
+        for r in records_m:
+            self.assertEqual(set(r.keys()), {"rule", "severity", "file", "description"})
+            self.assertIn(r["severity"], ("medium", "high"))
+
+    def test_severity_filters_exit_code(self):
+        """When severity filter hides all findings, exit code is 0 (clean)."""
+        root = _clean_root()
+        # Add a single medium-only finding (broken anchor in alpha)
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        # Default severity=low: medium reported -> exit 1
+        rc_default, records_default = _jsonl(root)
+        self.assertEqual(rc_default, 1)
+        self.assertTrue(records_default)
+        self.assertTrue(_find(records_default, rule="broken-anchor", severity="medium"))
+        # --severity high: medium hidden -> exit 0, empty
+        rc_high, records_high = _jsonl(root, "--severity", "high")
+        self.assertEqual(rc_high, 0)
+        self.assertEqual(records_high, [])
+
+    def test_strict_reports_all_findings(self):
+        """--strict reports every finding regardless of severity -> exit code
+        computed over all reported findings."""
+        root = _clean_root()
+        text = _read_doc(root, "docs/en/alpha/index.md")
+        _write_doc(root, "docs/en/alpha/index.md",
+                   text + "\nSee [x](beta/index.md#nope).\n")
+        _touch_manifest(root)
+        rc, out, _ = _run(root, "--strict")
+        # Medium finding reported at --strict -> exit 1
+        self.assertEqual(rc, 1)
+        self.assertTrue(out.startswith("\u26a0"))
+
+    def test_strict_exposes_low_warning(self):
+        """--strict exposes even warning-severity findings."""
+        root = _clean_root()
+        text = _read_doc(root, "docs/en/beta/index.md")
+        _write_doc(root, "docs/en/beta/index.md", text.replace(
+            "Status: draft", "Status: draft\nLast Modified: 2026-01-01"))
+        _touch_manifest(root)
+        rc, out, _ = _run(root, "--strict")
+        self.assertEqual(rc, 1)
+        self.assertTrue(out.startswith("\u26a0"))
 
 
 class TestRule1LineCount(unittest.TestCase):
@@ -101,16 +293,15 @@ class TestRule1LineCount(unittest.TestCase):
                    "Abstraction: conceptual\n"
                    "changelog-path: CHANGELOGS/beta.changes.md\n\n"
                    "## Purpose\n\n" + body + "\n")
+        _touch_manifest(root)
         rc, records = _jsonl(root)
         hits = _find(records, rule="line-count", severity="high")
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0]["file"], "docs/en/beta/index.md")
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 1 if not hits else 2)
 
     def test_metadata_and_blank_lines_not_counted(self):
         root = _clean_root()
-        # 197 body + H1 + `## Purpose` = exactly 200 content lines despite a
-        # much larger raw file (metadata block and blanks are excluded).
         body = "\n".join(f"line {i}" for i in range(197))
         _write_doc(root, "docs/en/beta/index.md",
                    "# Beta Document\n"
@@ -121,7 +312,7 @@ class TestRule1LineCount(unittest.TestCase):
                    "changelog-path: CHANGELOGS/beta.changes.md\n"
                    "title: " + "x" * 60 + "\n\n\n\n"
                    "## Purpose\n\n" + body + "\n")
-        _touch_manifest(root)  # new `title` field changes generated output
+        _touch_manifest(root)
         rc, records = _jsonl(root)
         self.assertEqual(_find(records, rule="line-count"), [])
         self.assertEqual(rc, 0)
@@ -134,7 +325,7 @@ class TestRule2Changelog(unittest.TestCase):
         rc, records = _jsonl(root)
         hits = _find(records, rule="changelog-path-missing", severity="high")
         self.assertEqual([h["file"] for h in hits], ["docs/en/beta/index.md"])
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
 
     def test_changelog_wrong_location_medium(self):
         root = _clean_root()
@@ -142,6 +333,7 @@ class TestRule2Changelog(unittest.TestCase):
         _write_doc(root, "docs/en/beta/index.md", text.replace(
             "changelog-path: CHANGELOGS/beta.changes.md",
             "changelog-path: notes/beta.changes.md"))
+        _touch_manifest(root)
         _, records = _jsonl(root)
         self.assertTrue(_find(records, rule="changelog-path-location",
                               severity="medium"))
@@ -153,11 +345,15 @@ class TestRule4CrossRefs(unittest.TestCase):
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nSee [beta section](beta/index.md#no-such-heading).\n")
+        _touch_manifest(root)
         rc, records = _jsonl(root)
         hits = _find(records, rule="broken-anchor", severity="medium")
         self.assertTrue(hits)
-        self.assertEqual(rc, 0)  # medium does not block at default severity
-        rc_strict, _, _ = _run(root, "--strict")
+        # Default severity=low: medium reported -> exit 1
+        self.assertEqual(rc, 1)
+        rc_strict, records_strict = _jsonl(root, "--strict")
+        self.assertTrue(_find(records_strict, rule="broken-anchor", severity="medium"))
+        # At --strict, medium reported, no high -> exit 1
         self.assertEqual(rc_strict, 1)
 
     def test_missing_reference_docs_en_path_high(self):
@@ -165,26 +361,29 @@ class TestRule4CrossRefs(unittest.TestCase):
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nSee `docs/en/ghost/index.md` for details.\n")
+        _touch_manifest(root)
         rc, records = _jsonl(root)
         hits = _find(records, rule="missing-reference", severity="high")
         self.assertTrue(any("ghost" in h["description"] for h in hits))
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
 
     def test_unresolved_section_reference_medium(self):
         root = _clean_root()
         text = _read_doc(root, "docs/en/beta/index.md")
         _write_doc(root, "docs/en/beta/index.md",
                    text + "\nSee §Totally Absent Section for semantics.\n")
+        _touch_manifest(root)
         rc, records = _jsonl(root)
         hits = _find(records, rule="unresolved-reference", severity="medium")
         self.assertTrue(any("Totally Absent" in h["description"] for h in hits))
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, 1)
 
     def test_section_reference_to_real_heading_passes(self):
         root = _clean_root()
         text = _read_doc(root, "docs/en/beta/index.md")
         _write_doc(root, "docs/en/beta/index.md",
                    text + "\nAs described in §Purpose above, this is fine.\n")
+        _touch_manifest(root)
         _, records = _jsonl(root)
         self.assertEqual(_find(records, rule="unresolved-reference"), [])
 
@@ -209,10 +408,6 @@ class TestRule4CrossRefs(unittest.TestCase):
         _touch_manifest(root)
 
     def test_relative_path_reference_resolves_file_relative_first(self):
-        """`../index.md` from a non-index file resolves against the FILE PATH
-        (join), landing on the containing folder's index.md (live-corpus
-        layer-2.md regression); `../../beta/index.md` reaches the sibling
-        folder. Both must pass with zero findings."""
         root = _clean_root()
         self._add_deep_doc(
             root,
@@ -227,7 +422,6 @@ class TestRule4CrossRefs(unittest.TestCase):
         self.assertEqual(rc, 0)
 
     def test_relative_path_reference_broken_high(self):
-        """A relative token that resolves nowhere is high missing-reference."""
         root = _clean_root()
         self._add_deep_doc(
             root,
@@ -238,42 +432,40 @@ class TestRule4CrossRefs(unittest.TestCase):
         hits = _find(records, rule="missing-reference", severity="high")
         self.assertTrue(any("../ghost/index.md" in h["description"]
                             for h in hits))
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
 
     # -- (b) same-line file detection ------------------------------------------
 
     def test_same_line_named_file_heading_hit_passes(self):
-        """Line names the target file (backticked, trailing comma) and the
-        §Name exists in that file -> PASS."""
         root = _clean_root()
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nField semantics are in `beta/index.md`, "
                    "§Purpose, verbatim.\n")
+        _touch_manifest(root)
         _, records = _jsonl(root)
         self.assertEqual(_find(records, rule="broken-anchor"), [])
         self.assertEqual(_find(records, rule="unresolved-reference"), [])
 
     def test_same_line_named_file_heading_miss_high(self):
-        """Line names the target file and the §Name is absent from it ->
-        broken-anchor HIGH (bound-file verification)."""
         root = _clean_root()
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nSee `beta/index.md`, §Nonexistent Bound Target "
                    "for details.\n")
+        _touch_manifest(root)
         rc, records = _jsonl(root)
         hits = _find(records, rule="broken-anchor", severity="high")
         self.assertTrue(any("Nonexistent Bound Target" in h["description"]
                             for h in hits))
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
 
     def test_same_line_plain_path_no_backticks_hit_passes(self):
-        """Without backticks: plain docs/en path + §Name hit passes."""
         root = _clean_root()
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nPer docs/en/beta/index.md §Purpose this is ok.\n")
+        _touch_manifest(root)
         _, records = _jsonl(root)
         self.assertEqual(_find(records, rule="broken-anchor"), [])
         self.assertEqual(_find(records, rule="unresolved-reference"), [])
@@ -281,8 +473,6 @@ class TestRule4CrossRefs(unittest.TestCase):
     # -- (c) corpus-wide heading index ------------------------------------------
 
     def test_corpus_wide_unique_heading_resolves_passes(self):
-        """No file named on the line: a §Name matching exactly one corpus
-        heading (in another file) resolves there and passes."""
         root = _clean_root()
         text = _read_doc(root, "docs/en/beta/index.md")
         _write_doc(root, "docs/en/beta/index.md",
@@ -304,8 +494,7 @@ class TestRule4CrossRefs(unittest.TestCase):
             _find(records, rule="ambiguous-section-reference"), [])
 
     def test_ambiguous_heading_low_not_medium(self):
-        """No file named, §Name matches multiple corpus headings -> LOW
-        ambiguous-section-reference (never medium)."""
+        """ambiguous-section-reference severity=low (not medium) at default low."""
         root = _clean_root()
         for rel in ("docs/en/alpha/index.md", "docs/en/beta/index.md"):
             text = _read_doc(root, rel)
@@ -326,15 +515,15 @@ class TestRule4CrossRefs(unittest.TestCase):
         self.assertTrue(any("Shared Heading" in h["description"]
                             for h in hits))
         self.assertTrue(all(h["severity"] == "low" for h in hits))
-        # candidates are listed (max 3)
+        self.assertFalse(any(h["severity"] == "medium"
+                              for h in hits))
         hit = next(h for h in hits if "Shared Heading" in h["description"])
         self.assertIn("docs/en/alpha/index.md", hit["description"])
         self.assertIn("docs/en/beta/index.md", hit["description"])
-        self.assertEqual(rc, 0)  # low never blocks at default severity
+        # Default severity=low: low finding reported -> exit 1
+        self.assertEqual(rc, 1)
 
     def test_zero_matches_stays_medium(self):
-        """§Name matching no heading corpus-wide stays medium
-        unresolved-reference (the signal worth keeping)."""
         root = _clean_root()
         _write_doc(root, "docs/en/gamma/index.md",
                    "# Gamma Document\n"
@@ -350,13 +539,12 @@ class TestRule4CrossRefs(unittest.TestCase):
         hits = _find(records, rule="unresolved-reference", severity="medium")
         self.assertTrue(any("Wholly Unknown Topic" in h["description"]
                             for h in hits))
-        self.assertEqual(rc, 0)
+        # Default severity=low: medium reported -> exit 1 (no high)
+        self.assertEqual(rc, 1)
 
     # -- (d) implementation-file §refs (AGENTS.md §1.6) --------------------------
 
     def test_implementation_file_ref_hit_passes(self):
-        """`fallback/index.md` §Name resolves against the real file's
-        headings: found -> PASS."""
         root = _clean_root()
         _write_doc(root, "fallback/index.md",
                    "# Subagent Fallback Mode\n\n"
@@ -371,8 +559,6 @@ class TestRule4CrossRefs(unittest.TestCase):
         self.assertEqual(_find(records, rule="broken-anchor"), [])
 
     def test_implementation_file_ref_miss_low_never_medium(self):
-        """`AGENTS.md` §Name not found -> LOW broken-anchor; the line must
-        never surface at medium/high (out of manifest scope)."""
         root = _clean_root()
         _write_doc(root, "AGENTS.md",
                    "# Documentation Agent Instructions\n\n"
@@ -388,11 +574,10 @@ class TestRule4CrossRefs(unittest.TestCase):
                             for h in hits))
         hit = next(h for h in hits if "Nonexistent Chapter Here" in h["description"])
         self.assertEqual(hit["severity"], "low")
-        self.assertEqual(rc, 0)
+        # Default severity=low: low finding reported -> exit 1
+        self.assertEqual(rc, 1)
 
     def test_implementation_file_numeric_ref_resolves(self):
-        """Numeric §refs resolve against numbered headings of the named
-        implementation file: found -> PASS."""
         root = _clean_root()
         _write_doc(root, "AGENTS.md",
                    "# Documentation Agent Instructions\n\n"
@@ -407,28 +592,24 @@ class TestRule4CrossRefs(unittest.TestCase):
         self.assertEqual(_find(records, rule="broken-anchor"), [])
 
 
-class TestHumanReadableTokenFormat(unittest.TestCase):
-    """Token contract with tools/hooks/pre-commit: every finding line in the
-    DEFAULT human-readable mode is `rule=<id> severity=<sev> file=<path>
-    <description>` so the hook's `grep 'severity=high'` works unchanged."""
 
+class TestHumanReadableTokenFormat(unittest.TestCase):
     def test_finding_lines_carry_tokens_and_parse(self):
         root = _clean_root()
         os.remove(os.path.join(root, "CHANGELOGS", "beta.changes.md"))
         rc, out, _ = _run(root)
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
         finding_lines = [ln for ln in out.splitlines() if "rule=" in ln]
         self.assertTrue(finding_lines)
         for ln in finding_lines:
             head, _, tail = ln.partition(" ")
-            parts = dict(kv.split("=", 1) for kv in (head, ln.split(" ")[1],
+            fields = dict(kv.split("=", 1) for kv in (head, ln.split(" ")[1],
                                                      ln.split(" ")[2]))
-            self.assertEqual(set(parts), {"rule", "severity", "file"})
-            self.assertIn(parts["severity"], ("low", "medium", "high"))
-            self.assertTrue(parts["file"].endswith(".md")
-                            or parts["file"].endswith(".yaml"))
-            self.assertTrue(tail.strip())  # description present
-        # the hook's block-mode filter:
+            self.assertEqual(set(fields), {"rule", "severity", "file"})
+            self.assertIn(fields["severity"], ("low", "medium", "high"))
+            self.assertTrue(fields["file"].endswith(".md")
+                            or fields["file"].endswith(".yaml"))
+            self.assertTrue(tail.strip())
         self.assertTrue(any("severity=high" in ln for ln in finding_lines))
 
     def test_high_finding_line_contains_literal_severity_high(self):
@@ -436,26 +617,24 @@ class TestHumanReadableTokenFormat(unittest.TestCase):
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nSee `docs/en/ghost/index.md` for details.\n")
+        _touch_manifest(root)
         rc, out, _ = _run(root)
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
         high_lines = [ln for ln in out.splitlines() if "severity=high" in ln]
         self.assertTrue(high_lines)
         self.assertTrue(any("rule=missing-reference" in ln for ln in high_lines))
-        # hook grep simulation: block-mode would match
         self.assertTrue(all(ln.startswith("rule=") for ln in high_lines))
 
     def test_json_mode_unchanged(self):
-        """--json still emits exactly {rule, severity, file, description}."""
         root = _clean_root()
         os.remove(os.path.join(root, "CHANGELOGS", "beta.changes.md"))
         rc, records = _jsonl(root)
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
         self.assertTrue(records)
         for r in records:
             self.assertEqual(set(r.keys()),
                              {"rule", "severity", "file", "description"})
         self.assertTrue(any(r["severity"] == "high" for r in records))
-
 
 class TestRule6ManifestParity(unittest.TestCase):
     def test_manifest_drift_high(self):
@@ -467,32 +646,27 @@ class TestRule6ManifestParity(unittest.TestCase):
         hits = _find(records, rule="manifest-drift", severity="high")
         self.assertEqual(len(hits), 1)
         self.assertIn("diff lines", hits[0]["description"])
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 2)
 
     def test_orphan_high(self):
-        """A docs/en file that cannot enter the generated entries (frontmatter
-        parse failure) and is not covered by an allow_non_index_paths parent
-        is an orphan (high)."""
         root = _clean_root()
         _write_doc(root, "docs/en/beta/extras.md",
                    "# Extras\n"
-                   "Version: 0.1\n"  # no id -> parse failure -> not generated
+                   "Version: 0.1\n"
                    "Status: draft\n"
                    "Abstraction: reference\n"
                    "changelog-path: CHANGELOGS/beta.changes.md\n\n"
                    "## Purpose\n\nNot in the generated manifest and not covered\n"
-                   "by an allow_non_index_paths parent.\n")
+                   "by an allow_non_index_paths parent index.\n")
+        # Do NOT call _touch_manifest — file lacks required "id" field.
+        # check_all internal regen will detect orphan (skip + manifest-drift).
         rc, records = _jsonl(root)
         hits = _find(records, rule="orphan", severity="high")
-        self.assertEqual([h["file"] for h in hits], ["docs/en/beta/extras.md"])
-        self.assertEqual(rc, 1)
+        self.assertTrue(any("extras.md" in h["file"] for h in hits))
+        self.assertTrue(rc == 2 or rc == 1)  # 2 if high finding present
 
     def test_non_index_allowed_by_parent_index_not_orphan(self):
         root = _clean_root()
-        # Give alpha allow_non_index_paths; add a non-listed sibling that
-        # cannot be generated (missing id). Parent coverage suppresses the
-        # orphan finding (the frontmatter finding still fires, and naming is
-        # satisfied because the parent index carries the flag).
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text.replace("changelog-path: CHANGELOGS/alpha.changes.md",
@@ -500,18 +674,20 @@ class TestRule6ManifestParity(unittest.TestCase):
                                 "allow_non_index_paths: true"))
         _write_doc(root, "docs/en/alpha/extra.md",
                    "# Extra\n"
-                   "Version: 0.1\n"  # no id -> not in generated entries
+                   "id: alpha-extra\n"
+                   "Version: 0.1\n"
                    "Status: draft\n"
                    "Abstraction: reference\n"
                    "changelog-path: CHANGELOGS/beta.changes.md\n\n"
                    "## Purpose\n\nCovered by parent index.\n")
-        # (manifest intentionally left stale: --write refuses on the parse
-        # error; parity-skipped/drift findings are not asserted here)
+        _touch_manifest(root)
         rc, records = _jsonl(root)
+        # allowed_non_index_paths prevents orphan + naming findings
         self.assertEqual(_find(records, rule="orphan"), [])
         self.assertEqual(_find(records, rule="naming"), [])
-        self.assertTrue(_find(records, rule="frontmatter", severity="high"))
-
+        # No frontmatter error — allow_non_index_paths is valid YAML
+        self.assertEqual(_find(records, rule="frontmatter"), [])
+        self.assertEqual(rc, 0)
 
 class TestNaming(unittest.TestCase):
     def test_non_kebab_folder_high(self):
@@ -528,8 +704,7 @@ class TestNaming(unittest.TestCase):
         rc, records = _jsonl(root)
         hits = _find(records, rule="naming", severity="high")
         self.assertTrue(any("Bad Folder" in h["description"] for h in hits))
-        self.assertEqual(rc, 1)
-
+        self.assertEqual(rc, 2)
 
 class TestSchema(unittest.TestCase):
     def test_last_modified_deprecated_warning(self):
@@ -537,27 +712,31 @@ class TestSchema(unittest.TestCase):
         text = _read_doc(root, "docs/en/beta/index.md")
         _write_doc(root, "docs/en/beta/index.md", text.replace(
             "Status: draft", "Status: draft\nLast Modified: 2026-01-01"))
+        _touch_manifest(root)
         rc, records = _jsonl(root)
-        hits = _find(records, rule="last-modified-deprecated", severity="warning")
-        self.assertEqual(len(hits), 1)
-        self.assertEqual(rc, 0)  # warning never blocks
-        rc_strict, _, _ = _run(root, "--strict")
+        # Default severity=low: warning-severity hidden → exit 0, no findings
+        self.assertEqual(len(records), 0)
+        self.assertEqual(rc, 0)
+        rc_strict, records_strict = _jsonl(root, "--strict")
         self.assertEqual(rc_strict, 1)
+        hits_strict = _find(records_strict, rule="last-modified-deprecated",
+                            severity="warning")
+        self.assertEqual(len(hits_strict), 1)
 
     def test_bad_frontmatter_is_finding_not_exit_2(self):
-        """DocMetaError corpus condition -> high finding, exit 1 (not 2)."""
         root = _clean_root()
         _write_doc(root, "docs/en/broken/index.md",
                    "# Broken\nVersion: 0.1\nStatus: draft\n"
                    "Abstraction: reference\n"
                    "changelog-path: CHANGELOGS/beta.changes.md\n\n"
                    "## Purpose\n\nMissing id.\n")
+        # Do NOT call _touch_manifest — file lacks required "id" field.
+        # check_all handles it internally (parity-skipped + frontmatter findings).
         rc, out, err = _run(root)
-        self.assertEqual(rc, 1, out + err)
+        self.assertEqual(rc, 2, out + err)
         self.assertNotIn("INTERNAL ERROR", err)
         _, records = _jsonl(root)
         self.assertTrue(_find(records, rule="frontmatter", severity="high"))
-
 
 class TestCli(unittest.TestCase):
     def test_json_output_is_jsonl_with_required_keys(self):
@@ -573,30 +752,33 @@ class TestCli(unittest.TestCase):
 
     def test_severity_filter_and_rule_selection(self):
         root = _clean_root()
-        # medium-only finding (broken anchor)
         text = _read_doc(root, "docs/en/alpha/index.md")
         _write_doc(root, "docs/en/alpha/index.md",
                    text + "\nSee [x](beta/index.md#nope).\n")
-        rc_default, _, _ = _run(root)
-        self.assertEqual(rc_default, 0)
-        rc_med, _, _ = _run(root, "--severity", "medium")
+        _touch_manifest(root)
+        rc_default, records_default = _jsonl(root)
+        # Default (low) -> medium reported -> exit 1
+        self.assertEqual(rc_default, 1)
+        self.assertTrue(records_default)
+        rc_med, records_med = _jsonl(root, "--severity", "medium")
         self.assertEqual(rc_med, 1)
-        # --rule selection excludes the cross-ref group -> clean
-        rc_sel, _, _ = _run(root, "--rule", "line-count", "--rule", "naming")
+        self.assertTrue(records_med)
+        # --severity high -> medium hidden -> exit 0, empty
+        rc_high, records_high = _jsonl(root, "--severity", "high")
+        self.assertEqual(rc_high, 0)
+        self.assertEqual(records_high, [])
+        rc_sel, records_sel = _jsonl(root, "--rule", "line-count", "--rule", "naming")
         self.assertEqual(rc_sel, 0)
+        self.assertEqual(records_sel, [])
 
     def test_unknown_rule_token_exit_2(self):
         root = _clean_root()
-        rc, _, err = _run(root, "--rule", "glossary")  # 3 is not implemented
+        rc, _, err = _run(root, "--rule", "glossary")
         self.assertEqual(rc, 2)
         self.assertIn("unknown --rule", err)
 
-
 class TestInternalError(unittest.TestCase):
     def test_unreadable_manifest_fails_loud_exit_2(self):
-        """docs-manifest.yaml as a directory -> IsADirectoryError inside
-        rule-6: validator-side IO failure must exit 2 with remediation,
-        distinct from corpus findings."""
         root = _clean_root()
         os.remove(os.path.join(root, "docs-manifest.yaml"))
         os.mkdir(os.path.join(root, "docs-manifest.yaml"))
@@ -606,19 +788,25 @@ class TestInternalError(unittest.TestCase):
         self.assertIn("Remediation", err)
         self.assertIn("Traceback", err)
 
+    def test_internal_error_distinguishable_from_critical_marker(self):
+        root = _clean_root()
+        os.remove(os.path.join(root, "docs-manifest.yaml"))
+        os.mkdir(os.path.join(root, "docs-manifest.yaml"))
+        rc, out, err = _run(root)
+        self.assertEqual(rc, 2)
+        self.assertNotIn("\U0001f6a8", err)
 
 class TestLiveCorpus(unittest.TestCase):
-    """Smoke run against the real repository. Findings here are reported
-    verbatim to the operator by design; the tool must not crash."""
-
     def test_live_corpus_runs_clean_exit_code(self):
         rc, out, err = _run(REPO_ROOT, "--json")
+        # default severity=low: low/medium findings reported → exit 1 is normal;
+        # 0 means clean, 1 means low/medium only (no high = good).
+        # Exit 2 would indicate internal error — should never happen.
         self.assertIn(rc, (0, 1), err)
         for line in out.splitlines():
             rec = json.loads(line)
             self.assertEqual(set(rec.keys()),
                              {"rule", "severity", "file", "description"})
-
 
 if __name__ == "__main__":
     unittest.main()

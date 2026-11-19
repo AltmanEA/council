@@ -10,7 +10,7 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | --- | --- | --- |
 | `docmeta.py` | Parse and validate document frontmatter headers (required fields, versions, changelog refs). Library used by the tools below. | operational (Stage A) |
 | `gen_manifest.py` | Generate `docs-manifest.yaml` from document frontmatter (`--write` / `--check`, byte-exact, atomic). Sole writer of the manifest. | operational (Stage A) |
-| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Includes the **link-integrity** step: docs→manifest references are hard-fail (high); there is no code→docs scan any more (the `documenter_service/` / `operator_ingress/` packages were deleted in the 2026-11-19 reconstruction; `LINK_INTEGRITY_CODE_DIRS` is empty). Exit codes are informational, never gating (shipped: 0 clean, 1 findings at severity≥high, 2 internal error; migration to the frozen contract 0 clean / 1 findings / 2 critical is part of the pending rewrite). The agent runs it as the mandatory advisory pre-commit audit (silent when clean); the operator runs it post-commit on demand (OP-3). | operational (rewrite pending) |
+| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Includes the **link-integrity** step: docs→manifest references are hard-fail (high); there is no code→docs scan any more (the `documenter_service/` / `operator_ingress/` packages were deleted in the 2026-11-19 reconstruction; `LINK_INTEGRITY_CODE_DIRS` is empty). Exit codes are informational, never gating: `0` clean (silent when clean), `1` findings reported with none high, `2` at least one high reported (critical) — or internal error / bad `--rule` token (distinguished on output: `check_all: INTERNAL ERROR` / `ERROR:`, never the `🚨` marker). `--severity` sets the minimum **reported** severity (default `low`; `--strict` ≡ `--severity warning`). Human rendering: clean = silent; otherwise `⚠ findings: N` / `🚨 critical: N` header(s) plus severity-sorted hint lines obeying the token contract. The agent runs it as the mandatory advisory pre-commit audit (silent when clean); the operator runs it post-commit on demand (OP-3). | operational (frozen contract, Phase 0) |
 | `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (documentation-rules §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) |
 | `classify_bump.py` | Read-only diff→bump classifier ("AI proposes — algorithm records"): proposes `patch`/`minor`/`major` for a full candidate document; never writes documents, changelogs, or the manifest — only its JSONL decision log `tools/state/classify_log.jsonl`. Reuses the `check_all.py` §-reference resolver and `gen_manifest.build_entries` path resolution; ambiguous → minor with a §7.5 warning; escalations printed in documentation-rules §6 format; `--report` gate: escalation rate > 20% → `classifier requires redesign`, exit 3. Exit codes: 0 classification/identical/report-within-gate, 2 usage/refusal, 3 gate exceeded. | operational (Stage C) |
 | `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only by default (best-effort advisory gate, never a hard block under OP-3; bypassable). | operational, warn-only |
@@ -30,7 +30,7 @@ schema** checks and the **link-integrity** CI guard (O-3):
 - **docs→manifest (hard fail):** a document under `docs/en` or `docs/ru`
   whose body references a `docs/...md` path that is missing or not
   registered in `docs-manifest.yaml` yields a high-severity
-  `docs-manifest-link` finding (exit 1). Precedent for a hard CI on a prose
+  `docs-manifest-link` finding (critical, exit 2). Precedent for a hard CI on a prose
   invariant: ADR-003.
 
 Rules **3 (glossary terms)** and **5 (abstraction
@@ -64,8 +64,10 @@ rm tools/hooks/block-mode.flag       # back to warn-only
 ```
 
 In BLOCK mode a commit is rejected when `check_all` reports a
-**high**-severity finding or crashes (exit 2); medium/low findings are
-printed as warnings. The hook is a best-effort gate only — `git commit
+**high**-severity finding (`🚨 critical`, exit 2) or crashes / reports an
+internal error (exit 2 without the critical marker, fail-closed); findings at
+medium/low or below are printed as warnings (exit 1, never blocking — OP-3).
+The hook is a best-effort gate only — `git commit
 --no-verify` bypasses it (see consensus `sess-doc-reliability-algo`).
 
 ## Translation (external — ADR-014)

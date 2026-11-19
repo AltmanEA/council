@@ -233,7 +233,7 @@ Council-specific frontmatter keys the engine does not skip by default are passed
 
 When `change_type: audit`:
 
-- **Dispatch, do not re-implement:** run `python3 tools/check_all.py` (options: `--json`, `--severity low|medium|high`, `--rule <ID>`, `--strict`) and analyze its report. Line count, changelog existence, cross-reference anchors, manifest parity, naming and schema are deterministic findings owned by the tool — the skill MUST NOT re-check them by reading files, and MUST NOT claim to implement "audit rules 1–6" (`documentation-rules` §8).
+- **Dispatch, do not re-implement:** run `python3 tools/check_all.py` (options: `--json`, `--severity warning|low|medium|high` (default `low` = minimum *reported* severity), `--rule <ID>`, `--strict` (≡ `--severity warning`)) and analyze its report. Line count, changelog existence, cross-reference anchors, manifest parity, naming and schema are deterministic findings owned by the tool — the skill MUST NOT re-check them by reading files, and MUST NOT claim to implement "audit rules 1–6" (`documentation-rules` §8).
 - **Skill/AI-reserved judgments** (`docs/en/documentation-rules/index.md` §8 — rules 3 and 5):
   - **Rule 3 — glossary terms:** every domain term used in a body exists in `docs/en/glossary/index.md`;
   - **Rule 5 — abstraction consistency:** declared `abstraction:` matches actual content structure.
@@ -251,7 +251,7 @@ Mechanical documentation operations are owned by the deterministic suites under 
 | --- | --- | --- |
 | Regenerate the manifest | `python3 tools/gen_manifest.py --write` | Sole writer of `docs-manifest.yaml` (`documentation-rules` §2.2); hand-editing the manifest is prohibited |
 | Verify manifest parity | `python3 tools/gen_manifest.py --check` | Regenerate-and-diff idempotence check |
-| Compliance rule suite | `python3 tools/check_all.py [--json] [--severity] [--rule] [--strict]` | Rules 1, 2, 4, 6 + naming/schema; exit 0 clean, 1 findings, 2 internal error |
+| Compliance rule suite | `python3 tools/check_all.py [--json] [--severity] [--rule] [--strict]` | Rules 1, 2, 4, 6 + naming/schema; `--severity` = minimum **reported** severity (default `low`; `--strict` ≡ `--severity warning`); exit 0 clean (silent), 1 findings (none high), 2 critical (high reported) or internal error / bad `--rule` (distinguished on output) |
 | Version bump + changelog + manifest | `python3 tools/bump_version.py --id <id> --kind <patch\|minor\|major> --note "<reason>"` | Enforced write order: document content → changelog → manifest (last); atomic per-file temp+rename with rollback; exit 2 = refusal/rolled back |
 | Diff→bump classification proposal | `python3 tools/classify_bump.py` | Read-only; ambiguous → `minor` with a §7.5 warning; `--report` gate: escalation rate > 20% → redesign |
 | Candidate translation (external engine) | `<local_path>/translate.sh` from `defaults/translation.lock` | ADR-014; §Translation via external Translation Project; exit ≠ 0 is fail-closed |
@@ -264,7 +264,7 @@ Rules of engagement:
 2. **No rule fork.** Any check available in `tools/check_all.py` is obtained by invoking it — duplicating the check in prose or ad-hoc commands is prohibited (no-rule-fork, `docs/en/documentation-rules/index.md` §8).
 3. **No coverage claims.** Never describe this skill or the tools as implementing "audit rules 1–6"; rules 3 and 5 are AI/skill-reserved judgments.
 4. **Advisory classification alignment.** The lists in §Trust Levels MUST stay aligned with the shipped `tools/` behavior; the `trust_level` labels are advisory work-classification (mechanical vs semantic), never an execution gate (OP-1). A mismatch with tool behavior is escalated, not resolved silently.
-5. **Structured failure handling.** A tool exit code 2 is a refusal or a rollback — report it as such and escalate; never retry with weakened arguments. (Audit findings use check_all's own 0/1/2 codes — informational, never gating.)
+5. **Structured failure handling.** A tool exit code 2 is a refusal or a rollback — report it as such and escalate; never retry with weakened arguments. (Audit findings use check_all's own 0/1/2 codes — informational, never gating; for check_all, exit 2 means critical (high) findings were reported or the validator hit an internal error — the output marker `🚨 critical` vs `check_all: INTERNAL ERROR` tells the two apart; neither gates, both are operator-report material.)
 
 ---
 
