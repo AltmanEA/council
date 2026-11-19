@@ -1,3 +1,4 @@
+<!-- CHANGES v0.2.0: status vocabulary extension and addition of the Archive Layout section -->
 # Changelog: documentation-rules
 
 <!-- CHANGES v0.1.1: §2.5 first words reworded ("Changelog files store version history...") to avoid check_drift metadata-fingerprint false positive on body lines starting with the known key prefix `Version`; has_translation field added; RU created via Translation Project CLI (cloud consent, ADR-012). -->
