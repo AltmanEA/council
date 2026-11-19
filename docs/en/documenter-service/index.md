@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.1.0-draft
+Version: 1.2.0-draft
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -17,8 +17,9 @@ This specification replaces the v0.x Documenter suite from scratch. The previous
 ## Principles (normative)
 
 - **OP-1 — Instant operator approval.** A single operator may approve any documentation edit at any moment. No waiting, no gating: no tiers, policy gates, interlocks, readiness sentinels, out-of-band approval flows, or blocking pre-checks. The approval act is one conversation turn: the operator answers `approve` to a proposed changeset.
-- **OP-2 — Maximum simplicity.** Every retained mechanism must justify its existence; the default is deletion. Hard ceiling: at most 12 files and about 3,100–3,600 lines of documentation tooling code, one operator-facing command, no daemons, no state files, no configuration files. Exceeding the ceiling requires explicit operator approval.
+- **OP-2 — Maximum simplicity.** Every retained mechanism must justify its existence; the default is deletion. Hard ceiling: at most 12 files and about 3,100–3,600 lines of documentation tooling code (executable tooling only; `tools/README.md` is documentation and does not count), one operator-facing command, no daemons, no state files, no configuration files. Exceeding the ceiling requires explicit operator approval.
 - **OP-3 — Commit audit as primary error control.** Errors are controlled after the fact: commits are audited against the documentation rules, and a bad commit is reverted with git. Audit never blocks any action.
+- **Evolution stance.** Deterministic actions (fully specified by inputs and rules, no judgment involved) should eventually be delegated to scripts under `tools/`, dispatched by the skill under an operator-approved changeset; scripts never hold independent write authority. Each promoted script must respect the OP-2 ceiling by displacement — replacing, not adding. This stance does not authorize new approval gates, new tools, or new state files. Deferred items are recorded in the producing session's consensus document; the detailed design is deferred to a future separate session.
 
 ## Operating model
 
@@ -31,6 +32,10 @@ The loop per change:
 5. Later, on demand, the operator runs the audit over recent commits; on a bad commit the operator reverts it. The revert decision is entirely the operator's judgment.
 
 The Documentation Worker skill (`.agents/skills/documentation/SKILL.md`) remains the sole writer of `docs/`, `docs-manifest.yaml`, and `CHANGELOGS/`. There is no Documenter service, no MCP interface, and no intermediate authority between the proposal and the operator's yes.
+
+### Complex edits
+
+For complex updates spanning multiple steps, the skill may perform intermediate edits before assembling the final bundle. Intermediate states are not commits and do not violate the single-commit invariant (which applies only to the final commit). The operator's `approve` binds to the final assembled state on the summary card — the plan is agent-internal working context, never an approval object. The audit pass runs on the assembled bundle only. Intermediate files live in a session-scoped area outside the `docs/` tree; `sessions/` is gitignored by repository convention.
 
 ## Error control
 
@@ -62,6 +67,7 @@ These risks are knowingly accepted under OP-3:
 3. **Approval fatigue.** The operator may rubber-stamp; mitigations are UX-shaped, never gates.
 4. **Audit latency at scale.** Full-tree checks cost a few seconds; correctness outranks speed.
 5. **RU staleness.** Translation runs when the operator triggers it; delays accumulate drift without automated enforcement.
+6. **Abandoned intermediate work.** If an agent is interrupted during staged work, intermediate files may persist in git-ignored workspace areas. Nothing is committed; the committed state is unchanged. Cleanup is the operator's per the session workspace lifecycle. No recovery is needed.
 
 ## Surviving tooling
 

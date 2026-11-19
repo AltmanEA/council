@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "1.1.0"
+  version: "2.1.0"
 ---
 
 # Documentation Worker
@@ -47,6 +47,15 @@ The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that a
 4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).
 
 There is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).
+
+### Complex edits (staged work)
+
+For complex updates spanning multiple steps (large rewrites, multi-document refactors, splits), the skill may prepare intermediate edits in a **session-scoped staging area outside the live `docs/` tree** — conventionally `sessions/<session-id>/staging/`, gitignored by repository convention, so staged work can never be captured by a `git add`. Staged work does not change the approval model:
+
+- The **plan is agent-internal working context**, never an approval object; the operator sees and approves only the final assembled state (one summary card, one `approve`). The card must describe exactly the files and changes that will be committed.
+- Only at commit time are the assembled final files written to their controlled paths; intermediate states are not commits and do not violate the single-commit invariant (`docs/en/documenter-service/index.md`, §Complex edits).
+- The advisory pre-commit audit runs on the **assembled final bundle**, not on intermediate working-tree state.
+- If staged work is abandoned or interrupted, nothing was committed; the staged files are gitignored and cleanup is the operator's per the session workspace lifecycle (`fallback/index.md`). No recovery procedure is needed.
 
 ---
 
@@ -325,4 +334,4 @@ Fix failures mechanically where a `tools/` script owns the fix; escalate if unfi
 
 ---
 
-*Aligned with project documents v1.1.0-draft (Documenter reconstruction).*
+*Aligned with project documents v1.2.0-draft (Documenter reconstruction, staged work mode).*
