@@ -39,11 +39,25 @@ Validate all required fields are present. If any field is missing or ambiguous, 
 
 ### Step-(5) Approve (operator approval carrier — in-chat)
 
-The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:
+The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The in-chat artifact of the approve act is the **Approval Card / Карточка согласования** (never "Operator Surface"; not to be confused with Operator Ingress, Council Layer 2). The procedure:
 
-1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.
-2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).
-3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.
+1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the Approval Card and never blocks. Clean result → no Audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.
+2. **Present the Approval Card.** Fixed template, maximum 10 lines (normally 6–8), fixed order and labels; variable-format cards are prohibited:
+
+   ```
+   Files: <affected files, max 8 per line>
+   Category: <create | update | delete | split | translation>
+   Delta: +<N> / −<M> / net ±<K>
+   Classification: <mechanical | semantic> [agent proposed: <original>]
+   Audit: <omitted when clean; else ⚠ findings: N / 🚨 critical: N + hints>
+   Translations: <mode> · verified <N> · unverified <M>   # only if translation involved
+   State: <final | intermediate>                          # staged work only
+   ```
+
+   - `Files`, `Category`, `Delta`, `Classification` are required; `Classification` bracket appears only on operator override (lightweight override log); the `Audit` line is absent entirely when clean (silent when clean); the `Translations` line appears only when a translation is involved; `State: intermediate` warns the card binds to a not-yet-assembled bundle — approval binds to `final` (staged work, §Complex edits).
+   - `Translations` interpretation key: `M = 0` → no action; `M > 0` → drift needs operator attention.
+   - The machine-checkable contract of this template (field order, formats, the silent-when-clean rule, the override bracket form) is verified by `tests/test_card_contract.py` against `tests/card_contract.py`; the agent renders the card, the test suite guards its shape.
+3. **Wait for the operator's reply (approve grammar).** (a) A bare `approve` approves a **mechanical** change. (b) A **semantic** change (substantive rewrite of meaning) requires `approve: <noun phrase>` naming its object (e.g. `approve: rewrite of the Safety section`). (c) Boundary rulings: version bump + changelog = mechanical; glossary term addition = semantic. (d) The agent always renders classification as a labeled card field, never buried in prose; the operator may override. Absence of approval is never consent: without an `approve` reply in the conversation, do not write.
 4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).
 
 There is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).
@@ -52,7 +66,7 @@ There is no consent terminal, no approval_id, no expiry window, no HMAC record, 
 
 For complex updates spanning multiple steps (large rewrites, multi-document refactors, splits), the skill may prepare intermediate edits in a **session-scoped staging area outside the live `docs/` tree** — conventionally `sessions/<session-id>/staging/`, gitignored by repository convention, so staged work can never be captured by a `git add`. Staged work does not change the approval model:
 
-- The **plan is agent-internal working context**, never an approval object; the operator sees and approves only the final assembled state (one summary card, one `approve`). The card must describe exactly the files and changes that will be committed.
+- The **plan is agent-internal working context**, never an approval object; the operator sees and approves only the final assembled state (one Approval Card, one `approve`). The card must describe exactly the files and changes that will be committed.
 - Only at commit time are the assembled final files written to their controlled paths; intermediate states are not commits and do not violate the single-commit invariant (`docs/en/documenter-service/index.md`, §Complex edits).
 - The advisory pre-commit audit runs on the **assembled final bundle**, not on intermediate working-tree state.
 - If staged work is abandoned or interrupted, nothing was committed; the staged files are gitignored and cleanup is the operator's per the session workspace lifecycle (`fallback/index.md`). No recovery procedure is needed.
