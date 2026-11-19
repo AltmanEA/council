@@ -11,6 +11,15 @@
 
 # GENERATED — DO NOT EDIT (sole writer: tools/gen_manifest.py; see documentation-rules §2.2)
 documents:
+  - id: archive
+    path: docs/en/archive/index.md
+    title: Archive
+    version: 0.1.0
+    status: archive
+    abstraction: reference
+    changelog-path: CHANGELOGS/documenter-service.changes.md
+    allow_non_index_paths: true
+
   - id: documentation-rules
     path: docs/en/documentation-rules/index.md
     title: Documentation Rules
@@ -23,7 +32,7 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter
-    version: 1.3.0-draft
+    version: 1.3.1-draft
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/documenter-service/index-RU.md
@@ -31,12 +40,12 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-approval-surface
-    path: docs/en/documenter-service/legacy/approval-surface.md
+    path: docs/en/archive/documenter-service/approval-surface.md
     title: Approval Surface — Tier 2+ Out-of-Band Approval
     version: 0.2.2
-    status: draft
+    status: archive
     abstraction: protocol
-    has_translation: docs/ru/documenter-service/legacy/approval-surface-RU.md
+    has_translation: docs/ru/archive/documenter-service/approval-surface-RU.md
     changelog-path: CHANGELOGS/approval-surface.changes.md
     references:
       - documenter-service-mvp-contract
@@ -44,12 +53,12 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-configuration-guide
-    path: docs/en/documenter-service/legacy/configuration-guide.md
+    path: docs/en/archive/documenter-service/configuration-guide.md
     title: Documenter Configuration Guide
     version: 0.19.1-draft
-    status: draft
+    status: archive
     abstraction: reference
-    has_translation: docs/ru/documenter-service/legacy/configuration-guide-RU.md
+    has_translation: docs/ru/archive/documenter-service/configuration-guide-RU.md
     changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
   - id: documenter-service-impl-guide
@@ -66,21 +75,21 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-legacy
-    path: docs/en/documenter-service/legacy/index.md
+    path: docs/en/archive/documenter-service/index.md
     title: Documenter Legacy Archive (SUPERSEDED)
     version: 0.1.0
-    status: deprecated
+    status: archive
     abstraction: reference
     changelog-path: CHANGELOGS/documenter-service.changes.md
     allow_non_index_paths: true
 
   - id: documenter-service-legacy-spec
-    path: docs/en/documenter-service/legacy/spec-v0.md
+    path: docs/en/archive/documenter-service/spec-v0.md
     title: Documenter Service
     version: 0.24.1-draft
-    status: draft
+    status: archive
     abstraction: protocol
-    has_translation: docs/ru/documenter-service/legacy/spec-v0-RU.md
+    has_translation: docs/ru/archive/documenter-service/spec-v0-RU.md
     changelog-path: CHANGELOGS/documenter-service.changes.md
     references:
       - documenter-service-configuration-guide
@@ -88,10 +97,10 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-mvp-contract
-    path: docs/en/documenter-service/legacy/mvp-contract.md
+    path: docs/en/archive/documenter-service/mvp-contract.md
     title: Documenter Service — MVP Contract
     version: 0.12.1-draft
-    status: draft
+    status: archive
     abstraction: protocol
     changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
     references:
@@ -100,10 +109,10 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-mvp-data-models
-    path: docs/en/documenter-service/legacy/mvp-data-models.md
+    path: docs/en/archive/documenter-service/mvp-data-models.md
     title: Documenter Service — MVP Data Models
     version: 0.6.1-draft
-    status: draft
+    status: archive
     abstraction: reference
     changelog-path: CHANGELOGS/documenter-service-mvp-data-models.changes.md
     references:
@@ -112,10 +121,10 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-mvp-interfaces
-    path: docs/en/documenter-service/legacy/mvp-interfaces.md
+    path: docs/en/archive/documenter-service/mvp-interfaces.md
     title: Documenter Service — MVP Interfaces
     version: 0.10.1-draft
-    status: draft
+    status: archive
     abstraction: format
     changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
     references:
@@ -123,12 +132,12 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-policy-reference
-    path: docs/en/documenter-service/legacy/policy-reference.md
+    path: docs/en/archive/documenter-service/policy-reference.md
     title: Documenter Policy Reference
     version: 0.9.1-draft
-    status: draft
+    status: archive
     abstraction: reference
-    has_translation: docs/ru/documenter-service/legacy/policy-reference-RU.md
+    has_translation: docs/ru/archive/documenter-service/policy-reference-RU.md
     changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
     allow_non_index_paths: true
 
@@ -156,7 +165,7 @@ documents:
   - id: operator-ingress
     path: docs/en/operator-ingress/index.md
     title: Operator Ingress & Escalation
-    version: 1.1.0
+    version: 1.1.1
     status: draft
     abstraction: protocol
     has_translation: docs/ru/operator-ingress/index-RU.md
@@ -259,7 +268,7 @@ documents:
   - id: service-contract
     path: docs/en/service-contract/index.md
     title: Cross-Service Artifact & Event Contract
-    version: 0.3.0
+    version: 0.3.1
     status: draft
     abstraction: format
     has_translation: docs/ru/service-contract/index-RU.md
@@ -271,7 +280,7 @@ documents:
   - id: service-contract-error-management
     path: docs/en/service-contract/error-management.md
     title: Error Management & Policy
-    version: 0.2.3
+    version: 0.2.4
     status: draft
     abstraction: format
     has_translation: docs/ru/service-contract/error-management-RU.md

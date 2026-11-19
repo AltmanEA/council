@@ -2,9 +2,9 @@
 
 id: documenter-service-policy-reference
 Version: 0.9.0-draft
-Status: draft
+Status: archive
 Abstraction: reference
-has_translation: docs/ru/documenter-service/legacy/policy-reference-RU.md
+has_translation: docs/ru/archive/documenter-service/policy-reference-RU.md
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
 

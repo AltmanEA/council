@@ -28,7 +28,7 @@ Documenter is a thin concept, not a service: an approval loop plus one read-only
 | Documenter specification | `docs/en/documenter-service/index.md` | OP-1/OP-2/OP-3 principles, operating loop, audit contract, accepted risks, tool inventory |
 | Documentation rules (audit target) | `docs/en/documentation-rules/index.md` | the rules `tools/check_all.py` audits against |
 
-The superseded v0.x suite (service, tiers, policy engine, approval surface, MVP contracts) is archived under `docs/en/documenter-service/legacy/` — history only, not authority.
+The superseded v0.x suite (service, tiers, policy engine, approval surface, MVP contracts) is archived under `docs/en/archive/documenter-service/` — history only, not authority.
 
 ---
 

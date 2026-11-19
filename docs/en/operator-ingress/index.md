@@ -1,7 +1,7 @@
 # Operator Ingress & Escalation
 
 id: operator-ingress
-Version: 1.1.0
+Version: 1.1.1
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-ingress/index-RU.md
@@ -31,7 +31,7 @@ Three caller classes: `operator`, `agent`, `service`.
 - AuthN: local stdio process plus `COUNCIL_OPERATOR_ID` and `COUNCIL_OPERATOR_TOKEN` from the environment. The surface verifies the token and never forwards it to Layer 1.
 - AuthZ is deny-by-default. Auth failures (unknown caller, missing/invalid/revoked credential, expired token) are rejected per the AUTH.* error codes in `operator-ingress/index.md` §Caller Identity and Authorization; structural schema violations remain `VAL.001`.
 - `operator_id` is a human principal. Agent principals MUST NOT approve Documenter writes or resolve escalations at MVP.
-- Operator identity is defined **exclusively** in this section. The `operator_id` that resolves escalations (§Resolution Binding and Resume) and approves Documenter writes (`documenter.approve`, `documenter-service/approval-surface.md`) is the same human principal, valid cross-document. No other document may define or extend who counts as an operator.
+- Operator identity is defined **exclusively** in this section. The `operator_id` that resolves escalations (§Resolution Binding and Resume) and approves Documenter writes (`documenter.approve`, `archive/documenter-service/approval-surface.md`) is the same human principal, valid cross-document. No other document may define or extend who counts as an operator.
 
 #### Authentication (MVP)
 
@@ -43,7 +43,7 @@ Three caller classes are recognized:
 | `Agent` | Session-scoped signed token with role claim | Bound to session_id and role_id | Signature + role membership checked on ingress |
 | `Service` | HMAC-signed service account credential | Bound to service name and permitted operations | Pre-registered in policy config; HMAC verified on ingress |
 
-Token structure: minimal JWT-like format `{alg, iss, sub, exp}`. Agent tokens include an additional `role` claim binding the principal to a specific role_id. Shared HMAC secret stored in `documenter-service/policy-reference.md` §Field Reference under `hmac_secret`, defaulting to operator-provided value at startup. Expired tokens produce `AUTH.001`. Malformed signatures produce `AUTH.002`. Unknown caller classes produce `AUTH.003`.
+Token structure: minimal JWT-like format `{alg, iss, sub, exp}`. Agent tokens include an additional `role` claim binding the principal to a specific role_id. Shared HMAC secret stored in `archive/documenter-service/policy-reference.md` §Field Reference (SUPERSEDED, archived) under `hmac_secret`, defaulting to operator-provided value at startup. Expired tokens produce `AUTH.001`. Malformed signatures produce `AUTH.002`. Unknown caller classes produce `AUTH.003`.
 
 Error codes for auth failures:
 - `AUTH.001` — Expired credential. Request the caller to obtain a fresh token.
@@ -64,7 +64,7 @@ Error codes for auth failures:
 | `documenter.approve` | allow (Tier 2+, implemented; policy-gated) | deny | deny | mvp-contract.md §4 — DORMANT (ADR-013) |
 | `documenter.override_gate` | allow + reason | deny | deny | mvp-contract.md §4 — DORMANT (ADR-013) |
 
-This table is the single transport-level permission registry owned by this document. Contract semantics of `documenter.*` verbs are defined by their owner (`documenter-service/mvp-contract.md` §4), not here.
+This table is the single transport-level permission registry owned by this document. Contract semantics of `documenter.*` verbs are defined by their owner (`archive/documenter-service/mvp-contract.md` §4), not here.
 
 ## Security and Threat Model (MVP)
 
@@ -94,7 +94,7 @@ This table is the single transport-level permission registry owned by this docum
 | `council.override_precheck` | Record an authenticated `pre_check` override with a reason |
 | `documenter.audit` | Run a read-only compliance scan; `pre_check=true` returns a gate verdict |
 | `documenter.delegate` | Validate a change and return a diff preview; no writes at Tier 0–1 |
-| `documenter.approve` | Out-of-band approval for Tier 2+ (implemented; policy-gated — see `documenter-service/approval-surface.md`) |
+| `documenter.approve` | Out-of-band approval for Tier 2+ (implemented; policy-gated — see `archive/documenter-service/approval-surface.md`) |
 | `documenter.override_gate` | Override a pre-check or audit-gate failure with a recorded reason and authenticated `operator_id`; emits `documenter.override_gate` event in the canonical envelope |
 
 **Stub-swap record.** Of the six deferred-tool envelopes drafted at implementation Step 2, five were superseded by real authenticated handlers in the MVP transport: `documenter.delegate`, `documenter.approve`, `council.resolve_escalation`, `council.override_precheck`, and `documenter.override_gate`. Their drafted CONFIG.001 texts remain the localization source for the withdrawn drafts. `council.get_artifacts` continues to serve its drafted deferred envelope.
@@ -199,9 +199,9 @@ Notices map to the following event types in the canonical envelope: `notice.simp
 
 ## Documenter Integration
 
-<!-- STATUS: approval-lifecycle moved to `documenter-service/approval-surface.md` (Phase 2, sess-operator-surface-split); canonical contract mvp-contract.md §4. See AGENTS.md §1.7 -->
+<!-- STATUS: approval-lifecycle moved to `archive/documenter-service/approval-surface.md` (Phase 2, sess-operator-surface-split); canonical contract mvp-contract.md §4. See AGENTS.md §1.7 -->
 
-<span style="color:red;font-weight:bold">⚠ DORMANT (ADR-013) — MCP UNREGISTERED</span> The operator-side Tier 2+ approval and gate-override workflow is specified in `documenter-service/approval-surface.md`; the canonical approval contract and `documenter.*` event schemas are in `documenter-service/mvp-contract.md` §4. The Tier 2+ write branch is implemented and dormant behind the ADR-013 dual interlock.
+<span style="color:red;font-weight:bold">⚠ DORMANT (ADR-013) — MCP UNREGISTERED</span> The operator-side Tier 2+ approval and gate-override workflow is specified in `archive/documenter-service/approval-surface.md`; the canonical approval contract and `documenter.*` event schemas are in `archive/documenter-service/mvp-contract.md` §4. The Tier 2+ write branch is implemented and dormant behind the ADR-013 dual interlock.
 
 ## Event Delivery
 
@@ -220,7 +220,7 @@ Deferred items (A10, p2 roadmap; source: p3 impl-plan out-of-scope list): crash-
 - `service-contract/index.md` — artifact, event, and error schemas
 - `execution-runtime/index.md` — phase machine, persistence, escalation routing
 - `documenter-service/index.md` — Documenter interfaces and trust tiers
-- `documenter-service/approval-surface.md` — operator-side Tier 2+ approval and override workflow
-- `documenter-service/mvp-contract.md` §4 — canonical Tier 2+ approval contract and `documenter.*` event schemas
+- `archive/documenter-service/approval-surface.md` — operator-side Tier 2+ approval and override workflow (SUPERSEDED, archived)
+- `archive/documenter-service/mvp-contract.md` §4 — canonical Tier 2+ approval contract and `documenter.*` event schemas (SUPERSEDED, archived)
 - `planned-architecture/layer-2.md` — adapter responsibilities
 - `fallback/index.md` — manual fallback workflow

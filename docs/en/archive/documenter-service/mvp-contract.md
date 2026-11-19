@@ -2,7 +2,7 @@
 
 id: documenter-service-mvp-contract
 Version: 0.12.1-draft
-Status: draft
+Status: archive
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
 allow_non_index_paths: true

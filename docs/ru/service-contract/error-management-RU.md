@@ -1,7 +1,7 @@
 # Управление ошибками и политика
 
 id: service-contract-error-management
-Version: 0.2.3
+Version: 0.2.4
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/error-management-RU.md
@@ -41,7 +41,7 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 | `AUTH.004` | Отозванные учетные данные | Повторно аутентифицироваться |
 | `PROT.GATE.001` | Сбой контрольной точки предварительной проверки или предварительного аудита, требующий разрешения | Записать разрешение через `documenter.override_gate(reason, operator_id)` и повторить попытку |
 | `PROT.008` | Контрольная точка целостности предварительной проверки недоступна (Документатор недостижим) | Блокировать переход; запросить `council.override_precheck` |
-| `IO.999` | Необработанное исключение во время выполнения делегата() | Зафиксировать трассировку после инцидента (§Протокол безопасности #8), эскалировать |
+| `IO.999` | Необработанное исключение во время выполнения делегата() | Зафиксировать трассировку после инцидента (процедура трассировки находилась в упразднённом Протоколе безопасности v0.x, ныне в архиве), эскалировать |
 
 Документатор сопоставление: `hash_mismatch` → `IO.002`; `trust_mismatch` → `VAL.004`; `audit_mismatch` → `VAL.005`; `blocking_finding` → `PROT.005`; `skill_failure` → `IO.004`; `operator_timeout` → `PROT.006`; `gate_failure` → `PROT.GATE.001`; `unknown` → `IO.999`.
 
@@ -109,4 +109,4 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 - `planned-architecture/layer-1.md` — производители ролевых артефактов
 - `execution-runtime/index.md` — семантика фазы и персистентности
 - `operator-ingress/index.md` — рендеринг и доставка эскалации
-- `documenter-service/configuration-guide.md` — полезная нагрузка событий Документатора
+- `archive/documenter-service/configuration-guide.md` — полезная нагрузка событий Документатора

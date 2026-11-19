@@ -2,7 +2,7 @@
 
 id: documenter-service-legacy
 Version: 0.1.0
-Status: deprecated
+Status: archive
 Abstraction: reference
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service.changes.md
@@ -17,4 +17,4 @@ Archive rules:
 2. Do NOT cite these documents as current authority; the authoritative specification is `docs/en/documenter-service/index.md`.
 3. Do NOT delete the archive; git history is the recovery path and this folder is its readable tombstone.
 
-Contents: `spec-v0.md` (former primary spec, with its RU mirror `../ru/documenter-service/legacy/spec-v0-RU.md`), `mvp-contract.md`, `mvp-interfaces.md`, `mvp-data-models.md`, `policy-reference.md`, `approval-surface.md`, `configuration-guide.md`. What was abandoned and why is summarized in the migration section of the authoritative index.
+Contents: `spec-v0.md` (former primary spec, with its RU mirror `docs/ru/archive/documenter-service/spec-v0-RU.md`), `mvp-contract.md`, `mvp-interfaces.md`, `mvp-data-models.md`, `policy-reference.md`, `approval-surface.md`, `configuration-guide.md`. What was abandoned and why is summarized in the migration section of the authoritative index.

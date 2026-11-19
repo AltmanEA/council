@@ -2,9 +2,9 @@
 
 id: documenter-service-configuration-guide
 Version: 0.19.1-draft
-Status: draft
+Status: archive
 Abstraction: reference
-has_translation: docs/ru/documenter-service/legacy/configuration-guide-RU.md
+has_translation: docs/ru/archive/documenter-service/configuration-guide-RU.md
 changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
 ---

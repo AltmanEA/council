@@ -1,3 +1,5 @@
+<!-- CHANGES v0.2.4: cross-reference paths retargeted to archive/documenter-service after legacy migration (sess-archive-design-2026-11-19) -->
+<!-- CHANGES v0.3.1: cross-reference paths retargeted to archive/documenter-service after legacy migration (sess-archive-design-2026-11-19) -->
 <!-- CHANGES v0.3.0: Term renamed to Operator Ingress in Scope and localization lines; cross-reference updated (ADR-018) -->
 # Changelog — Cross-Service Artifact & Event Contract
 <!-- CHANGES v0.2.3 (error-management.md): Removed stray Source: line from body (compliance fix, AGENTS.md §7.2) (sess-doc-reliability-algo Stage A). -->

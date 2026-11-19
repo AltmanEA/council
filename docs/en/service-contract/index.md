@@ -1,7 +1,7 @@
 # Cross-Service Artifact & Event Contract
 
 id: service-contract
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/index-RU.md
@@ -193,4 +193,4 @@ Error codes, configuration precedence, schema versioning, critical finding valid
 - `planned-architecture/layer-1.md` — producers of role artifacts
 - `execution-runtime/index.md` — phase and persistence semantics
 - `operator-ingress/index.md` — rendering and escalation delivery
-- `documenter-service/configuration-guide.md` — Documenter event payloads
+- `archive/documenter-service/configuration-guide.md` — Documenter event payloads (SUPERSEDED, archived)

@@ -2,9 +2,9 @@
 
 id: documenter-service
 Version: 0.24.0-draft
-Status: draft
+Status: archive
 Abstraction: protocol
-has_translation: docs/ru/documenter-service/legacy/spec-v0-RU.md
+has_translation: docs/ru/archive/documenter-service/spec-v0-RU.md
 references: [documenter-service-configuration-guide, documenter-service-policy-reference]
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service.changes.md

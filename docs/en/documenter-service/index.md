@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.3.0-draft
+Version: 1.3.1-draft
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -12,7 +12,7 @@ changelog-path: CHANGELOGS/documenter-service.changes.md
 
 ## Migration note (v1.0.0)
 
-This specification replaces the v0.x Documenter suite from scratch. The previous design — trust tiers, a policy engine, a dual interlock, an approval surface, a consent terminal, a pre-audit gate, a hash store, intent records — reached a dead end: the gating machinery multiplied without improving documentation quality. It was abolished on 2026-11-19 by consensus `sess-documenter-concept-revision` (operator decision) and archived under `docs/en/documenter-service/legacy/`. This document is the whole system; the legacy archive is history, not authority.
+This specification replaces the v0.x Documenter suite from scratch. The previous design — trust tiers, a policy engine, a dual interlock, an approval surface, a consent terminal, a pre-audit gate, a hash store, intent records — reached a dead end: the gating machinery multiplied without improving documentation quality. It was abolished on 2026-11-19 by consensus `sess-documenter-concept-revision` (operator decision) and archived under `docs/en/archive/documenter-service/`. This document is the whole system; the legacy archive is history, not authority.
 
 ## Principles (normative)
 
@@ -86,4 +86,4 @@ Retained: `tools/gen_manifest.py` (sole manifest writer), `tools/check_all.py` (
 
 ## Legacy
 
-`docs/en/documenter-service/legacy/` (guard: `legacy/index.md`) holds the superseded v0.x suite: primary spec (`spec-v0.md`), MVP contract/interfaces/data-models, policy reference, approval surface, configuration guide. Read them only as history of why this simplicity was chosen. Per-document `legacy/` folders are superseded by the Archive convention (§Archive); migrating this folder under `docs/en/archive/` is a separate action item (sess-archive-design-2026-11-19).
+`docs/en/archive/documenter-service/` (guard: `archive/documenter-service/index.md`) holds the superseded v0.x suite: primary spec (`spec-v0.md`), MVP contract/interfaces/data-models, policy reference, approval surface, configuration guide. Read them only as history of why this simplicity was chosen. Per-document `legacy/` folders were superseded by the Archive convention (§Archive); the v0.x suite was migrated under `docs/en/archive/` on 2026-11-19 (sess-archive-design-2026-11-19).

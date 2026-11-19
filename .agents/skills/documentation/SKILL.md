@@ -62,7 +62,7 @@ The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that a
 3. **Wait for the operator's reply (approve grammar).** (a) A bare `approve` approves a **mechanical** change. (b) A **semantic** change (substantive rewrite of meaning) requires `approve: <noun phrase>` naming its object (e.g. `approve: rewrite of the Safety section`). (c) Boundary rulings: version bump + changelog = mechanical; glossary term addition = semantic. (d) The agent always renders classification as a labeled card field, never buried in prose; the operator may override. Absence of approval is never consent: without an `approve` reply in the conversation, do not write.
 4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).
 
-There is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).
+There is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/archive/documenter-service/` — do not reintroduce it).
 
 ### Complex edits (staged work)
 

@@ -1,7 +1,7 @@
 # Кросс-сервисный контракт на Артефакты и события
 
 id: service-contract
-Version: 0.2.2
+Version: 0.3.1
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/index-RU.md
@@ -193,4 +193,4 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 - `planned-architecture/layer-1.md` — производители артефактов Роли
 - `execution-runtime/index.md` — семантика Фазы и персистентности
 - `operator-ingress/index.md` — рендеринг и доставка Эскалации
-- `documenter-service/configuration-guide.md` — полезная нагрузка событий Документатора
+- `archive/documenter-service/configuration-guide.md` — полезная нагрузка событий Документатора

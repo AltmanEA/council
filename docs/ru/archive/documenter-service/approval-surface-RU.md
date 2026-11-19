@@ -2,11 +2,11 @@
 
 id: documenter-service-approval-surface
 Version: 0.1.0
-Status: draft
+Status: archive
 Abstraction: protocol
 references: [documenter-service-mvp-contract, operator-ingress]
 allow_non_index_paths: true
-has_translation: docs/ru/documenter-service/legacy/approval-surface-RU.md
+has_translation: docs/ru/archive/documenter-service/approval-surface-RU.md
 changelog-path: CHANGELOGS/approval-surface.changes.md
 
 ---

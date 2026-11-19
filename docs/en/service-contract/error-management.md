@@ -1,7 +1,7 @@
 # Error Management & Policy
 
 id: service-contract-error-management
-Version: 0.2.3
+Version: 0.2.4
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/error-management-RU.md
@@ -41,7 +41,7 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 | `AUTH.004` | Revoked credential | Re-authenticate |
 | `PROT.GATE.001` | Pre-check or pre-audit gate failure requiring override | Record override via `documenter.override_gate(reason, operator_id)` and re-attempt |
 | `PROT.008` | Pre-check integrity gate unavailable (Documenter unreachable) | Block transition; request `council.override_precheck` |
-| `IO.999` | Unhandled exception during delegate() execution | Capture post-mortem trace (§Safety Protocol #8), escalate |
+| `IO.999` | Unhandled exception during delegate() execution | Capture post-mortem trace (the trace procedure lived in the superseded v0.x Safety Protocol, now in the archive), escalate |
 
 Documenter mapping: `hash_mismatch` → `IO.002`; `trust_mismatch` → `VAL.004`; `audit_mismatch` → `VAL.005`; `blocking_finding` → `PROT.005`; `skill_failure` → `IO.004`; `operator_timeout` → `PROT.006`; `gate_failure` → `PROT.GATE.001`; `unknown` → `IO.999`.
 
@@ -109,4 +109,4 @@ When specifications conflict across documents, the following precedence order ap
 - `planned-architecture/layer-1.md` — producers of role artifacts
 - `execution-runtime/index.md` — phase and persistence semantics
 - `operator-ingress/index.md` — rendering and escalation delivery
-- `documenter-service/configuration-guide.md` — Documenter event payloads
+- `archive/documenter-service/configuration-guide.md` — Documenter event payloads (SUPERSEDED, archived)

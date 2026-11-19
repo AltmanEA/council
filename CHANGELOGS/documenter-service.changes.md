@@ -1,3 +1,4 @@
+<!-- CHANGES v1.3.1-draft: legacy archive migrated to docs/en/archive/documenter-service per Archive convention (sess-archive-design-2026-11-19 item 5) -->
 <!-- CHANGES v1.3.0-draft: addition of the Archive section to the Documenter spec -->
 <!-- CHANGES v1.2.3-draft: Phase 2 terminology sync: 'summary card' renamed to Approval Card in Complex-edits clause (operator approve, sess-documenter-impl) -->
 <!-- CHANGES v1.2.3-draft: RU mirror docs/ru/documenter-service/index-RU.md realigned (post-Approve auto_sync §3.3 mode b; mirrors Approval Card terminology rename; Version 1.2.2→1.2.3-draft). Write-gates: check_drift --phase4 exit 0, drift clean -->
