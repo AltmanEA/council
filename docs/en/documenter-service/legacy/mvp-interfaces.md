@@ -1,7 +1,7 @@
 # Documenter Service — MVP Interfaces
 
 id: documenter-service-mvp-interfaces
-Version: 0.10.0-draft
+Version: 0.10.1-draft
 Status: draft
 Abstraction: format
 references: [documenter-service-mvp-data-models]
@@ -10,11 +10,12 @@ changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
 
 ---
 
+> **SUPERSEDED** (2026-11-19, sess-documenter-concept-revision). This document describes the abandoned Documenter design (trust tiers, policy engine, dual interlock, approval surface). It is archived for history only and is NOT normative: do not execute, implement, cite as current, or link from new documents as if active. The authoritative specification is `docs/en/documenter-service/index.md`.
 ## Purpose
 
 Machine-readable interface schemas for the Documenter Service MVP. Core operations: `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface — write-branch `delegate(preview: false)`, `documenter.approve`, `documenter.override_gate` — is specified in `documenter-service/mvp-contract.md` §4 (operator-side workflow: `documenter-service/approval-surface.md`) and IMPLEMENTED in the build; it is gated at runtime by the policy interlock (`active_tier >= 2` + non-null `briefing_ref` + archived briefing file + authenticated operator ingress + Operator Ingress readiness sentinel, ADR-016). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`.
 
-Data models behind these interfaces: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
+Data models behind these interfaces: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/legacy/spec-v0.md`.
 
 **MVP scope boundary:** operates only on manifest-tracked artifacts (`docs/en/`, `docs/ru/`) and its own state (`documenter/`). Any `target_id` outside the manifest → `error_category: unknown`.
 
@@ -82,7 +83,7 @@ Preview only. Returns a diff without write intent; exempt from `allowed_operatio
 | trust_level | enum | Caller request `safe`\|`review`; accepted only when `requested >= derived` floor |
 | diff_input | string | Base64-encoded UTF-8 machine-readable diff |
 | preview | boolean | MUST be `true`. `false` or absent → reject `tier_interlock` |
-| audit_id | string\|null | Optional; when supplied, the pre-audit gate (rules 1–5, `documenter-service/index.md` §Pre-audit gate) runs before the preview completes (`audit_mismatch`/`blocking_finding` on failure). `null` = preview exempt from the gate, as in the write-branch contract where the gate guards apply only at Tier 2+ |
+| audit_id | string\|null | Optional; when supplied, the pre-audit gate (rules 1–5, `documenter-service/legacy/spec-v0.md` §Pre-audit gate) runs before the preview completes (`audit_mismatch`/`blocking_finding` on failure). `null` = preview exempt from the gate, as in the write-branch contract where the gate guards apply only at Tier 2+ |
 
 ### Response
 
@@ -212,7 +213,7 @@ Closed enum in every response, so the operator always knows the next step:
 
 `audit_mismatch`, `blocking_finding`, `tier_interlock`, `approval_expired`, `approval_invalidated`, `hash_mismatch`, `trust_mismatch`, `token_replay`, `lock_conflict`, `gate_failure`, `unknown`.
 
-Canonical names: `audit_mismatch` covers a missing, stale, or out-of-scope `audit_id` (pre-audit rules 1–3); `blocking_finding` covers high/critical findings and an incomplete scan (`has_remaining: true`, rule 5). These match `service-contract/error-management.md` §Error Code Registry (Documenter mapping) and the pre-audit gate in `documenter-service/index.md` §Pre-audit gate; earlier drafts that split these into `audit_missing` / `audit_stale` / `audit_scope_insufficient` / `finding_high` / `finding_critical` / `rescan_incomplete` are superseded.
+Canonical names: `audit_mismatch` covers a missing, stale, or out-of-scope `audit_id` (pre-audit rules 1–3); `blocking_finding` covers high/critical findings and an incomplete scan (`has_remaining: true`, rule 5). These match `service-contract/error-management.md` §Error Code Registry (Documenter mapping) and the pre-audit gate in `documenter-service/legacy/spec-v0.md` §Pre-audit gate; earlier drafts that split these into `audit_missing` / `audit_stale` / `audit_scope_insufficient` / `finding_high` / `finding_critical` / `rescan_incomplete` are superseded.
 
 `error_category` is not part of the frozen `service-contract` enumeration set, so this expansion is legal. `unknown` is reserved for genuine defects; a Tier 2+ call hitting `unknown` (as it would today) is a contract bug, since `tier_interlock` exists.
 

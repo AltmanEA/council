@@ -6,11 +6,12 @@ Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-contract, operator-ingress]
 allow_non_index_paths: true
-has_translation: docs/ru/documenter-service/approval-surface-RU.md
+has_translation: docs/ru/documenter-service/legacy/approval-surface-RU.md
 changelog-path: CHANGELOGS/approval-surface.changes.md
 
 ---
 
+> **SUPERSEDED / АРХИВ** (2026-11-19, sess-documenter-concept-revision). Документ описывает отменённую конструкцию Документатора (уровни доверия, движок политик, двойную блокировку, поверхность согласования). Хранится только как история; НЕ нормативен: не исполнять, не реализовывать, не цитировать как действующий. Действующая спецификация — `docs/en/documenter-service/index.md`.
 > **Граница AuthN/AuthZ определена исключительно в `operator-ingress/index.md` §Caller Identity and Authorization.** Этот документ не определяет, не расширяет и не переформулирует, кто считается оператором, и не описывает проверку учётных данных; при любом кажущемся противоречии приоритет остаётся за `operator-ingress/index.md`.
 
 ## Область применения
@@ -46,4 +47,4 @@ changelog-path: CHANGELOGS/approval-surface.changes.md
 - `documenter-service/mvp-contract.md` §4 — канонический контракт согласования Tier 2+ и схемы событий `documenter.approval` / `documenter.override_gate`
 - `operator-ingress/index.md` — транспорт, граница AuthN/AuthZ, реестр глаголов, ворота `pre_check`, уведомления
 - `documenter-service/policy-reference.md` — поля политики и рабочий процесс авторизации
-- `documenter-service/index.md` — интерфейсы Документатора и уровни доверия
+- `documenter-service/legacy/spec-v0.md` — интерфейсы Документатора и уровни доверия

@@ -10,9 +10,10 @@
 
 | ID | English | Русский |
 |----|---------|---------|
-| `documenter-service` | [Documenter Service](../en/documenter-service/index.md) | [Сервис Документатора](documenter-service/index-RU.md) |
-| `documenter-service-configuration-guide` | [Documenter Configuration Guide](../en/documenter-service/configuration-guide.md) | [Руководство по конфигурации Документатора](documenter-service/configuration-guide-RU.md) |
-| `documenter-service-policy-reference` | [Documenter Policy Reference](../en/documenter-service/policy-reference.md) | [Справочник политик Документатора](documenter-service/policy-reference-RU.md) |
+| `documenter-service` | [Documenter Service](../en/documenter-service/index.md) | Сервис Документатора (перевод перерабатывается) |
+| `documenter-service-legacy-spec` | [Documenter Service (SUPERSEDED)](../en/documenter-service/legacy/spec-v0.md) | [Сервис Документатора, архив](documenter-service/legacy/spec-v0-RU.md) |
+| `documenter-service-configuration-guide` | [Documenter Configuration Guide (SUPERSEDED)](../en/documenter-service/legacy/configuration-guide.md) | [Руководство по конфигурации Документатора, архив](documenter-service/legacy/configuration-guide-RU.md) |
+| `documenter-service-policy-reference` | [Documenter Policy Reference (SUPERSEDED)](../en/documenter-service/legacy/policy-reference.md) | [Справочник политик Документатора, архив](documenter-service/legacy/policy-reference-RU.md) |
 | `execution-runtime` | [Execution Runtime & Session Lifecycle](../en/execution-runtime/index.md) | [Среда исполнения и жизненный цикл сессии](execution-runtime/index-RU.md) |
 | `glossary` | [Glossary](../en/glossary/index.md) | [Глоссарий](glossary/index-RU.md) |
 | `operator-ingress` | [Operator Ingress & Escalation](../en/operator-ingress/index.md) | [Точка входа оператора и эскалация](operator-ingress/index-RU.md) |

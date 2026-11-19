@@ -22,24 +22,20 @@ documents:
 
   - id: documenter-service
     path: docs/en/documenter-service/index.md
-    title: Documenter Service
-    version: 0.24.0-draft
+    title: Documenter
+    version: 1.0.0-draft
     status: draft
-    abstraction: protocol
-    has_translation: docs/ru/documenter-service/index-RU.md
+    abstraction: conceptual
     changelog-path: CHANGELOGS/documenter-service.changes.md
-    references:
-      - documenter-service-configuration-guide
-      - documenter-service-policy-reference
     allow_non_index_paths: true
 
   - id: documenter-service-approval-surface
-    path: docs/en/documenter-service/approval-surface.md
+    path: docs/en/documenter-service/legacy/approval-surface.md
     title: Approval Surface — Tier 2+ Out-of-Band Approval
-    version: 0.2.1
+    version: 0.2.2
     status: draft
     abstraction: protocol
-    has_translation: docs/ru/documenter-service/approval-surface-RU.md
+    has_translation: docs/ru/documenter-service/legacy/approval-surface-RU.md
     changelog-path: CHANGELOGS/approval-surface.changes.md
     references:
       - documenter-service-mvp-contract
@@ -47,18 +43,40 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-configuration-guide
-    path: docs/en/documenter-service/configuration-guide.md
+    path: docs/en/documenter-service/legacy/configuration-guide.md
     title: Documenter Configuration Guide
-    version: 0.19.0-draft
+    version: 0.19.1-draft
     status: draft
     abstraction: reference
-    has_translation: docs/ru/documenter-service/configuration-guide-RU.md
+    has_translation: docs/ru/documenter-service/legacy/configuration-guide-RU.md
     changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
+  - id: documenter-service-legacy
+    path: docs/en/documenter-service/legacy/index.md
+    title: Documenter Legacy Archive (SUPERSEDED)
+    version: 0.1.0
+    status: deprecated
+    abstraction: reference
+    changelog-path: CHANGELOGS/documenter-service.changes.md
+    allow_non_index_paths: true
+
+  - id: documenter-service-legacy-spec
+    path: docs/en/documenter-service/legacy/spec-v0.md
+    title: Documenter Service
+    version: 0.24.1-draft
+    status: draft
+    abstraction: protocol
+    has_translation: docs/ru/documenter-service/legacy/spec-v0-RU.md
+    changelog-path: CHANGELOGS/documenter-service.changes.md
+    references:
+      - documenter-service-configuration-guide
+      - documenter-service-policy-reference
+    allow_non_index_paths: true
+
   - id: documenter-service-mvp-contract
-    path: docs/en/documenter-service/mvp-contract.md
+    path: docs/en/documenter-service/legacy/mvp-contract.md
     title: Documenter Service — MVP Contract
-    version: 0.12.0-draft
+    version: 0.12.1-draft
     status: draft
     abstraction: protocol
     changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
@@ -68,9 +86,9 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-mvp-data-models
-    path: docs/en/documenter-service/mvp-data-models.md
+    path: docs/en/documenter-service/legacy/mvp-data-models.md
     title: Documenter Service — MVP Data Models
-    version: 0.6.0-draft
+    version: 0.6.1-draft
     status: draft
     abstraction: reference
     changelog-path: CHANGELOGS/documenter-service-mvp-data-models.changes.md
@@ -80,9 +98,9 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-mvp-interfaces
-    path: docs/en/documenter-service/mvp-interfaces.md
+    path: docs/en/documenter-service/legacy/mvp-interfaces.md
     title: Documenter Service — MVP Interfaces
-    version: 0.10.0-draft
+    version: 0.10.1-draft
     status: draft
     abstraction: format
     changelog-path: CHANGELOGS/documenter-service-mvp-interfaces.changes.md
@@ -91,12 +109,12 @@ documents:
     allow_non_index_paths: true
 
   - id: documenter-service-policy-reference
-    path: docs/en/documenter-service/policy-reference.md
+    path: docs/en/documenter-service/legacy/policy-reference.md
     title: Documenter Policy Reference
-    version: 0.9.0-draft
+    version: 0.9.1-draft
     status: draft
     abstraction: reference
-    has_translation: docs/ru/documenter-service/policy-reference-RU.md
+    has_translation: docs/ru/documenter-service/legacy/policy-reference-RU.md
     changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
     allow_non_index_paths: true
 

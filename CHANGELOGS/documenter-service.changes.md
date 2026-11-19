@@ -1,3 +1,5 @@
+<!-- CHANGES v0.24.1-draft: Marked SUPERSEDED and relocated to legacy/ archive per sess-documenter-concept-revision (2026-11-19); archive-guard references retargeted to legacy/spec-v0.md -->
+<!-- CHANGES v1.0.0-draft: Reconstructed from scratch per sess-documenter-concept-revision consensus (2026-11-19): OP-1 instant operator approval, OP-2 maximum simplicity, OP-3 commit audit plus revert; v0.x suite superseded -->
 <!-- CHANGES v0.24.0-draft: Added activation overlay narrative (§Status section, §Tier 2+ activation): --verify-activation as primary activation diagnostic (baseline|active|invalid), overlay merge transparent, base policy stays Tier 1, overlay as alternative activation path in Authorization Workflow. RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.23.0-draft: Term renamed to Operator Ingress throughout; Tier 2+ interlock prose synchronized (ADR-018) -->
 <!-- CHANGES v0.22.1-draft: Approval semantics now cite mvp-contract §4 as canonical source instead of operator-surface Documenter Integration -->

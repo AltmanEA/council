@@ -1,7 +1,7 @@
 # Documenter Service — MVP Contract
 
 id: documenter-service-mvp-contract
-Version: 0.12.0-draft
+Version: 0.12.1-draft
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-interfaces, documenter-service-mvp-data-models]
@@ -10,9 +10,10 @@ changelog-path: CHANGELOGS/documenter-service-mvp-contract.changes.md
 
 ---
 
+> **SUPERSEDED** (2026-11-19, sess-documenter-concept-revision). This document describes the abandoned Documenter design (trust tiers, policy engine, dual interlock, approval surface). It is archived for history only and is NOT normative: do not execute, implement, cite as current, or link from new documents as if active. The authoritative specification is `docs/en/documenter-service/index.md`.
 ## Purpose
 
-Implementation contract for the Documenter Service MVP (Tier 0–1, read-only): technology stack, safety protocol, Tier 2+ reserved interfaces, and testing strategy. Interface schemas: `documenter-service/mvp-interfaces.md`. Data models and configuration: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/index.md`.
+Implementation contract for the Documenter Service MVP (Tier 0–1, read-only): technology stack, safety protocol, Tier 2+ reserved interfaces, and testing strategy. Interface schemas: `documenter-service/mvp-interfaces.md`. Data models and configuration: `documenter-service/mvp-data-models.md`. Architectural intent: `documenter-service/legacy/spec-v0.md`.
 
 **MVP boundary:** the build exposes `audit()`, `delegate(preview: true)`, `documenter.status()`. The Tier 2+ surface (`delegate(preview: false)`, the approval flow, `override_gate`, the durability sequence, and Tier 3 pattern auto-apply) is specified here (§2.2, §4) and **implemented in the build, gated by the policy interlock**: activation evaluates the effective policy (base repo policy + runtime activation overlay, if present and valid, merged at read-time — see `documenter-service/policy-reference.md` §Activation Overlay, ADR-020); overlay requires `active_tier >= 2`, a non-null `briefing_ref` whose file exists, matching `allowed_operations` entries (expanded from scope preset or advanced override at load time), and authenticated operator ingress (`COUNCIL_OPERATOR_ID` only; never a client parameter). With the repository policy at Tier 0–1 every non-preview call fails closed with `tier_interlock`. The **Multi-file Commit Protocol** (ordered renames across documents in one commit set) is **implemented in the build, policy-gated and dormant behind the dual interlock** (ADR-013) like the rest of the Tier 2+ write branch; the single-document legacy path remains available as the fallback write path.
 

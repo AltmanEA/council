@@ -1,7 +1,7 @@
 # Documenter Service — MVP Data Models
 
 id: documenter-service-mvp-data-models
-Version: 0.6.0-draft
+Version: 0.6.1-draft
 Status: draft
 Abstraction: reference
 references: [documenter-service-mvp-interfaces, service-contract]
@@ -10,6 +10,7 @@ changelog-path: CHANGELOGS/documenter-service-mvp-data-models.changes.md
 
 ---
 
+> **SUPERSEDED** (2026-11-19, sess-documenter-concept-revision). This document describes the abandoned Documenter design (trust tiers, policy engine, dual interlock, approval surface). It is archived for history only and is NOT normative: do not execute, implement, cite as current, or link from new documents as if active. The authoritative specification is `docs/en/documenter-service/index.md`.
 ## Purpose
 
 Runtime data structures, persistence formats, and configuration schema for the Documenter Service MVP. Interface schemas are defined in `documenter-service/mvp-interfaces.md`; safety protocol and testing in `documenter-service/mvp-contract.md`.

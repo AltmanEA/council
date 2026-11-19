@@ -1,14 +1,15 @@
 # Documenter Configuration Guide
 
 id: documenter-service-configuration-guide
-Version: 0.19.0-draft
+Version: 0.19.1-draft
 Status: draft
 Abstraction: reference
-has_translation: docs/ru/documenter-service/configuration-guide-RU.md
+has_translation: docs/ru/documenter-service/legacy/configuration-guide-RU.md
 changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
 ---
 
+> **SUPERSEDED** (2026-11-19, sess-documenter-concept-revision). This document describes the abandoned Documenter design (trust tiers, policy engine, dual interlock, approval surface). It is archived for history only and is NOT normative: do not execute, implement, cite as current, or link from new documents as if active. The authoritative specification is `docs/en/documenter-service/index.md`.
 ## Scope
 
 This document defines runtime data structures and their integrity rules: hash store, audit registry, intent record, event schema, glossary compliance modes, and RU alignment procedure. The policy file schema, load-time validation rules, operational tuning parameters, and the tier authorization workflow live in `documenter-service/policy-reference.md` — the single source of truth for configuration. Where this guide references a policy field by name (e.g. `audit_freshness`, `rescan_batch_ceiling`), §Field Reference in the policy reference defines its type, default, and allowed values; behavior attributed to a field here is not restated there.
@@ -93,7 +94,7 @@ Read → compare expected hash with current content hash → apply if match → 
 
 ## Intent Record
 
-A crash-recovery journal written to `documenter/intent/<tx_id>.json` before the first rename in a multi-file commit. Managed exclusively by Documenter, hidden from operator. Provides the "intent" half of the two-phase commit protocol (see main spec, `documenter-service/index.md`, §Safety Protocol #9).
+A crash-recovery journal written to `documenter/intent/<tx_id>.json` before the first rename in a multi-file commit. Managed exclusively by Documenter, hidden from operator. Provides the "intent" half of the two-phase commit protocol (see main spec, `documenter-service/legacy/spec-v0.md`, §Safety Protocol #9).
 
 **Schema:** `{tx_id: uuid-v4, target_id: string, created_at: ISO8601Z, entries: [{path, tmp_path, before_hash: sha256, after_hash: sha256}]}` — one entry per file in the changeset.
 

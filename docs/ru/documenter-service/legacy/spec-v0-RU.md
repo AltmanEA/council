@@ -4,13 +4,14 @@ id: documenter-service
 Version: 0.24.0-draft
 Status: draft
 Abstraction: protocol
-has_translation: docs/ru/documenter-service/index-RU.md
+has_translation: docs/ru/documenter-service/legacy/spec-v0-RU.md
 references: [documenter-service-configuration-guide, documenter-service-policy-reference]
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-service.changes.md
 
 ---
 
+> **SUPERSEDED / АРХИВ** (2026-11-19, sess-documenter-concept-revision). Документ описывает отменённую конструкцию Документатора (уровни доверия, движок политик, двойную блокировку, поверхность согласования). Хранится только как история; НЕ нормативен: не исполнять, не реализовывать, не цитировать как действующий. Действующая спецификация — `docs/en/documenter-service/index.md`.
 ## Назначение
 
 Документатор — это **Вспомогательный сервис**, находящийся за пределами трёхуровневой цепочки, обеспечивающий качество документации в соответствии с правилами `documentation-rules`. Он функционирует как **утилита по запросу** — все функции запускаются только при явном вызове оператором; фоновые процессы или наблюдатели за файлами не работают автономно. Он предоставляет два интерфейса: `audit()` для отчётов только для чтения и `delegate()` для операций записи через навык Работника документации. Четырёхуровневая модель доверия регулирует возможности записи в delegate(). Схемы параметров интерфейсов являются авторитетными в §Interfaces; поля конфигурации определены в Справочнике политик (`documenter-service/policy-reference.md`), а структуры данных времени выполнения — в Руководстве по конфигурации (`documenter-service/configuration-guide.md`).

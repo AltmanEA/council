@@ -1,24 +1,25 @@
 # Documenter Policy Reference
 
 id: documenter-service-policy-reference
-Version: 0.9.0-draft
+Version: 0.9.1-draft
 Status: draft
 Abstraction: reference
-has_translation: docs/ru/documenter-service/policy-reference-RU.md
+has_translation: docs/ru/documenter-service/legacy/policy-reference-RU.md
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/documenter-policy-reference.changes.md
 
 ---
 
+> **SUPERSEDED** (2026-11-19, sess-documenter-concept-revision). This document describes the abandoned Documenter design (trust tiers, policy engine, dual interlock, approval surface). It is archived for history only and is NOT normative: do not execute, implement, cite as current, or link from new documents as if active. The authoritative specification is `docs/en/documenter-service/index.md`.
 ## Purpose
 
-Authoritative schema for the Documenter policy file: field definitions, load-time validation rules, operational tuning parameters, and the step-by-step tier authorization workflow. Protocol semantics these fields configure (trust tiers, safety protocol, interface contracts) are defined in `documenter-service/index.md`; runtime data structures (hash store, intent record, event schema) are defined in `documenter-service/configuration-guide.md`. This document defines no behavior of its own — it is the configuration surface for behavior defined elsewhere.
+Authoritative schema for the Documenter policy file: field definitions, load-time validation rules, operational tuning parameters, and the step-by-step tier authorization workflow. Protocol semantics these fields configure (trust tiers, safety protocol, interface contracts) are defined in `documenter-service/legacy/spec-v0.md`; runtime data structures (hash store, intent record, event schema) are defined in `documenter-service/configuration-guide.md`. This document defines no behavior of its own — it is the configuration surface for behavior defined elsewhere.
 
 ---
 
 ## Policy File
 
-A YAML configuration defining which operations are permitted at each tier and compliance modes. Written and maintained by the operator. Time-based auto-proceed is not part of the model: approval is always an explicit operator action within a `delegate()` invocation, and the only auto-execution path is Tier 3 pattern-based auto-apply (see §Trust Tiers and §Approval semantics in the main spec, `documenter-service/index.md`).
+A YAML configuration defining which operations are permitted at each tier and compliance modes. Written and maintained by the operator. Time-based auto-proceed is not part of the model: approval is always an explicit operator action within a `delegate()` invocation, and the only auto-execution path is Tier 3 pattern-based auto-apply (see §Trust Tiers and §Approval semantics in the main spec, `documenter-service/legacy/spec-v0.md`).
 
 **Validator rule:** Documenter MUST reject loading any policy file where `allowed_operations` is non-empty while `active_tier < 2`. This prevents misconfiguration during deployment. **Authority rule:** Policy entries may only tighten the built-in trust classification floor from the main spec (§Trust Classification): an `allowed_operations` entry may require `review` where the table permits `safe`, but a policy combination authorizing a `trust_level` below the *static floor* for its `change_type` is invalid and MUST be rejected at load time — Documenter treats it as a misconfiguration error, consistent with the validator rule above.
 

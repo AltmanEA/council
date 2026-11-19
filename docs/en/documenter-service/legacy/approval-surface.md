@@ -1,16 +1,17 @@
 # Approval Surface — Tier 2+ Out-of-Band Approval
 
 id: documenter-service-approval-surface
-Version: 0.2.1
+Version: 0.2.2
 Status: draft
 Abstraction: protocol
 references: [documenter-service-mvp-contract, operator-ingress]
 allow_non_index_paths: true
-has_translation: docs/ru/documenter-service/approval-surface-RU.md
+has_translation: docs/ru/documenter-service/legacy/approval-surface-RU.md
 changelog-path: CHANGELOGS/approval-surface.changes.md
 
 ---
 
+> **SUPERSEDED** (2026-11-19, sess-documenter-concept-revision). This document describes the abandoned Documenter design (trust tiers, policy engine, dual interlock, approval surface). It is archived for history only and is NOT normative: do not execute, implement, cite as current, or link from new documents as if active. The authoritative specification is `docs/en/documenter-service/index.md`.
 > **AuthN/AuthZ boundary is exclusively defined in `operator-ingress/index.md` §Caller Identity and Authorization.** This document does not define, extend, or restate who counts as an operator or how credentials are verified; any apparent conflict is resolved in favor of `operator-ingress/index.md`.
 
 ## Scope
@@ -46,4 +47,4 @@ Defines the operator-facing Tier 2+ approval and gate-override workflow as rende
 - `documenter-service/mvp-contract.md` §4 — canonical Tier 2+ approval contract and `documenter.approval` / `documenter.override_gate` event schemas
 - `operator-ingress/index.md` — transport, AuthN/AuthZ boundary, verbs registry, `pre_check` gate, notices
 - `documenter-service/policy-reference.md` — policy fields and authorization workflow
-- `documenter-service/index.md` — Documenter interfaces and trust tiers
+- `documenter-service/legacy/spec-v0.md` — Documenter interfaces and trust tiers

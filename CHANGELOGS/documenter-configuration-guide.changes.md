@@ -1,3 +1,4 @@
+<!-- CHANGES v0.19.1-draft: Marked SUPERSEDED and relocated to legacy/ archive per sess-documenter-concept-revision (2026-11-19); archive-guard references retargeted to legacy/spec-v0.md -->
 <!-- CHANGES v0.19.0-draft: Added §Activation Overlay (runtime path resolution, effective policy merge, --status/verify diagnostics, scope expansion via scope presets). RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.18.2-draft: Rule references (§2.1, §3.3) and Cross-References AGENTS.md entry retargeted to documentation-rules -->
 <!-- CHANGES v0.18.2-draft (configuration-guide-RU.md): RU aligned — §2.1 reference retargeted, §3.3 translation clause restored from pre-existing truncation (full ADR-014/provenance text), Cross-References entry retargeted; check_drift clean. -->

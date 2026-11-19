@@ -1,3 +1,4 @@
+<!-- CHANGES v0.12.1-draft: Marked SUPERSEDED and relocated to legacy/ archive per sess-documenter-concept-revision (2026-11-19); archive-guard references retargeted to legacy/spec-v0.md -->
 <!-- CHANGES v0.12.0-draft: Effective policy now base + runtime activation overlay (merged at read-time, transparent to callers; base policy file stays Tier 1); scope presets expand to allowed_operations at load time (ADR-020); MVP boundary clause updated to reflect overlay as activation source. RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.11.1-draft: Tier 2+ sentinel path synchronized to documenter/.operator_ingress_ready (ADR-019) -->
 <!-- CHANGES v0.11.0-draft: Operator Ingress readiness sentinel wording synchronized; sentinel path unchanged (ADR-018) -->
