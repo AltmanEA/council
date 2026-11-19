@@ -55,8 +55,8 @@ documents:
   - id: documenter-service-impl-guide
     path: docs/en/documenter-service/impl-guide.md
     title: Documenter Implementation Guide
-    version: 0.2.0-draft
-    status: draft
+    version: 0.4.0
+    status: active
     abstraction: reference
     has_translation: docs/ru/documenter-service/impl-guide-RU.md
     changelog-path: CHANGELOGS/documenter-service-impl-guide.changes.md

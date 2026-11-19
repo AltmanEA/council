@@ -1,8 +1,8 @@
 # Documenter Implementation Guide
 
 id: documenter-service-impl-guide
-Version: 0.2.0-draft
-Status: draft
+Version: 0.4.0
+Status: active
 Abstraction: reference
 has_translation: docs/ru/documenter-service/impl-guide-RU.md
 changelog-path: CHANGELOGS/documenter-service-impl-guide.changes.md
@@ -35,10 +35,10 @@ hybrid.
 |---|---|---|
 | Documentation Worker skill — core orchestration | prompt | `.agents/skills/documentation/SKILL.md` |
 | Manifest generation | script | `tools/gen_manifest.py` (sole writer) |
-| Audit engine | script | `tools/check_all.py` (Phase 0 rewrite pending) |
+| Audit engine | script | `tools/check_all.py` (frozen contract, Phase 0 landed) |
 | Version/changelog/manifest writer | script | `tools/bump_version.py` (atomic, ordered) |
 | Bump classification proposal | script (read-only) | `tools/classify_bump.py` |
-| EN↔RU structural drift judge + write-gates | script | `tools/check_drift.py` (extended, Phase 1) |
+| EN↔RU structural drift judge + write-gates | script | `tools/check_drift.py` (`--phase4` gates landed, Phase 1) |
 | Translation generation | external | `techdoc-translator` via `defaults/translation.lock` (ADR-014) |
 | Translation mode (a) explicit | prompt + external | skill §create_ru; writes post-Approve |
 | Translation mode (b) auto_sync | prompt + external + gates | skill; writes only if all gates pass |
@@ -68,12 +68,12 @@ step of `index.md` §Operating model:
   exit `0` clean / `1` findings / `2` critical; findings never gate (OP-3).
   Rendering: clean is silent; otherwise `⚠ findings: N` or `🚨 critical: N`
   plus one-line fix hints, grouped and severity-sorted. `--severity` flag
-  keeps filter semantics (minimum reported severity); only exit codes change
-  in the pending rewrite. **Token contract** (stable, grep-stable for the
-  hook): literal tokens `severity=high|medium|low` in human output and the
-  `--json` schema; the `⚠`/`🚨` markers are visual only, not grep targets.
-  Current shipped behavior (legacy codes 0/1-high/2-error) is migrated by
-  Phase 0 below.
+  keeps filter semantics (minimum reported severity; default `low` per the
+  Phase 0 operator amendment). **Token contract** (stable, grep-stable for the
+  hook): literal tokens `severity=high|medium|low` in human
+  output and the `--json` schema; the `⚠`/`🚨` markers are visual only, not grep
+  targets.
+  Shipped behavior matches this contract (Phase 0 landed).
 - **Manifest** — `gen_manifest.py --write` is the sole writer; `--check`
   verifies parity. Hand-editing prohibited (documentation-rules §2.2).
 - **Version writing** — `bump_version.py` owns the normative order content →

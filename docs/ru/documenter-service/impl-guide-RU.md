@@ -1,8 +1,8 @@
 # Руководство по реализации Документатора
 
 id: documenter-service-impl-guide
-Version: 0.2.0-draft
-Status: draft
+Version: 0.4.0
+Status: active
 Abstraction: reference
 has_translation: docs/ru/documenter-service/impl-guide-RU.md
 changelog-path: CHANGELOGS/documenter-service-impl-guide.changes.md
@@ -35,10 +35,10 @@ references: [documenter-service, documentation-rules]
 |---|---|---|
 | Навык Documentation Worker — ядро оркестрации | prompt | `.agents/skills/documentation/SKILL.md` |
 | Генерация манифеста | script | `tools/gen_manifest.py` (единственный автор манифеста) |
-| Движок аудита | script | `tools/check_all.py` (переписывание — Фаза 0, в процессе) |
+| Движок аудита | script | `tools/check_all.py` (замороженный контракт, Фаза 0 выполнена) |
 | Писатель версии/чанелога/манифеста | script | `tools/bump_version.py` (атомарный, упорядоченный) |
 | Предложение классификации bumps | script (только чтение) | `tools/classify_bump.py` |
-| Судья структурного дрейфа EN↔RU + write-гейты | script | `tools/check_drift.py` (расширенный, Фаза 1) |
+| Судья структурного дрейфа EN↔RU + write-гейты | script | `tools/check_drift.py` (гейты `--phase4` выполнены, Фаза 1) |
 | Генерация перевода | external | `techdoc-translator` через `defaults/translation.lock` (ADR-014) |
 | Режим перевода (a) явный | prompt + external | навык §create_ru; запись после Approve |
 | Режим перевода (b) auto_sync | prompt + external + гейты | навык; запись только если все гейты пройдены |
@@ -68,12 +68,12 @@ references: [documenter-service, documentation-rules]
   код выхода `0` чисто / `1` замечания / `2` критично; замечания никогда не блокируют (OP-3).
   Рендеринг: чисто — без вывода; иначе `⚠ findings: N` или `🚨 critical: N`
   плюс однострочные подсказки по исправлению, сгруппированные и отсортированные по серьёзности. Флаг
-  `--severity` сохраняет семантику фильтра (минимальная отображаемая серьёзность); меняются только коды выхода
-  в ожидаемом переписывании. **Контракт токенов** (стабильный, пригодный для grep в
+  `--severity` сохраняет семантику фильтра (минимальный отображаемый уровень серьёзности; по умолчанию
+  `low` согласно поправке оператора Фазы 0). **Контракт токенов** (стабильный, пригодный для grep в
   хуке): литеральные токены `severity=high|medium|low` в человекочитаемом выводе и схема
   `--json`; маркеры `⚠`/`🚨` только визуальные, не цели для grep.
-  Текущее поведение (устаревшие коды 0/1-high/2-error) мигрируется
-  Фазой 0, описанной ниже.
+  Фактическое поведение соответствует этому контракту
+  (Фаза 0 выполнена).
 - **Манифест** — `gen_manifest.py --write` является единственным автором; `--check`
   проверяет паритет. Ручное редактирование запрещено (documentation-rules §2.2).
 - **Запись версии** — `bump_version.py` владеет нормативным порядком content →
