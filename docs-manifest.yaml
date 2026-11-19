@@ -52,6 +52,18 @@ documents:
     has_translation: docs/ru/documenter-service/legacy/configuration-guide-RU.md
     changelog-path: CHANGELOGS/documenter-configuration-guide.changes.md
 
+  - id: documenter-service-impl-guide
+    path: docs/en/documenter-service/impl-guide.md
+    title: Documenter Implementation Guide
+    version: 0.1.0-draft
+    status: draft
+    abstraction: reference
+    changelog-path: CHANGELOGS/documenter-service-impl-guide.changes.md
+    references:
+      - documenter-service
+      - documentation-rules
+    allow_non_index_paths: true
+
   - id: documenter-service-legacy
     path: docs/en/documenter-service/legacy/index.md
     title: Documenter Legacy Archive (SUPERSEDED)
