@@ -5,7 +5,7 @@
 | id | status | model | prompt_version | timestamp | report_ref |
 |---|---|---|---|---|---|
 | documentation-rules | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T07:49:39+0000 | runs/ |
-| documenter-service | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T05:32:45+0000 | runs/ |
+| documenter-service | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:01:01+0000 | runs/ |
 | documenter-service-approval-surface | drift | local-model | 2026.11-r5 | 2026-11-17T10:11:17+0000 | runs/ |
 | documenter-service-configuration-guide | missing |  |  |  | runs/ |
 | documenter-service-legacy-spec | missing |  |  |  | runs/ |

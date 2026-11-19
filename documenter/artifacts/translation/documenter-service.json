@@ -1,21 +1,21 @@
 {
-  "ok": 38,
-  "skip": 35,
+  "ok": 42,
+  "skip": 37,
   "fail": 0,
   "backend": "local",
   "model": "Qwen3.6-35B-A3B-NVFP4",
   "prompt_version": "2026.11-r5",
   "glossary_applied": 1,
-  "source_sha256": "31b96748b602761dcef91b54d5eddafc83f681746c1a51964647e2da7dad699c",
-  "output_sha256": "0f7867c75e85b5b07cb42e19490efc7817282dcf164342bdb3d8bc8a6e65b60e",
+  "source_sha256": "28ccbac461d574d9cbbfb5b0bce387f93ce2f0c97e97924fad480ee169b3ac5d",
+  "output_sha256": "beb1aa6a99d049da6df937844490131029251bc52cefb90c3029e7b68c2116ef",
   "exit_code": 0,
   "contract_version": "1.0.0",
-  "timestamp": "2026-11-19T05:32:45+0000",
+  "timestamp": "2026-11-19T06:01:01+0000",
   "message": "ok",
   "target_id": "documenter-service",
   "ru_path": "docs/ru/documenter-service/index-RU.md",
-  "en_sha256_at_commit": "31b96748b602761dcef91b54d5eddafc83f681746c1a51964647e2da7dad699c",
+  "en_sha256_at_commit": "28ccbac461d574d9cbbfb5b0bce387f93ce2f0c97e97924fad480ee169b3ac5d",
   "status": "unverified",
   "note": "RU bytes differ from run output",
-  "remediation_note": "Phase-4 remediation applied by the Documentation Worker skill to the engine output before write (9 mechanical fixes): mistranslation 'check battery'->'Набор проверок', 'Выживание инструментов'->'Сохранённые инструменты', grammar 'единичной операционный'->'операцией', capitalization 'по Уровень серьёзности'->'по уровню серьёзности', skill-name consistency (Documentation Worker), exit-code status clause reworded. RU bytes therefore intentionally differ from output_sha256; status unverified by byte-design, remediation recorded here. Explicit operator translation request 2026-11-19."
+  "remediation_note": "Phase-4 remediation applied by the Documentation Worker skill to the engine output before write (v1.2.0 pass, 14 mechanical fixes): inline-code mangling of the sole-writer paragraph (recomposed from EN), mistranslations ('заряд батареи'->'Набор проверок', 'Инструменты для выживания'->'Сохранённые инструменты', 'замечания, а не добавляя'->'замещением, а не добавлением', 'Модель операционный деятельности'->'Операционная модель'), grammar ('единичной операционный'->'операцией'), capitalization ('по Уровень серьёзности'), calques ('барьеры утверждения'->'гейты одобрения'), 'рамками Сессия'->'рамками сессии', skill-name consistency. RU bytes intentionally differ from output_sha256; status unverified by byte-design, remediation recorded here. Explicit operator translation request 2026-11-19 (RU mirror of staged-work-mode revision)."
 }
