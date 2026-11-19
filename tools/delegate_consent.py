@@ -144,8 +144,12 @@ def _cmd_propose(args) -> int:
     # --- Step 2: draft creation if not already present ---
     draft_path = os.path.join(root, _DRAFT)
     if not os.path.exists(draft_path):
-        if os.path.isfile(diff_file_name):
-            diff_path = diff_file_name
+        # Stage under documenter/intent/diffs/ by BASENAME (consent_terminal
+        # joins state_root + diff_file; an absolute path would escape staging).
+        diff_file_name = os.path.basename(diff_file_name)
+        src = args.diff_file
+        if os.path.isfile(src):
+            diff_path = src
         else:
             diff_path = os.path.join(root, _DIR_DIFFS, diff_file_name)
         if not os.path.isfile(diff_path):
@@ -167,6 +171,7 @@ def _cmd_propose(args) -> int:
             "tier": tier,
             "diff_file": diff_file_name,
         }
+        os.makedirs(os.path.dirname(draft_path), exist_ok=True)
         with open(draft_path, "w", encoding="utf-8") as fh:
             json.dump(draft, fh)
 
@@ -234,6 +239,7 @@ def _cmd_propose(args) -> int:
             .strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     link_path = os.path.join(root, _LINK)
+    os.makedirs(os.path.dirname(link_path), exist_ok=True)
     with open(link_path, "w", encoding="utf-8") as fh:
         json.dump(link, fh, indent=2)
 

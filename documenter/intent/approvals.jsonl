@@ -1,0 +1,2 @@
+{"approver_operator_id": "op-altmanea", "created_at": "2026-11-19T02:06:42Z", "diff_hash": "sha256:fda62a24d17509d163dd97d01107b05b7af24ecec09e6d1aa377795e04971709", "hmac": "c19f909401cfe3c4797b933510d6be302edf5c0ab45a339088ea516423f1bcdc", "proposer_operator_id": "agent", "request_id": "9c320329", "signed_at": "2026-11-19T02:07:50Z", "state": "approved"}
+{"request_id": "9c320329", "signed_at": "2026-11-19T02:12:04Z", "state": "consumed"}

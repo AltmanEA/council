@@ -203,7 +203,7 @@ emitted by the MVP build.
 | `diff_hash` | `sha256:hex` | Hash of the diff presented to the operator (bound to `approval_id`) |
 | `approval_id` | uuid-v4 \| null | The `approval_id` returned by `delegate()` when `approval_required` is true; present on out-of-band approvals, null for Tier 3 auto-approve events |
 | `decision` | `approved` \| `rejected` \| `auto_approved` | Out-of-band operator approve/reject or Tier 3 pattern decision |
-| `operator_id` | string | Identity of the operator who approved/rejected; MUST differ from the proposing actor.id (out-of-band). For `auto_approved`, contains `pattern:<pattern_id>` instead of a real operator ID. |
+| `operator_id` | string | Identity of the operator who approved/rejected; MUST differ from the proposing actor.id (out-of-band), except on the solo-operator path (ADR-017), where equality is permitted only for `trust_level: safe` with the `CONFIRMED_SOLE_REVIEWER` acknowledgment. For `auto_approved`, contains `pattern:<pattern_id>` instead of a real operator ID. |
 | `decided_at` | ISO8601Z | Timestamp of the approve/reject action via `documenter.approve()` |
 | `pattern_id` | string \| null | Only populated for `auto_approved` events |
 
