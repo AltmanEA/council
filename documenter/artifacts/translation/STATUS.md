@@ -8,6 +8,7 @@
 | documenter-service | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:01:01+0000 | runs/ |
 | documenter-service-approval-surface | drift | local-model | 2026.11-r5 | 2026-11-17T10:11:17+0000 | runs/ |
 | documenter-service-configuration-guide | missing |  |  |  | runs/ |
+| documenter-service-impl-guide | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:45:07+0000 | runs/ |
 | documenter-service-legacy-spec | missing |  |  |  | runs/ |
 | documenter-service-policy-reference | drift | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-17T14:13:08+0000 | runs/ |
 | execution-runtime | missing |  |  |  | runs/ |

@@ -1,0 +1,20 @@
+{
+  "ok": 151,
+  "skip": 57,
+  "fail": 0,
+  "backend": "local",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 3,
+  "source_sha256": "761ffcd926e8f245872f06d765f5e5d78198ea5e9df57bff4cb986e4854af460",
+  "output_sha256": "c891f2a8aa4062c534a6dd26c863403d9c6e3525b2c512ca43fc664d7f17b09b",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-19T06:45:07+0000",
+  "message": "ok",
+  "target_id": "documenter-service-impl-guide",
+  "ru_path": "docs/ru/documenter-service/impl-guide-RU.md",
+  "en_sha256_at_commit": "761ffcd926e8f245872f06d765f5e5d78198ea5e9df57bff4cb986e4854af460",
+  "status": "unverified",
+  "note": "RU bytes differ from run output"
+}

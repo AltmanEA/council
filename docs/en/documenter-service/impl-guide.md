@@ -1,9 +1,10 @@
 # Documenter Implementation Guide
 
 id: documenter-service-impl-guide
-Version: 0.1.0-draft
+Version: 0.2.0-draft
 Status: draft
 Abstraction: reference
+has_translation: docs/ru/documenter-service/impl-guide-RU.md
 changelog-path: CHANGELOGS/documenter-service-impl-guide.changes.md
 allow_non_index_paths: true
 references: [documenter-service, documentation-rules]
@@ -97,7 +98,7 @@ function); glossary compliance (documentation-rules §8 rule 3); abstraction
 consistency (rule 5); orphan classification. The skill remains the sole
 writer of `docs/`, `docs-manifest.yaml`, `CHANGELOGS/`.
 
-## Approval Card (operator surface for the approve act)
+## Approval Card (in-chat artifact of the approve act)
 
 Fixed template, maximum 10 lines (normally 6–8), fixed order and labels;
 variable-format cards are prohibited:

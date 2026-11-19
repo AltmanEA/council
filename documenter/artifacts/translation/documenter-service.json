@@ -16,6 +16,5 @@
   "ru_path": "docs/ru/documenter-service/index-RU.md",
   "en_sha256_at_commit": "28ccbac461d574d9cbbfb5b0bce387f93ce2f0c97e97924fad480ee169b3ac5d",
   "status": "unverified",
-  "note": "RU bytes differ from run output",
-  "remediation_note": "Phase-4 remediation applied by the Documentation Worker skill to the engine output before write (v1.2.0 pass, 14 mechanical fixes): inline-code mangling of the sole-writer paragraph (recomposed from EN), mistranslations ('заряд батареи'->'Набор проверок', 'Инструменты для выживания'->'Сохранённые инструменты', 'замечания, а не добавляя'->'замещением, а не добавлением', 'Модель операционный деятельности'->'Операционная модель'), grammar ('единичной операционный'->'операцией'), capitalization ('по Уровень серьёзности'), calques ('барьеры утверждения'->'гейты одобрения'), 'рамками Сессия'->'рамками сессии', skill-name consistency. RU bytes intentionally differ from output_sha256; status unverified by byte-design, remediation recorded here. Explicit operator translation request 2026-11-19 (RU mirror of staged-work-mode revision)."
+  "note": "RU bytes differ from run output"
 }
