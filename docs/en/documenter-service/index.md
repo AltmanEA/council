@@ -46,7 +46,7 @@ Check battery:
 | Translation staleness EN↔RU | whole tree | missing or structurally drifted RU mirrors |
 | Controlled-file deletion | whole tree | deletion of manifest-tracked documents |
 
-Exit codes are informational metadata, never gating: `0` clean, `1` findings, `2` critical findings. Human-facing rendering: clean is silent; otherwise `⚠ findings: N` or `🚨 critical: N` plus one-line fix hints, grouped and severity-sorted.
+Exit codes are informational metadata, never gating: `0` clean, `1` findings, `2` critical findings. Human-facing rendering: clean is silent; otherwise `⚠ findings: N` or `🚨 critical: N` plus one-line fix hints, grouped and severity-sorted. (Implementation status: the shipped `check_all.py` still uses the legacy codes 0 clean / 1 high+ findings / 2 internal error; migrating to the contract above is part of the pending check_all rewrite.)
 
 ### Recovery
 

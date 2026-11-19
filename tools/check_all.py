@@ -36,8 +36,9 @@ ONLY the deterministic side:
                                           not registered in docs-manifest.yaml
                                           (hard fail — ADR-003 precedent for a
                                           prose invariant enforced by CI)
-          code→docs            warning comments/docstrings under documenter_service/
-                                          (and operator_ingress/ when it exists)
+          code→docs            warning comments/docstrings under scanned package
+                                          dirs (LINK_INTEGRITY_CODE_DIRS; empty
+                                          since the 2026-11-19 reconstruction)
                                           referencing a missing/unregistered docs/
                                           path: WARN-ONLY by contract (worktree
                                           drift must not block legitimate
@@ -171,9 +172,10 @@ _GENERIC_MD_NAMES = {"index.md", "readme.md"}
 _LINK_DOC_PATH_RE = re.compile(r"(?<![\w/.-])(docs/(?:en|ru)/[\w./-]+\.md)(?![\w-])")
 
 #: Package directories whose Python comments/docstrings are scanned for
-#: code→docs references. `operator_ingress` joins the list when the package
-#: appears (p3 plan Steps 0-9); a missing directory is skipped silently.
-LINK_INTEGRITY_CODE_DIRS = ("documenter_service", "operator_ingress")
+#: code→docs references. The Council service packages were deleted in the
+#: 2026-11-19 reconstruction (sess-documenter-concept-revision); the list is
+#: empty, so the code→docs pass is inert. Kept as an extension point.
+LINK_INTEGRITY_CODE_DIRS = ()
 
 
 def _registered_doc_paths(root: str) -> set:

@@ -10,25 +10,20 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | --- | --- | --- |
 | `docmeta.py` | Parse and validate document frontmatter headers (required fields, versions, changelog refs). Library used by the tools below. | operational (Stage A) |
 | `gen_manifest.py` | Generate `docs-manifest.yaml` from document frontmatter (`--write` / `--check`, byte-exact, atomic). Sole writer of the manifest. | operational (Stage A) |
-| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Includes the **link-integrity** step (consensus sess-operator-surface-split O-3): docs→manifest references are hard-fail (high, exit 1); code→docs references in `documenter_service/` / `operator_surface/` comments are warn-only, promoted to blocking by `--strict-links` (clean pre-merge mode). Exit codes: 0 clean, 1 findings, 2 internal error. | operational (Stage B) |
+| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Includes the **link-integrity** step: docs→manifest references are hard-fail (high); there is no code→docs scan any more (the `documenter_service/` / `operator_ingress/` packages were deleted in the 2026-11-19 reconstruction; `LINK_INTEGRITY_CODE_DIRS` is empty). Exit codes are informational, never gating (shipped: 0 clean, 1 findings at severity≥high, 2 internal error; migration to the frozen contract 0 clean / 1 findings / 2 critical is part of the pending rewrite). The agent runs it as the mandatory advisory pre-commit audit (silent when clean); the operator runs it post-commit on demand (OP-3). | operational (rewrite pending) |
 | `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (documentation-rules §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) |
 | `classify_bump.py` | Read-only diff→bump classifier ("AI proposes — algorithm records"): proposes `patch`/`minor`/`major` for a full candidate document; never writes documents, changelogs, or the manifest — only its JSONL decision log `tools/state/classify_log.jsonl`. Reuses the `check_all.py` §-reference resolver and `gen_manifest.build_entries` path resolution; ambiguous → minor with a §7.5 warning; escalations printed in documentation-rules §6 format; `--report` gate: escalation rate > 20% → `classifier requires redesign`, exit 3. Exit codes: 0 classification/identical/report-within-gate, 2 usage/refusal, 3 gate exceeded. | operational (Stage C) |
-| `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only (soak) by default, blocking once the marker file exists. | operational, soak mode (Stage B) |
+| `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only by default (best-effort advisory gate, never a hard block under OP-3; bypassable). | operational, warn-only |
 | `translation_status.py` | Deterministic rebuild of translation provenance: per-document sidecar + `STATUS.md` status index from stored run reports under `documenter/artifacts/translation/runs/` (ADR-014). Idempotent; exit 0 ok, 2 nothing to do. | operational |
 | `check_drift.py` | Deterministic EN↔RU structural comparison (see below) — the sole Council-side structural judge; translation itself is external (ADR-014). | operational |
 | `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational |
-| `check_drift.py` | Deterministic EN↔RU structural comparison: 8 rules (heading count/depth, table rows/blocks, code fences, list markers, inline code count/set, hr count/pos, metadata fingerprint, EN-leakage). Used by full mode tests and e2e. | operational (M2) |
 | `tests/` | (empty after ADR-014; the translation test suite moved to the external project) | removed |
-| `consent_terminal.py` | Operator consent terminal for step-(5) documentation changesets (consensus `sess-operator-approval-tool`, 2026-11-18). File-based approval spool `documenter/intent/approvals.jsonl` (append-only, latest-record-wins, `fcntl.flock` on all access) with HMAC-signed operator decisions (procedural separation/detection only under the same-UID threat model — NOT cryptographic isolation), integrity/expiry prune (`state: denied` + reason), one-shot interactive `review` (safe tier: `y`; review tier: `y` then Enter-confirm, bare Enter/`s` expand verbatim diff; `n`/Ctrl-C/EOF deny; `q` quit undecided), tool-computed `diff_hash`/`request_id` (agent supplies neither), fail-closed parameterless `request` (ingests `documenter/intent/consent_draft.json`, quarantines bad drafts to `documenter/intent/quarantine/`, 64 KB diff cap). Credentials: `COUNCIL_OPERATOR_ID/SECRET` env or `~/.council` files (like `start_operator_ingress.sh`). Importable API: `create_request/read_pending/prune_pending/verify_decision/mark_consumed/decide`. Exit codes: 0 approved (or `q`), 1 denied/expired, 2 usage/error. §4 `documenter.approve`, ADR-017 solo flow, batch/`--watch`, and Operator Ingress coupling are OUT of MVP scope. | operational (MVP, sess-operator-approval-tool) |
-| `consent_review.sh` | Thin operator launcher: `tools/consent_review.sh [--request-id <id>]` → `python3 tools/consent_terminal.py review` with repo-root resolution. Run by the operator in a SEPARATE terminal (out-of-band), never spawned as an agent subprocess. | operational (MVP, sess-operator-approval-tool) |
-| `delegate_consent.py` | Orchestrator coupling the consent terminal with the Documenter Service Tier 2+ write branch (sess-consent-integration, 2026-11-18): `propose --target ID --diff-file FILE [--change-type update] [--trust-level safe] [--root DIR]` runs audit(pre-check) → delegate-write(propose), stages the consent draft (raw bytes, ≤64 KB) and writes the bind link `documenter/intent/delegate_consent_link.json` {request_id, approval_id, diff_b64, consent_diff_hash, …}; `consume --root DIR` verifies the operator decision (HMAC `verify_decision`) and double hash binding (record hash ↔ link hash ↔ sha256 of staged bytes) before calling `--approve --acknowledge CONFIRMED_SOLE_REVIEWER` and apply; on refusal/expiry the approval is left to expire, nothing is written. All writes go through `documenter_service` CLI (server-side guards unchanged: interlock, freshness, delay, expiry). Operator flow: `propose` → `tools/consent_review.sh` (separate terminal, one `y`) → `consume`. Exit codes: 0 success, 1 nothing-to-do, 2 structured error. Tests: `tests/test_delegate_consent.py` (unittest, 8 active + 1 retired-baseline skip). | operational |
-| `../documenter_service/` | Documenter Service MVP scaffold (Tier 0–1 read-only): `audit()`/`status()`/`delegate(preview:true)` поверх tools-ядра, без форка правил; status: scaffold (Stage 4, sess-doc-reliability-algo). | scaffold (Stage 4) |
 
 ## Rule coverage (check_all.py)
 
 `check_all.py` implements deterministic **rules 1, 2, 4, 6** from
-`docs/en/documenter-service/mvp-interfaces.md` (line count, changelog
+`docs/en/documentation-rules/index.md` §8 (line count, changelog
 existence, cross-reference anchors, manifest parity) plus the **naming and
 schema** checks and the **link-integrity** CI guard (O-3):
 
@@ -37,12 +32,6 @@ schema** checks and the **link-integrity** CI guard (O-3):
   registered in `docs-manifest.yaml` yields a high-severity
   `docs-manifest-link` finding (exit 1). Precedent for a hard CI on a prose
   invariant: ADR-003.
-- **code→docs (warn-only):** comments and docstrings under
-  `documenter_service/` (and `operator_surface/` when it exists) referencing
-  unregistered `docs/...md` paths yield `warning` `code-docs-link` findings
-  that never change the exit code — worktree drift during legitimate
-  implementation work must not block changesets. `--strict-links` promotes
-  them to blocking for clean pre-merge runs.
 
 Rules **3 (glossary terms)** and **5 (abstraction
 consistency)** remain skill/AI-reserved judgments and are NOT implemented

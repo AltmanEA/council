@@ -35,18 +35,18 @@ constraints: [optional]
 
 Validate all required fields are present. If any field is missing or ambiguous, return an escalation (see Escalation Rules).
 
-**Authority note:** (Applies when Documenter service is operational.) For Documenter-mediated invocations within the documentation workspace (`docs-manifest.yaml`), the effective trust level is assigned by Documenter's classifier (`documenter-service/index.md`, §Trust Classification); the `trust_level` received here is already validated and may only be stricter than what the operation's nature implies. The lists below mirror that classification and MUST stay aligned with it — this skill is the executor, not the authority. Alignment obligation extends to BOTH the Documenter classifier (`documenter-service/index.md`, §Trust Classification) AND the deterministic tools under `tools/` (validator rule suite, generator) when shipped; the tools provide atomicity, not authority.
+**Authority note:** the operator is the sole authority (OP-1, `docs/en/documenter-service/index.md`). The `trust_level` in the delegation is the agent's advisory classification of the change's nature (mechanical vs semantic); it classifies work, it does not gate execution — the tools under `tools/` provide atomicity, not authority.
 
-### Step-(5) Consent Gate (operator approval carrier)
+### Step-(5) Approve (operator approval carrier — in-chat)
 
-The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is carried out-of-band through the operator consent terminal (`tools/consent_terminal.py`, `tools/consent_review.sh`; design consensus `sess-operator-approval-tool`, 2026-11-18). When this skill is asked to apply a `review`-tier changeset to live files, the primary agent MUST obtain an operator consent decision first; the procedure (agent-side, this skill verifies at apply time):
+The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:
 
-1. **Register.** The agent writes a consent draft (`documenter/intent/consent_draft.json`: `target_path`, `summary` ≤200 chars, `tier` ∈ {safe, review}, `diff_file`) plus the diff file, then runs `python3 tools/consent_terminal.py request` (parameterless; the tool computes `diff_hash` and `request_id` itself and prints the operator command). A malformed draft is rejected fail-closed (quarantined, exit 2) — the agent corrects and retries, never proceeds.
-2. **Present, then wait.** The agent prints the exact command for the operator — `tools/consent_review.sh --request-id <id>` — to run in a **separate terminal** (out-of-band; never as an agent subprocess), states the expiry deadline, and ends its turn / polls the spool bounded by expiry.
-3. **Verification Gate (this skill's obligation, before ANY write).** Read the spool decision and require ALL of: latest `state == "approved"` ∧ `ct.verify_decision(...)` HMAC valid ∧ the diff the agent is about to apply hashes to the record's `diff_hash`. **Any other outcome — denied, expired, malformed, missing record, HMAC or hash mismatch — is a denial: do not write.** Absence of a decision is never consent (deny-by-default).
-4. **Consume.** After applying (or after a denial), the agent transitions the record to `consumed` (`ct.mark_consumed`).
+1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.
+2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).
+3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.
+4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).
 
-Honesty constraint (mirrors `tools/start_operator_ingress.sh`): HMAC signing gives **procedural separation and tamper *detection*, not cryptographic isolation** — under the same-UID threat model the agent could forge a record; signing makes forgery a *detectable incident*. The consent terminal is the step-(5) carrier only; the Tier 2+ `documenter.approve` path (§4), the ADR-017 solo flow, and Operator Ingress coupling are OUT of its scope and must not be conflated with it. See `tools/README.md` for the tool contract.
+There is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).
 
 ---
 
@@ -225,7 +225,7 @@ Council-specific frontmatter keys the engine does not skip by default are passed
 When `change_type: audit`:
 
 - **Dispatch, do not re-implement:** run `python3 tools/check_all.py` (options: `--json`, `--severity low|medium|high`, `--rule <ID>`, `--strict`) and analyze its report. Line count, changelog existence, cross-reference anchors, manifest parity, naming and schema are deterministic findings owned by the tool — the skill MUST NOT re-check them by reading files, and MUST NOT claim to implement "audit rules 1–6" (`documentation-rules` §8).
-- **Skill/AI-reserved judgments** (`documenter-service/mvp-interfaces.md`, §Compliance rules scanned — rules 3 and 5):
+- **Skill/AI-reserved judgments** (`docs/en/documentation-rules/index.md` §8 — rules 3 and 5):
   - **Rule 3 — glossary terms:** every domain term used in a body exists in `docs/en/glossary/index.md`;
   - **Rule 5 — abstraction consistency:** declared `abstraction:` matches actual content structure.
 - **Orphan classification (AI judgment):** when the manifest↔disk comparison reports on-disk documents absent from the manifest, distinguish truly orphaned files (no cross-reference anywhere) from auxiliary/operational files referenced from a parent document body (e.g., templates, prompts, helpers mentioned inside `fallback/fallback-mode.md`). Report only true orphans as compliance violations; flag auxiliaries as INFO-level notes.
@@ -252,10 +252,10 @@ Mechanical documentation operations are owned by the deterministic suites under 
 Rules of engagement:
 
 1. **Atomicity, not authority.** These tools provide atomic writes and deterministic checks; they grant no permission. Every dispatch is permitted only after step (5) Approve of `documentation-rules` §5.2, and only by this skill.
-2. **No rule fork.** Any check available in `tools/check_all.py` is obtained by invoking it — duplicating the check in prose or ad-hoc commands is prohibited (mirrors the Documenter `audit()` reuse rule, `documenter-service/mvp-interfaces.md` §Compliance rules scanned).
+2. **No rule fork.** Any check available in `tools/check_all.py` is obtained by invoking it — duplicating the check in prose or ad-hoc commands is prohibited (no-rule-fork, `docs/en/documentation-rules/index.md` §8).
 3. **No coverage claims.** Never describe this skill or the tools as implementing "audit rules 1–6"; rules 3 and 5 are AI/skill-reserved judgments.
-4. **Trust alignment.** The lists in §Trust Levels MUST stay aligned with the Documenter trust classifier (`documenter-service/index.md`, §Trust Classification) and with the shipped `tools/` behavior; a mismatch is escalated, not resolved silently.
-5. **Structured failure handling.** A tool exit code 2 is a refusal or a rollback — report it as such and escalate; never retry with weakened arguments.
+4. **Advisory classification alignment.** The lists in §Trust Levels MUST stay aligned with the shipped `tools/` behavior; the `trust_level` labels are advisory work-classification (mechanical vs semantic), never an execution gate (OP-1). A mismatch with tool behavior is escalated, not resolved silently.
+5. **Structured failure handling.** A tool exit code 2 is a refusal or a rollback — report it as such and escalate; never retry with weakened arguments. (Audit findings use check_all's own 0/1/2 codes — informational, never gating.)
 
 ---
 
@@ -306,7 +306,7 @@ Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skil
 - [ ] Metadata header follows `documentation-rules` §7.2 conventions (no `Language` field, `Source:` present for RU)
 - [ ] Split decision (if size exceeded) escalated to the operator with 2–3 candidate points (§7.3)
 - [ ] Changelog `--note` reason string is operator-supplied or quoted verbatim from the approved plan
-- [ ] Trust levels aligned with the Documenter classifier and shipped `tools/` behavior (§Trust Levels, `AGENTS.md` §1.7)
+- [ ] `trust_level` is advisory work-classification (mechanical vs semantic), aligned with shipped `tools/` behavior and OP-1 non-gating (§Trust Levels, `AGENTS.md` §1.7)
 - [ ] Russian synchronization per `documentation-rules` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
   - [ ] For explicit or `auto_sync` writes: line number parity verified; all four Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance)
   - [ ] External engine used per ADR-014 contract (lock file read, `--contract-version` passed, exit code 0, report stored); provenance sidecar + `STATUS.md` regenerated after write

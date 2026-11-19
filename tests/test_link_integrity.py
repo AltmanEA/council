@@ -7,10 +7,10 @@ trigger, condition O-1(ii)):
                    path that does not exist or is not registered in
                    docs-manifest.yaml → HIGH (hard fail, exit 1; ADR-003
                    precedent for a prose invariant enforced by CI).
-  code→docs      — comments/docstrings under documenter_service/ (and
-                   operator_ingress/ when present) referencing missing
-                   docs/... paths → WARN-ONLY (exit stays 0); --strict-links
-                   promotes them to blocking for clean pre-merge runs.
+  code→docs      — comments/docstrings under scanned package directories
+                   (LINK_INTEGRITY_CODE_DIRS; empty since the 2026-11-19
+                   reconstruction deleted the Council service packages, so
+                   this side is inert — kept as an extension point).
 
 Every case runs the CLI (check_all.main) against a temp copy of the fixture
 corpus tests/fixtures/check_all/corpus/ (same harness style as
@@ -178,103 +178,6 @@ class TestDocsToManifest(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual([f for f in findings
                           if f["rule"] == "docs-manifest-link"], [])
-
-
-class TestCodeToDocs(unittest.TestCase):
-    """code→docs: WARN-ONLY (exit 0); --strict-links promotes (O-3)."""
-
-    def _code(self, root, name, body):
-        return _write(root, f"documenter_service/{name}", body)
-
-    def test_registered_reference_clean(self):
-        root = _clean_root()
-        self._code(root, "widget.py",
-                   '"""Uses docs/en/alpha/index.md as spec."""\n\n'
-                   "# also docs/en/beta/index.md\nVALUE = 1\n")
-        rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)
-        self.assertEqual([f for f in findings
-                          if f["rule"] == "code-docs-link"], [])
-
-    def test_missing_reference_warns_without_blocking(self):
-        root = _clean_root()
-        self._code(root, "widget.py",
-                   "# see docs/en/gamma/index.md for contract\nVALUE = 1\n")
-        rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)  # warn-only: exit unchanged (O-3)
-        hits = [f for f in findings if f["rule"] == "code-docs-link"]
-        self.assertEqual(len(hits), 1)
-        self.assertEqual(hits[0]["severity"], "warning")
-        self.assertEqual(hits[0]["file"], "documenter_service/widget.py")
-        self.assertIn("docs/en/gamma/index.md", hits[0]["description"])
-
-    def test_strict_links_promotes_missing_reference(self):
-        root = _clean_root()
-        self._code(root, "widget.py",
-                   '"""See docs/en/gamma/index.md."""\nVALUE = 1\n')
-        rc, findings = _json_findings(root, "--rule", "link-integrity",
-                                      "--strict-links")
-        self.assertEqual(rc, 1)
-        hits = [f for f in findings if f["rule"] == "code-docs-link"]
-        self.assertEqual(len(hits), 1)
-        self.assertEqual(hits[0]["severity"], "high")
-        self.assertIn("--strict-links", hits[0]["description"])
-
-    def test_strict_links_promotes_unregistered_existing_target(self):
-        """Exists on disk but unregistered: silent in warn-only mode
-        (worktree drift tolerance), caught in clean pre-merge mode."""
-        root = _clean_root()
-        _write(root, "docs/en/beta/extra.md", "# Extra\n")
-        self._code(root, "widget.py",
-                   "# see docs/en/beta/extra.md\nVALUE = 1\n")
-        rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)
-        self.assertEqual([f for f in findings
-                          if f["rule"] == "code-docs-link"], [])
-        rc, findings = _json_findings(root, "--rule", "link-integrity",
-                                      "--strict-links")
-        self.assertEqual(rc, 1)
-        hits = [f for f in findings if f["rule"] == "code-docs-link"]
-        self.assertEqual(len(hits), 1)
-        self.assertIn("registered", hits[0]["description"])
-
-    def test_operator_ingress_dir_scanned_when_present(self):
-        root = _clean_root()
-        _write(root, "operator_ingress/core/thing.py",
-               '"""Per docs/en/gone/index.md."""\n')
-        rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)
-        hits = [f for f in findings if f["rule"] == "code-docs-link"]
-        self.assertEqual(len(hits), 1)
-        self.assertEqual(hits[0]["file"], "operator_ingress/core/thing.py")
-
-    def test_syntax_error_file_falls_back_to_comment_lines(self):
-        """Broken file must not crash the step; `#` lines still scanned."""
-        root = _clean_root()
-        self._code(root, "broken.py",
-                   "# see docs/en/gamma/index.md\nVALUE = (1\n")
-        rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)
-        hits = [f for f in findings if f["rule"] == "code-docs-link"]
-        self.assertEqual(len(hits), 1)
-        self.assertEqual(hits[0]["file"], "documenter_service/broken.py")
-
-    def test_pycache_skipped(self):
-        root = _clean_root()
-        _write(root, "documenter_service/__pycache__/cached.py",
-               "# see docs/en/gamma/index.md\n")
-        rc, findings = _json_findings(root, "--rule", "link-integrity")
-        self.assertEqual(rc, 0)
-        self.assertEqual([f for f in findings
-                          if f["rule"] == "code-docs-link"], [])
-
-    def test_strict_links_clean_corpus_still_zero(self):
-        """Baseline guard: with no findings, --strict-links changes nothing."""
-        root = _clean_root()
-        rc, findings = _json_findings(root, "--rule", "link-integrity",
-                                      "--strict-links")
-        self.assertEqual(rc, 0)
-        self.assertEqual(findings, [])
 
 
 class TestLiveCorpus(unittest.TestCase):

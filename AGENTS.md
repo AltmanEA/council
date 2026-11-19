@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 2.2.0
+Version: 3.0.0
 Status: active
 changelog-path: CHANGELOGS/agents.changes.md
 
@@ -17,29 +17,26 @@ This file is the **context router** for AI agents working in this repository. It
 
 **All changes to documentation artifacts — files under `docs/`, the manifest `docs-manifest.yaml`, and `CHANGELOGS/` — are made exclusively through the Documentation Worker skill** (`/.agents/skills/documentation/SKILL.md`, invoked via `skill("documentation")`), and only after the human operator's step (5) Approve of the proposed changeset (§5.1–§5.2 in `documentation-rules`). No exceptions — even typo fixes require explicit go-ahead after the propose step. Agents MUST NOT edit these files directly, hand-edit the manifest, or dispatch `tools/` write-scripts on their own authority; scripts provide atomicity, not authority.
 
-The Documenter Service is *not* the write executor: it is an on-demand audit/preview supporting service (§1.7). Agents that need a documentation change load the skill instruction (the `documentation` skill) and follow its Work Request Contract.
+**The approval carrier is in-chat (OP-1, per sess-documenter-concept-revision 2026-11-19).** Step (5) Approve is the operator's text reply in the same conversation turn — there is no out-of-band consent tool, no approval queue, no gating service. The agent presents a summary card (affected files, change category, line delta, mechanical/semantic classification) with the advisory audit verdict merged in (silent when clean); the operator replies `approve`, and for a **semantic** change must name its object (e.g. `approve: rewrite of the Safety section`). Every logical update lands as exactly one atomic commit (single-commit invariant); errors are recovered by `git revert` after audit, not prevented by gates. The authoritative specification is `docs/en/documenter-service/index.md`.
 
 ## 3. Working on Documenter — Required Inputs
 
-Developers of the Documenter Service, and the Documenter runtime itself, do **not** use this file as their specification. Their normative inputs live in the Documenter documentation folder:
+Documenter is a thin concept, not a service: an approval loop plus one read-only audit engine. Its normative inputs:
 
 | Input | Path | Covers |
 |-------|------|--------|
-| Service specification | `docs/en/documenter-service/index.md` | interfaces `audit()`/`delegate()`, trust tiers, safety protocol |
-| MVP implementation contract | `docs/en/documenter-service/mvp-contract.md` | stack, ports, Tier 2+ reserved interfaces, testing |
-| Interface schemas | `docs/en/documenter-service/mvp-interfaces.md` | machine-readable schemas, error categories |
-| Runtime data models | `docs/en/documenter-service/mvp-data-models.md` | audit registry, token model, policy schema |
-| Policy schema | `docs/en/documenter-service/policy-reference.md` | policy fields, authorization workflow |
-| Configuration guide | `docs/en/documenter-service/configuration-guide.md` | hash store, intent records, RU alignment |
-| Documentation rules (audit target) | `docs/en/documentation-rules/index.md` | the rules Documenter audits against |
+| Documenter specification | `docs/en/documenter-service/index.md` | OP-1/OP-2/OP-3 principles, operating loop, audit contract, accepted risks, tool inventory |
+| Documentation rules (audit target) | `docs/en/documentation-rules/index.md` | the rules `tools/check_all.py` audits against |
 
-The runtime consumes the manifest read-only via the `ManifestSource` port and never writes it.
+The superseded v0.x suite (service, tiers, policy engine, approval surface, MVP contracts) is archived under `docs/en/documenter-service/legacy/` — history only, not authority.
 
 ---
 
 ## 1.5 Project Stage
 
-The project has moved from the **Specification** phase to **Specification→MVP implementation started**: per operator decision of 2026-11-12 (ADR-011), implementation of Documenter MVP (Tier 0–1) and `tools/` is approved; the Documenter Tier 2+ write branch is implemented but **dormant behind the dual interlock**, gated exclusively by code-level checks per ADR-016: (a) policy state — `documenter_policy.yml` holds `active_tier: 1` with a null `briefing_ref`; (b) the Operator Ingress readiness sentinel `documenter/.operator_ingress_ready`, currently absent. The Operator Ingress (formerly Operator Surface; renamed per ADR-018; package executed `operator_surface/` → `operator_ingress/` and sentinel path renamed per ADR-019, both 2026-11-18) exists as code (`operator_ingress/`, p3 MVP, 2026-11-15) providing authenticated operator ingress, so the code-existence condition of ADR-013 is satisfied; Tier 2+ remains interlocked because neither code-level gate is open. Activation is an operator act out-of-session. Code implementation beyond that scope (Layer 0+) has not started. The code-based Moderator is not yet built. All Council sessions during this phase run in fallback mode until a Moderator adapter is available.
+The Documenter design was reconstructed from scratch on 2026-11-19 (consensus `sess-documenter-concept-revision`, operator decision) under three operator principles: **OP-1** instant operator approval without gating, **OP-2** maximum simplicity, **OP-3** commit audit plus revert as primary error control. The previous machinery — trust tiers, `documenter_policy.yml`, the dual interlock and readiness sentinel, the Operator Ingress service, the consent terminal, the approval surface, the `documenter_service/` package — was deleted (Commits B/A of the revision). The surviving system is: the Documentation Worker skill (sole writer), the deterministic tools under `tools/`, and the read-only audit engine `tools/check_all.py` (exit codes 0/1/2 are informational, never gating; run advisory pre-commit by the agent, post-commit by the operator on demand). `documenter/` holds only translation provenance artifacts.
+
+The code-based Moderator is not yet built. All Council sessions run in fallback mode until a Moderator adapter is available.
 
 **Fallback is frozen.** `fallback/index.md` is operational and is the working mode for development. Do not modify fallback documents as part of remediation, refactoring, or consistency cleanup. Changes require an explicit operator request and a confirmed critical defect.
 
@@ -57,21 +54,17 @@ This separation is documented in the consensus document from session `sess-docum
 
 ### 1.7 Tooling Separation
 
-Tools are divided into two categories:
-
 **Operational (available now):**
-- Documentation Worker skill (`/.agents/skills/documentation/SKILL.md`) — write and audit operations on documentation artifacts per `documentation-rules` rules; the sole write executor (see §2 Write Rule).
+- Documentation Worker skill (`/.agents/skills/documentation/SKILL.md`) — write and audit operations on documentation artifacts per `documentation-rules` rules; the sole write executor (see §2 Write Rule). The agent runs `tools/check_all.py` as the advisory pre-commit audit (mandatory, silent when clean, never blocking); the operator runs it post-commit on demand and reverts bad commits.
 
 - Translation Project CLI (`techdoc-translator`, external repository) — the EN→RU translation engine, extracted from `tools/` per ADR-014. Operational via its CLI contract (`docs/en/translation-project/`, exit codes 0–6, pinned by `defaults/translation.lock`). The engine knows nothing about Council; the Documentation Worker skill supplies glossary and skip-patterns and owns verification and writes. Council-side translation test suite rebuild is deferred to a dedicated session; provenance artifacts live in `documenter/artifacts/translation/` (operational, git-tracked, never manifest).
 
+- Deterministic tools (`tools/`): `check_all.py` (audit engine), `gen_manifest.py` (sole manifest writer), `check_drift.py`, `docmeta.py`, `bump_version.py`, `classify_bump.py`, `translation_status.py`, `sync_translator.sh`, `check_parity.py`. OP-2 ceiling: at most 12 files / ~3,600 LOC of tooling, one operator-facing command (`check_all.py`), zero daemons/state/config files.
+
 **Under development (not yet operational):**
-- Documenter Service — automated quality auditing and delegated writes. Implementation status (glossary, §Implementation Status): Tier 0–1 surface Operational (CLI and MCP stdio implemented, `documenter_service/` package, covered by tests); the MCP server is **not registered** in the workspace configuration — registration is an explicit operator decision. The Tier 2+ write branch is Dormant behind the dual interlock, gated exclusively by the code-level checks of ADR-016 (policy state plus the readiness sentinel `documenter/.operator_ingress_ready`); both currently deny activation. Agents MUST NOT invoke unregistered `documenter.*` MCP tools, MUST NOT register the MCP server, and MUST NOT edit `documenter_policy.yml` — changing `active_tier`, `allowed_operations`, or `briefing_ref` is an activation act reserved to the operator out-of-session. The Tier 0–1 CLI (`python3 -m documenter_service`) may be used in read-only/preview mode where the operator has sanctioned it.
-- Operator Ingress (formerly Operator Surface; renamed per ADR-018) — implementation complete at p3 MVP (`operator_ingress/`, ADR-015/ADR-016): JSON-RPC stdio verbs, pre_check gate, notices, readiness sentinel; creation of the sentinel on successful start is the code-level Tier 2+ condition. The surface is **not registered** in the workspace configuration and the sentinel is not created — runtime state is interlocked. Registration and activation are operator decisions out-of-session (`operator_ingress/REGISTRATION.md`). The code package rename `operator_surface/` → `operator_ingress/` was executed 2026-11-18 as the ADR-018 implementation act, and code-level identifier cleanup (sentinel path `documenter/.operator_ingress_ready`, `OPERATOR_INGRESS_SENTINEL`, `operator_ingress_ready()`) was executed the same day per ADR-019 in the interlock-closed window; stable wire identifiers NOT renamed: env vars, tool verbs, event names, event wire strings ("operator-surface" issuer/actor values).
 - Code-based Moderator — automated Council session execution. Not yet built (see §1.5); all sessions run in fallback mode.
 
-Prohibition: Do not invoke any `council.*`, `documenter.*`, or equivalent MCP tools while these services are under development. Enforcement point: the OpenCode workspace configuration (`.opencode/opencode.jsonc`) currently registers no MCP servers for Council or Documenter tools — their absence is the effective guard. Violating this rule without explicit operator approval is a protocol error.
-
-Relationship between the two: the Documentation Worker skill is the executor; Documenter Service (when operational) will act as an intermediary that calls the Documentation Worker on behalf of its caller. A single document update may involve both: Documenter evaluates trust and policy, then invokes the Documentation Worker to perform the mechanical file operations. Both must be referenced separately to avoid confusion.
+Prohibition: Do not invoke any `council.*` or equivalent MCP tools while the Moderator is under development. There are no `documenter.*` tools any more — the Documenter service was deleted in the 2026-11-19 reconstruction; do not recreate it (OP-2).
 
 **Prose-contract synchronization.** Behavioral contracts for tools (documented in prose, e.g. the Documentation Worker skill's wrapper contract and `tools/README.md`) are binding: whenever a tool's behavior changes, its prose contracts MUST be reviewed and updated in the same changeset. A prose contract diverging from implementation is a documentation defect (root cause: heading-translation contract breach, sess-translate-automation 2026-11-14; norm ratified sess-prevention-measures 2026-11-14).
 
@@ -82,5 +75,5 @@ Relationship between the two: the Documentation Worker skill is the executor; Do
 - `docs/en/documentation-rules/index.md` — normative documentation rules (§2 organization/manifest, §3 language policy, §4 glossary, §5 workflow and approval, §6 ambiguity, §7 file conventions, §8 compliance)
 - `docs-manifest.yaml` — generated index, read-only entry point for all agents
 - `.agents/skills/documentation/SKILL.md` — Documentation Worker skill (sole write executor)
-- `docs/en/documenter-service/` — Documenter specifications (§3 above)
+- `docs/en/documenter-service/index.md` — Documenter specification (OP-1/OP-2/OP-3, operating loop, audit contract)
 - `fallback/index.md` — fallback-mode Council procedure
