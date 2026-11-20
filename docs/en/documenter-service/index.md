@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.3.2
+Version: 1.4.0
 Status: active
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -17,9 +17,9 @@ This specification replaces the v0.x Documenter suite from scratch. The previous
 ## Principles (normative)
 
 - **OP-1 — Instant operator approval.** A single operator may approve any documentation edit at any moment. No waiting, no gating: no tiers, policy gates, interlocks, readiness sentinels, out-of-band approval flows, or blocking pre-checks. The approval act is one conversation turn: the operator answers `approve` to a proposed changeset.
-- **OP-2 — Maximum simplicity.** Every retained mechanism must justify its existence; the default is deletion. Hard ceiling: at most 12 files and about 3,100–3,600 lines of documentation tooling code (executable tooling only; `tools/README.md` is documentation and does not count), one operator-facing command, no daemons, no state files, no configuration files. Exceeding the ceiling requires explicit operator approval.
+- **OP-2 — Maximum simplicity.** Every retained mechanism must justify its existence; the default is deletion. There is no fixed numeric ceiling on tooling: the operator judges complexity at approval time under OP-1.
 - **OP-3 — Commit audit as primary error control.** Errors are controlled after the fact: commits are audited against the documentation rules, and a bad commit is reverted with git. Audit never blocks any action.
-- **Evolution stance.** Deterministic actions (fully specified by inputs and rules, no judgment involved) should eventually be delegated to scripts under `tools/`, dispatched by the skill under an operator-approved changeset; scripts never hold independent write authority. Each promoted script must respect the OP-2 ceiling by displacement — replacing, not adding. This stance does not authorize new approval gates, new tools, or new state files. Deferred items are recorded in the producing session's consensus document; the detailed design is deferred to a future separate session.
+- **Evolution stance.** Deterministic actions (fully specified by inputs and rules, no judgment involved) should eventually be delegated to scripts under `tools/`, dispatched by the skill under an operator-approved changeset; scripts never hold independent write authority. Prefer displacement — replacing, not adding — when promoting a script; this is a recommendation, not a requirement, and the operator judges each case at approval. This stance does not authorize new approval gates, new tools, or new state files. Deferred items are recorded in the producing session's consensus document; the detailed design is deferred to a future separate session.
 
 ## Operating model
 

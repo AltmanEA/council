@@ -1,7 +1,7 @@
 # Documenter Implementation Guide
 
 id: documenter-service-impl-guide
-Version: 0.4.0
+Version: 0.5.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/documenter-service/impl-guide-RU.md
@@ -132,19 +132,17 @@ version bump + changelog = mechanical; glossary term addition = semantic.
 (d) The agent always renders classification as a labeled card field, never
 buried in prose; the operator may override.
 
-## OP-2 ceiling compliance
+## Simplicity and displacement (guidance)
 
-Ceiling: ≤12 files / ~3,100–3,600 LOC of executable tooling
-(`tools/README.md` excluded). Counting rule: executable tooling (scripts,
-helpers, test code) counts; fixture data under `tools/tests/fixtures/` does
-not (same class as README). Displacement: any new script must name a
-displacement candidate in its changeset; absent one, escalate to the
-operator — never silently exceed the ceiling.
+There is no fixed numeric ceiling on tooling. Under OP-1 the operator judges
+each addition on its merits at approval time; complexity is a decision, not a
+threshold. Displacement — replacing rather than adding — remains a recommended
+default when a capability can be folded into an existing tool, but it is not a
+requirement and its absence is not an escalation condition.
 
-Recorded displacement: `tools/check_parity.py` (29 LOC) is displaced by the
-`check_drift.py` Phase-4 rule extension (Phase 1); zero code references,
-prose mentions cleaned in the same changeset. Trace: changelog-style note in
-`tools/README.md` (displaced-by, date, reason), not a ledger.
+Historical note: `tools/check_parity.py` was retired when its `phase4-*`
+checks moved into `check_drift.py` (Phase 1). This records what happened; it
+does not establish a rule.
 
 ## Phasing
 

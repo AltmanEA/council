@@ -59,7 +59,7 @@ This separation is documented in the consensus document from session `sess-docum
 
 - Translation Project CLI (`techdoc-translator`, external repository) — the EN→RU translation engine, extracted from `tools/` per ADR-014. Operational via its CLI contract (`docs/en/translation-project/`, exit codes 0–6, pinned by `defaults/translation.lock`). The engine knows nothing about Council; the Documentation Worker skill supplies glossary and skip-patterns and owns verification and writes. Council-side translation test suite rebuild is deferred to a dedicated session; provenance artifacts live in `documenter/artifacts/translation/` (operational, git-tracked, never manifest).
 
-- Deterministic tools (`tools/`): `check_all.py` (audit engine), `gen_manifest.py` (sole manifest writer), `check_drift.py`, `docmeta.py`, `bump_version.py`, `classify_bump.py`, `translation_status.py`, `sync_translator.sh`, `check_parity.py`. OP-2 ceiling: at most 12 files / ~3,600 LOC of tooling, one operator-facing command (`check_all.py`), zero daemons/state/config files.
+- Deterministic tools (`tools/`): `check_all.py` (audit engine), `gen_manifest.py` (sole manifest writer), `check_drift.py`, `docmeta.py`, `bump_version.py`, `classify_bump.py`, `translation_status.py`, `sync_translator.sh`, `check_parity.py`. There is no fixed numeric ceiling on tooling; the operator judges complexity at approval time under OP-1.
 
 **Under development (not yet operational):**
 - Code-based Moderator — automated Council session execution. Not yet built (see §1.5); all sessions run in fallback mode.
