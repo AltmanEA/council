@@ -13,7 +13,7 @@
   "timestamp": "2026-11-17T14:13:08+0000",
   "message": "ok",
   "target_id": "documenter-service-policy-reference",
-  "ru_path": "docs/ru/documenter-service/legacy/policy-reference-RU.md",
+  "ru_path": "docs/ru/archive/documenter-service/policy-reference-RU.md",
   "en_sha256_at_commit": "6acca3f2fb9638fa0220439518fc0cdd6a4243762975f3a96efa00f64e6c9ab7",
   "status": "drift",
   "note": "EN changed after translation"

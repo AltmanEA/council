@@ -15,6 +15,6 @@
   "target_id": "documenter-service",
   "ru_path": "docs/ru/documenter-service/index-RU.md",
   "en_sha256_at_commit": "28ccbac461d574d9cbbfb5b0bce387f93ce2f0c97e97924fad480ee169b3ac5d",
-  "status": "unverified",
-  "note": "RU bytes differ from run output"
+  "status": "drift",
+  "note": "EN changed after translation"
 }

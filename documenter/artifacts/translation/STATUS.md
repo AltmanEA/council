@@ -4,20 +4,20 @@
 
 | id | status | model | prompt_version | timestamp | report_ref |
 |---|---|---|---|---|---|
-| documentation-rules | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T07:49:39+0000 | runs/ |
-| documenter-service | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:01:01+0000 | runs/ |
+| documentation-rules | drift | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T07:49:39+0000 | runs/ |
+| documenter-service | drift | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:01:01+0000 | runs/ |
 | documenter-service-approval-surface | drift | local-model | 2026.11-r5 | 2026-11-17T10:11:17+0000 | runs/ |
 | documenter-service-configuration-guide | missing |  |  |  | runs/ |
-| documenter-service-impl-guide | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:45:07+0000 | runs/ |
+| documenter-service-impl-guide | drift | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-19T06:45:07+0000 | runs/ |
 | documenter-service-legacy-spec | missing |  |  |  | runs/ |
 | documenter-service-policy-reference | drift | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-17T14:13:08+0000 | runs/ |
-| execution-runtime | missing |  |  |  | runs/ |
-| glossary | missing |  |  |  | runs/ |
+| execution-runtime | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:45:30+0000 | runs/ |
+| glossary | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:47:21+0000 | runs/ |
 | operator-ingress | missing |  |  |  | runs/ |
-| planned-architecture | missing |  |  |  | runs/ |
-| planned-architecture-layer-0 | missing |  |  |  | runs/ |
+| planned-architecture | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:44:04+0000 | runs/ |
+| planned-architecture-layer-0 | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:49:25+0000 | runs/ |
 | planned-architecture-layer-1 | missing |  |  |  | runs/ |
-| planned-architecture-layer-2 | missing |  |  |  | runs/ |
+| planned-architecture-layer-2 | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:49:59+0000 | runs/ |
 | project-concept | unverified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-15T04:57:47+0000 | runs/ |
 | project-reference | missing |  |  |  | runs/ |
 | protocol-core | missing |  |  |  | runs/ |

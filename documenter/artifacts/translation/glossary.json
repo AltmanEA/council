@@ -1,6 +1,19 @@
 {
+  "ok": 90,
+  "skip": 116,
+  "fail": 0,
+  "backend": "local",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 49,
+  "source_sha256": "aa67f66c58a0878e305c5e3e3b877c9daec8756c2ebd9c52daa2e333673a6066",
+  "output_sha256": "8f0e02543b31b62a9f69551aa5934a5caf1388d2b97d2d8cacd09d03641ede06",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-20T02:47:21+0000",
+  "message": "ok",
   "target_id": "glossary",
   "ru_path": "docs/ru/glossary/index-RU.md",
-  "en_sha256_at_commit": null,
-  "status": "missing"
+  "en_sha256_at_commit": "aa67f66c58a0878e305c5e3e3b877c9daec8756c2ebd9c52daa2e333673a6066",
+  "status": "verified"
 }

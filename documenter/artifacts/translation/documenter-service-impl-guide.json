@@ -15,6 +15,6 @@
   "target_id": "documenter-service-impl-guide",
   "ru_path": "docs/ru/documenter-service/impl-guide-RU.md",
   "en_sha256_at_commit": "761ffcd926e8f245872f06d765f5e5d78198ea5e9df57bff4cb986e4854af460",
-  "status": "unverified",
-  "note": "RU bytes differ from run output"
+  "status": "drift",
+  "note": "EN changed after translation"
 }

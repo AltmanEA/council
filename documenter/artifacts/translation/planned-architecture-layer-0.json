@@ -1,6 +1,19 @@
 {
+  "ok": 28,
+  "skip": 39,
+  "fail": 0,
+  "backend": "local",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 1,
+  "source_sha256": "28f56e12734d54736fd96e52e4e996e65b2cb7ee4813df02c43e77700849c572",
+  "output_sha256": "6874b9762aeb3707e62c88be7532016887ce640e3d2fa8a66a58816a64c1492b",
+  "exit_code": 0,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-20T02:49:25+0000",
+  "message": "ok",
   "target_id": "planned-architecture-layer-0",
   "ru_path": "docs/ru/planned-architecture/layer-0-RU.md",
-  "en_sha256_at_commit": null,
-  "status": "missing"
+  "en_sha256_at_commit": "28f56e12734d54736fd96e52e4e996e65b2cb7ee4813df02c43e77700849c572",
+  "status": "verified"
 }

@@ -13,7 +13,7 @@
   "timestamp": "2026-11-17T10:11:17+0000",
   "message": "ok",
   "target_id": "documenter-service-approval-surface",
-  "ru_path": "docs/ru/documenter-service/legacy/approval-surface-RU.md",
+  "ru_path": "docs/ru/archive/documenter-service/approval-surface-RU.md",
   "en_sha256_at_commit": "599a72f42ab12ac43ecf9269ae3c55b9ac24ecb35e25205e9d5870e534b13eea",
   "status": "drift",
   "note": "EN changed after translation"

@@ -15,6 +15,6 @@
   "target_id": "documentation-rules",
   "ru_path": "docs/ru/documentation-rules/index-RU.md",
   "en_sha256_at_commit": "851a0c7dfecd5a70ad1ea0d920b9d9bece7eff97f80fd255904b2d0f47b5c175",
-  "status": "unverified",
-  "note": "RU bytes differ from run output"
+  "status": "drift",
+  "note": "EN changed after translation"
 }
