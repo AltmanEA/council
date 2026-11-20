@@ -265,6 +265,14 @@ documents:
     has_translation: docs/ru/scenario/index-RU.md
     changelog-path: CHANGELOGS/scenario.changes.md
 
+  - id: selector
+    path: docs/en/selector/index.md
+    title: Selector
+    version: 0.1.0
+    status: draft
+    abstraction: conceptual
+    changelog-path: CHANGELOGS/selector.changes.md
+
   - id: service-contract
     path: docs/en/service-contract/index.md
     title: Cross-Service Artifact & Event Contract

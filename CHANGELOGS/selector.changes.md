@@ -1,0 +1,1 @@
+<!-- CHANGES v0.1.0: Initial draft specification for Selector (read-only information-retrieval utility for docs and codebase; interim skill+subagent, final separate module), published per operator approval 2026-11-20 (sess-selector-spec-2026-11-20) -->
