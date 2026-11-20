@@ -4,6 +4,7 @@ id: selector
 Version: 0.1.0
 Status: draft
 Abstraction: conceptual
+has_translation: docs/ru/selector/index-RU.md
 changelog-path: CHANGELOGS/selector.changes.md
 
 ---

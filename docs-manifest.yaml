@@ -271,6 +271,7 @@ documents:
     version: 0.1.0
     status: draft
     abstraction: conceptual
+    has_translation: docs/ru/selector/index-RU.md
     changelog-path: CHANGELOGS/selector.changes.md
 
   - id: service-contract
