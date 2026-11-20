@@ -125,6 +125,22 @@ class TestOutputSchema(unittest.TestCase):
         items = ranked.get("patternProperties", {}).get("^.*$", {})
         self.assertIn("rationale", items.get("required", []))
 
+    def test_ranked_ids_items_required_rank_and_discoverable(self):
+        """Ordering must be explicit via rank; advisory must be per document."""
+        ranked = self.schema["properties"]["ranked_ids"]
+        items = ranked.get("patternProperties", {}).get("^.*$", {})
+        for field in ("rank", "discoverable"):
+            self.assertIn(field, items.get("required", []))
+        self.assertGreaterEqual(ranked.get("minProperties", 0), 1)
+        disc = items.get("properties", {}).get("discoverable", {})
+        self.assertEqual(disc.get("enum"), ["yes", "no"])
+
+    def test_gap_type_enum_covers_fail_closed_and_spec_values(self):
+        """gap_type enum must include SKILL.md fail-closed values and spec values."""
+        gap_type = self.schema["properties"]["gap"]["properties"]["gap_type"]
+        allowed = set(gap_type.get("enum", []))
+        self.assertTrue({"none", "manifest_missing", "conflict", "ambiguous"} <= allowed)
+
     def test_gap_required_fields(self):
         """gap.required must contain gap_type, searched_sources, covered_items, omitted_items."""
         gap_schema = self.schema["properties"]["gap"]
@@ -402,6 +418,25 @@ class TestFixtures(unittest.TestCase):
             rationale = item.get("rationale", "")
             self.assertGreater(len(rationale), 10, "Rationale must be more than 10 chars")
             self.assertIn("id", item, "Each ranked entry must have 'id'")
+
+    def test_output_valid_ranked_entries_have_rank_and_per_doc_advisory(self):
+        """Fixtures must carry explicit rank and per-document discoverable."""
+        entries = self.output_valid.get("ranked_ids", {})
+        ranks = []
+        for item in entries.values():
+            self.assertIsInstance(item.get("rank"), int)
+            self.assertIn(item.get("discoverable"), ("yes", "no"))
+            ranks.append(item["rank"])
+        self.assertEqual(sorted(ranks), list(range(1, len(entries) + 1)))
+
+    def test_output_valid_searched_sources_is_manifest_only(self):
+        """Layer 1 searched_sources must be the index, not document paths."""
+        sources = self.output_valid.get("gap", {}).get("searched_sources", [])
+        self.assertEqual(sources, ["docs-manifest.yaml"])
+
+    def test_output_valid_gap_type_is_partial_not_empty(self):
+        """Covered plus omitted items yield a partial gap, never not_found."""
+        self.assertEqual(self.output_valid.get("gap", {}).get("gap_type"), "partial")
 
     def test_output_valid_gap_has_required_fields(self):
         """gap must have all four required fields."""

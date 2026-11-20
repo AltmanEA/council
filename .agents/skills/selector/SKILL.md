@@ -42,7 +42,9 @@ Any request for code-level discovery receives a deferral to Layer 2.
 Every caller-facing response MUST follow this ordered chain:
 
 1. **Task summary** — one-line restatement of the request.
-2. **Ranked IDs** — ordered list of `id` values with 1–2 line rationale per entry.
+2. **Ranked IDs** — recommended starting set keyed by `id`; every entry carries an
+   explicit 1-based `rank` (object key order is not authoritative), a 1–2 line
+   `rationale`, and its own `Discoverable: yes/no` advisory.
 3. **Disclaimer** — the exact phrase: `recommended starting set, not a boundary`.
 4. **Discoverable advisory** — `Discoverable: yes/no` per document
    (whether a follow-up `discover()` on that ID is likely worthwhile).
@@ -108,13 +110,12 @@ After every Selector call, perform an integrity check:
 
 Every Selector output MUST include a structured gap section with these fields:
 
-| Field              | Type    | Description                                        |
-|--------------------|---------|----------------------------------------------------|
-| `gap_type`         | string  | One of: `none`, `partial`, `not_found`,
-                       |         | `budget_stop`, `manifest_missing`, `scope_limited`  |
-| `searched_sources` | array   | List of source identifiers consulted                |
-| `covered_items`    | array   | IDs/items that are covered by the result            |
-| `omitted_items`    | array   | IDs/items that were not included (with reason)      |
+| Field              | Type    | Description                                                     |
+|--------------------|---------|-----------------------------------------------------------------|
+| `gap_type`         | string  | One of: `none`, `not_found`, `partial`, `conflict`, `ambiguous`, `scope_limited`, `budget_stop`, `manifest_missing` |
+| `searched_sources` | array   | Source identifiers consulted — for Layer 1 this is `docs-manifest.yaml` (index-only), not document bodies or code paths |
+| `covered_items`    | array   | IDs/items that are covered by the result                         |
+| `omitted_items`    | array   | IDs/items that were not included (with reason)                   |
 
 Additionally, `gap` MAY include:
 

@@ -3,19 +3,23 @@
   "ranked_ids": {
     "selector-spec": {
       "id": "selector-spec",
-      "rationale": "Authoritative spec for the Selector service — primary reference for the selector layer."
+      "rank": 1,
+      "rationale": "Authoritative spec for the Selector service — primary reference for the selector layer.",
+      "discoverable": "yes"
     },
     "documenter-service": {
       "id": "documenter-service",
-      "rationale": "Defines operator principles and audit contract relevant to Selector operational constraints."
+      "rank": 2,
+      "rationale": "Defines operator principles and audit contract relevant to Selector operational constraints.",
+      "discoverable": "no"
     }
   },
   "disclaimer": "recommended starting set, not a boundary",
   "discoverable": "yes",
   "interim_form": "Layer 1",
   "gap": {
-    "gap_type": "not_found",
-    "searched_sources": ["docs/en/selector/index.md", "docs-en/documenter-service/index.md"],
+    "gap_type": "partial",
+    "searched_sources": ["docs-manifest.yaml"],
     "covered_items": ["selector-spec", "documenter-service"],
     "omitted_items": ["fallback-mode"],
     "suggestion": "Consider narrowing the request to the documentation area of interest."

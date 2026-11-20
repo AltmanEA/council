@@ -3,7 +3,9 @@
   "ranked_ids": {
     "selector-spec": {
       "id": "selector-spec",
-      "rationale": "Primary reference — included before budget stop."
+      "rank": 1,
+      "rationale": "Primary reference — included before budget stop.",
+      "discoverable": "yes"
     }
   },
   "disclaimer": "recommended starting set, not a boundary",

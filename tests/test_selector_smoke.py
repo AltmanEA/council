@@ -96,6 +96,17 @@ class TestSmokeScenarioMetadataOnly(unittest.TestCase):
             self.assertLessEqual(rationale.count("\n"), 1,
                                  f"Rationale for {entry_id} must be <= 1 line")
 
+    def test_ranked_ids_discoverable_is_per_document(self):
+        """Spec requires a Discoverable advisory per document, not one global flag."""
+        for entry_id, entry in self.output_valid.get("ranked_ids", {}).items():
+            self.assertIn(entry.get("discoverable"), ("yes", "no"),
+                          f"Missing per-document advisory for {entry_id}")
+
+    def test_ranked_ids_order_is_explicit(self):
+        """Rank must be explicit because JSON object key order is not authoritative."""
+        ranks = [e["rank"] for e in self.output_valid.get("ranked_ids", {}).values()]
+        self.assertEqual(sorted(ranks), list(range(1, len(ranks) + 1)))
+
     def test_valid_output_task_summary_is_short(self):
         """task_summary must be a short string (metadata summary, not a document body)."""
         summary = self.output_valid.get("task_summary", "")

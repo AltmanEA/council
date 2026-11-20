@@ -21,23 +21,34 @@
     "ranked_ids": {
       "type": "object",
       "additionalProperties": false,
+      "minProperties": 1,
       "patternProperties": {
         "^.*$": {
           "type": "object",
-          "required": ["id", "rationale"],
+          "required": ["id", "rank", "rationale", "discoverable"],
           "properties": {
             "id": {
               "type": "string",
               "description": "Document ID from the manifest."
             },
+            "rank": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Explicit 1-based relevance rank; object key order is not authoritative."
+            },
             "rationale": {
               "type": "string",
               "description": "One-line rationale referencing metadata fields only."
+            },
+            "discoverable": {
+              "type": "string",
+              "enum": ["yes", "no"],
+              "description": "Per-document advisory: whether a follow-up discover() is worthwhile."
             }
           }
         }
       },
-      "description": "Ordered recommended starting set of document IDs with rationale."
+      "description": "Recommended starting set of document IDs with explicit rank, rationale and per-document discoverability."
     },
     "disclaimer": {
       "type": "string",
@@ -47,7 +58,7 @@
     "discoverable": {
       "type": "string",
       "enum": ["yes", "no"],
-      "description": "Advisory on whether the document is discoverable from index metadata."
+      "description": "Aggregate advisory (yes if any ranked document is discoverable). Per-document advisory lives in ranked_ids[*].discoverable."
     },
     "interim_form": {
       "type": "string",
@@ -60,7 +71,7 @@
       "properties": {
         "gap_type": {
           "type": "string",
-          "enum": ["not_found", "partial", "conflict", "scope_limited", "ambiguous", "budget_stop"],
+          "enum": ["none", "not_found", "partial", "conflict", "ambiguous", "scope_limited", "budget_stop", "manifest_missing"],
           "description": "Classification of the gap."
         },
         "searched_sources": {
