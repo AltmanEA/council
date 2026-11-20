@@ -1,7 +1,7 @@
 # Selector
 
 id: selector
-Version: 0.1.0
+Version: 0.2.0
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/selector/index-RU.md
@@ -11,7 +11,7 @@ changelog-path: CHANGELOGS/selector.changes.md
 
 ## Purpose and Scope
 
-Selector is a read-only information-retrieval utility invoked by other agents when they need relevant information from project documentation and the codebase. It is **not** a Council participant and does not take part in consensus, voting, or phase advancement. Its purpose is to reduce the calling agent's context load by performing discovery and reading on the caller's behalf and returning only necessary, relevant facts with references for possible clarification.
+Selector is a read-only information-retrieval utility invoked by other agents when they need relevant information from project documentation and the codebase. It is **not** a Council participant and does not take part in consensus, voting, or phase advancement. Its purpose is to reduce the calling agent's context load by performing discovery and reading on the caller's behalf and returning only necessary, relevant facts with references for possible clarification. The current interim form implements a narrower, index-only subset of this scope (Layer 1, §Interim and Final Forms); the full facts+references scope describes the deferred final form (Layer 2).
 
 Selector is **independent** of the built-in OpenCode `explore` subagent/capability. Architectural responsibility differs: `explore` is a harness-native general navigation/search capability (where available), while Selector is a project-defined utility with a stable contract for locating and summarizing relevant docs/code with traceable references across environments where `explore` may not exist.
 
@@ -31,8 +31,8 @@ Selector is intended to work in:
 
 ### Interim and Final Forms
 
-- **Interim (development):** implemented as an independent **skill + subagent** form, packaged separately from OpenCode `explore`. The interim form MUST implement the Selector contract defined here and record consulted sources for auditability in fallback sessions.
-- **Final (target):** a separate module/service analogous in role to Documenter (utility, non-participant), with a versioned interface compatible with the interim contract. Transition is an operator-approved milestone with a documented checklist; compatibility guarantees: the contract/schema may evolve by addition but MUST NOT silently drop provenance, safety, or traceability fields relied upon by callers.
+- **Interim form — Layer 1 (current implementation target):** an independent **skill + subagent** form, packaged separately from OpenCode `explore`. Layer 1 performs **index-only relevance judgement** over manifest metadata for project documents: it returns a task summary, an ordered recommended starting set of document IDs with a short rationale per ID, an explicit "recommended starting set, not a boundary" disclaimer, and a `Discoverable: yes/no` advisory per document. It MUST NOT read document bodies or codebase content; a code-discovery request receives an explicit deferral response. `discover()` is an internal, fail-closed, checksum-validated helper that fetches content for a selected ID on demand; it is not a new externally callable tool type. Consulted sources MUST be recorded for auditability in fallback sessions, and a system-level budget ceiling MUST override caller hints.
+- **Final form — Layer 2 (deferred design target):** a separate module/service analogous in role to Documenter (utility, non-participant), realising the full facts+references information-retrieval scope of this specification across documentation and codebase content, with a versioned interface compatible with the interim contract. Transition is an operator-approved milestone with a documented checklist **and security review**; compatibility guarantees: the contract/schema may evolve by addition but MUST NOT silently drop provenance, safety, or traceability fields relied upon by callers.
 
 Context-specific rules (fallback Markdown artifacts vs future runtime structured envelopes/events) MUST NOT leak across contexts.
 
@@ -62,6 +62,8 @@ Selector begins from the caller's request and available context (including `AGEN
 
 ## Output Contract
 
+**Form-scoped output.** Layer 1 delivers the index-only output defined in §Interim and Final Forms (task summary → ranked recommended IDs with rationale → starting-set disclaimer → `Discoverable` advisory). The facts+references requirements below describe Layer 2 and are NOT claimed by Layer 1. Every response MUST carry an `interim_form: Layer 1` label, a clearly delimited gaps section with structured core `{gap_type, searched_sources, covered_items, omitted_items}` and optional free-form `suggestion`, and a one-line hint acknowledgement (`hints applied` / `hints not fully applied` with reason). On a budget stop, a top-of-response `⚠ TRUNCATED` banner is MANDATORY.
+
 Selector returns **relevant facts with references for possible clarification** in free form, with the following requirements:
 
 1. **Relevance and concision:** include only information necessary to answer the request; avoid raw file dumps and unnecessary exploratory narration.
@@ -71,7 +73,7 @@ Selector returns **relevant facts with references for possible clarification** i
    Facts derived from `draft` or `archive` sources MUST carry that status.
 3. **Structure (recommended):** a brief summary followed by detailed facts/findings and a gaps/limitations section. Structure may be adapted to the request, but provenance and gaps MUST remain clear.
 4. **Gaps, ambiguity, and conflicts:** report not-found results, partial coverage, scope limits, ambiguity, or conflicting sources explicitly. A structured gap/warning block is RECOMMENDED, e.g. `{gap_type: not_found|partial|conflict|scope_limited|ambiguous, searched_sources: [...], suggestion: "..."}` (or equivalent free-form fields). Selector MUST NOT present uncertainty as certainty.
-5. **Budgets:** to protect caller context, a single response SHOULD stay within a default per-call budget (target: ~≤4K tokens output, ≤20 files read, implementation/profile-tunable). On budget/limit hit, Selector MUST stop gracefully and report what was covered, what was omitted, and how to refine the request.
+5. **Budgets:** to protect caller context, a single response SHOULD stay within a default per-call budget (target: ~≤4K tokens output, ≤20 files read, implementation/profile-tunable). A system-level ceiling (~≤8K tokens output, ≤40 files read) MUST override caller hints. On budget/limit hit, Selector MUST stop gracefully and report what was covered, what was omitted, and how to refine the request.
 
 ## Operational Behavior and Observability
 

@@ -22,6 +22,6 @@
 | project-reference | missing |  |  |  | runs/ |
 | protocol-core | missing |  |  |  | runs/ |
 | scenario | missing |  |  |  | runs/ |
-| selector | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T09:08:38+0000 | runs/ |
+| selector | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T09:50:49+0000 | runs/ |
 | service-contract | missing |  |  |  | runs/ |
 | service-contract-error-management | missing |  |  |  | runs/ |
