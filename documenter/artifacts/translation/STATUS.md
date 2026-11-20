@@ -13,7 +13,7 @@
 | documenter-service-policy-reference | drift | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-17T14:13:08+0000 | runs/ |
 | execution-runtime | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:45:30+0000 | runs/ |
 | glossary | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:47:21+0000 | runs/ |
-| operator-ingress | missing |  |  |  | runs/ |
+| operator-ingress | error-4 | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:55:27+0000 | runs/ |
 | planned-architecture | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:44:04+0000 | runs/ |
 | planned-architecture-layer-0 | verified | Qwen3.6-35B-A3B-NVFP4 | 2026.11-r5 | 2026-11-20T02:49:25+0000 | runs/ |
 | planned-architecture-layer-1 | missing |  |  |  | runs/ |

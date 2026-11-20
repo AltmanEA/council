@@ -1,6 +1,19 @@
 {
+  "ok": 140,
+  "skip": 86,
+  "fail": 1,
+  "backend": "local",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "prompt_version": "2026.11-r5",
+  "glossary_applied": 4,
+  "source_sha256": "a780c9ee1a3f838d15b9be4bc4441c8a84835527d032e4db8ae50de324405b4b",
+  "output_sha256": "95c49daafe930216a7d9088b23edf59812a953adc82b754410b82388585fd0b4",
+  "exit_code": 4,
+  "contract_version": "1.0.0",
+  "timestamp": "2026-11-20T02:55:27+0000",
+  "message": "1 lines failed translation",
   "target_id": "operator-ingress",
   "ru_path": "docs/ru/operator-ingress/index-RU.md",
-  "en_sha256_at_commit": null,
-  "status": "missing"
+  "en_sha256_at_commit": "a780c9ee1a3f838d15b9be4bc4441c8a84835527d032e4db8ae50de324405b4b",
+  "status": "error-4"
 }
