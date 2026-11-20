@@ -172,3 +172,12 @@ Documents with `status: archive` or located under archived paths:
 - `docs-manifest.yaml` — authoritative document index
 - `fallback/index.md` — fallback-mode procedure and artifact conventions
 - `docs/en/glossary/index.md` — project terminology
+
+## Internal Runtime Harness (deterministic Layer 1)
+
+An internal Python harness `.agents/skills/selector/runtime/selector_runtime.py`
+implements the deterministic part of Selector Layer 1 as a module, not an external
+tool type. It is invoked by the skill wrapper, never by the read-only role.
+Public functions: `sha256_file`, `load_manifest`, `sanitize_metadata`, `rank`,
+`run_query`, `validate_output`, `write_audit`. Used for automated V1/V2/V3/V4/V6/V8
+checks (injection defence, index-only, integrity, budget, fail-closed, audit).

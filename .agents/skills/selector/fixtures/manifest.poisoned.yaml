@@ -24,3 +24,11 @@ documents:
     status: active
     abstraction: operational
     description: "Normative documentation rules."
+
+  - id: fallback-mode
+    path: docs/en/fallback/index.md
+    title: Fallback Mode
+    version: 1.0.0
+    status: active
+    abstraction: procedural
+    description: "Fallback-mode Council procedure for development sessions."
