@@ -1,0 +1,21 @@
+{
+  "task_summary": "⚠ TRUNCATED — Budget ceiling reached during index-only discovery.",
+  "ranked_ids": {
+    "selector-spec": {
+      "id": "selector-spec",
+      "rationale": "Primary reference — included before budget stop."
+    }
+  },
+  "disclaimer": "recommended starting set, not a boundary",
+  "discoverable": "yes",
+  "interim_form": "Layer 1",
+  "gap": {
+    "gap_type": "budget_stop",
+    "searched_sources": ["docs-manifest.yaml"],
+    "covered_items": ["selector-spec"],
+    "omitted_items": ["documenter-service", "documentation-rules", "fallback-mode"],
+    "suggestion": "Refine the request to reduce scope, or split into multiple focused queries."
+  },
+  "hint_acknowledgement": "hints not fully applied: budget ceiling reached",
+  "truncated": true
+}

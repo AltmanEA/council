@@ -1,0 +1,25 @@
+{
+  "task_summary": "Index-only discovery for project documentation: 3 relevant documents found.",
+  "ranked_ids": {
+    "selector-spec": {
+      "id": "selector-spec",
+      "rationale": "Authoritative spec for the Selector service — primary reference for the selector layer."
+    },
+    "documenter-service": {
+      "id": "documenter-service",
+      "rationale": "Defines operator principles and audit contract relevant to Selector operational constraints."
+    }
+  },
+  "disclaimer": "recommended starting set, not a boundary",
+  "discoverable": "yes",
+  "interim_form": "Layer 1",
+  "gap": {
+    "gap_type": "not_found",
+    "searched_sources": ["docs/en/selector/index.md", "docs-en/documenter-service/index.md"],
+    "covered_items": ["selector-spec", "documenter-service"],
+    "omitted_items": ["fallback-mode"],
+    "suggestion": "Consider narrowing the request to the documentation area of interest."
+  },
+  "hint_acknowledgement": "hints applied",
+  "truncated": false
+}

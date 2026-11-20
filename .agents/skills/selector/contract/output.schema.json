@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Selector Layer 1 Output",
+  "description": "Contract output schema for Selector interim form Layer 1 (index-only).",
+  "type": "object",
+  "required": [
+    "task_summary",
+    "ranked_ids",
+    "disclaimer",
+    "discoverable",
+    "interim_form",
+    "gap",
+    "hint_acknowledgement",
+    "truncated"
+  ],
+  "properties": {
+    "task_summary": {
+      "type": "string",
+      "description": "Brief summary of the discovered documents relevant to the request."
+    },
+    "ranked_ids": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^.*$": {
+          "type": "object",
+          "required": ["id", "rationale"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Document ID from the manifest."
+            },
+            "rationale": {
+              "type": "string",
+              "description": "One-line rationale referencing metadata fields only."
+            }
+          }
+        }
+      },
+      "description": "Ordered recommended starting set of document IDs with rationale."
+    },
+    "disclaimer": {
+      "type": "string",
+      "const": "recommended starting set, not a boundary",
+      "description": "Mandatory disclaimer phrase."
+    },
+    "discoverable": {
+      "type": "string",
+      "enum": ["yes", "no"],
+      "description": "Advisory on whether the document is discoverable from index metadata."
+    },
+    "interim_form": {
+      "type": "string",
+      "const": "Layer 1",
+      "description": "Identifies the interim form version."
+    },
+    "gap": {
+      "type": "object",
+      "required": ["gap_type", "searched_sources", "covered_items", "omitted_items"],
+      "properties": {
+        "gap_type": {
+          "type": "string",
+          "enum": ["not_found", "partial", "conflict", "scope_limited", "ambiguous", "budget_stop"],
+          "description": "Classification of the gap."
+        },
+        "searched_sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of sources searched."
+        },
+        "covered_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Items that were found/covered."
+        },
+        "omitted_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Items that were not found/omitted."
+        },
+        "suggestion": {
+          "type": "string",
+          "description": "Optional free-form suggestion to help the caller."
+        }
+      }
+    },
+    "hint_acknowledgement": {
+      "type": "string",
+      "description": "One-line acknowledgement of caller hints (e.g. 'hints applied' / 'hints not fully applied')."
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "Whether the output was truncated due to budget ceiling."
+    }
+  }
+}

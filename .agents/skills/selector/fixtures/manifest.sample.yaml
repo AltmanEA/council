@@ -1,0 +1,37 @@
+# Sample manifest for Selector fixture tests.
+# Represents a minimal but valid set of project documentation entries.
+documents:
+  - id: selector-spec
+    path: docs/en/selector/index.md
+    title: Selector
+    version: 0.2.0
+    status: draft
+    abstraction: conceptual
+    has_translation: docs/ru/selector/index-RU.md
+    description: "Selector is a read-only information-retrieval utility for project docs."
+
+  - id: documenter-service
+    path: docs/en/documenter-service/index.md
+    title: Documenter Service
+    version: 2.0.0
+    status: active
+    abstraction: operational
+    has_translation: docs/ru/documenter-service/index-RU.md
+    description: "The Documenter specification — operator principles and audit contract."
+
+  - id: documentation-rules
+    path: docs/en/documentation-rules/index.md
+    title: Documentation Rules
+    version: 3.0.0
+    status: active
+    abstraction: operational
+    has_translation: docs/ru/documentation-rules/index-RU.md
+    description: "Normative documentation rules for the Council framework."
+
+  - id: fallback-mode
+    path: docs/en/fallback/index.md
+    title: Fallback Mode
+    version: 1.0.0
+    status: active
+    abstraction: procedural
+    description: "Fallback-mode Council procedure for development sessions."

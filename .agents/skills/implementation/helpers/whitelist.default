@@ -6,3 +6,4 @@
 tools/*
 documenter_service/*
 tests/test_*.py
+.agents/skills/selector/*
