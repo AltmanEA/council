@@ -1,8 +1,8 @@
 # Документатор
 
 id: documenter-service
-Version: 1.3.1-draft
-Status: draft
+Version: 1.3.2
+Status: active
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
 allow_non_index_paths: true

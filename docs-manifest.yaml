@@ -23,8 +23,8 @@ documents:
   - id: documentation-rules
     path: docs/en/documentation-rules/index.md
     title: Documentation Rules
-    version: 0.2.0
-    status: draft
+    version: 0.2.1
+    status: active
     abstraction: protocol
     has_translation: docs/ru/documentation-rules/index-RU.md
     changelog-path: CHANGELOGS/documentation-rules.changes.md
@@ -32,8 +32,8 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter
-    version: 1.3.1-draft
-    status: draft
+    version: 1.3.2
+    status: active
     abstraction: conceptual
     has_translation: docs/ru/documenter-service/index-RU.md
     changelog-path: CHANGELOGS/documenter-service.changes.md

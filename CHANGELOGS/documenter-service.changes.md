@@ -1,3 +1,4 @@
+<!-- CHANGES v1.3.2: Promotion to active status per operator request 2026-11-20 (readiness review; -draft suffix dropped) -->
 <!-- CHANGES v1.3.1-draft: legacy archive migrated to docs/en/archive/documenter-service per Archive convention (sess-archive-design-2026-11-19 item 5) -->
 <!-- CHANGES v1.3.0-draft: addition of the Archive section to the Documenter spec -->
 <!-- CHANGES v1.2.3-draft: Phase 2 terminology sync: 'summary card' renamed to Approval Card in Complex-edits clause (operator approve, sess-documenter-impl) -->

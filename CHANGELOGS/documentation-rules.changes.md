@@ -1,3 +1,4 @@
+<!-- CHANGES v0.2.1: Promotion to active status per operator request 2026-11-20 (readiness review) -->
 <!-- CHANGES v0.2.0: status vocabulary extension and addition of the Archive Layout section -->
 # Changelog: documentation-rules
 

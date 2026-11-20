@@ -1,7 +1,7 @@
 # Documentation Rules
 id: documentation-rules
-Version: 0.2.0
-Status: draft
+Version: 0.2.1
+Status: active
 Abstraction: protocol
 has_translation: docs/ru/documentation-rules/index-RU.md
 changelog-path: CHANGELOGS/documentation-rules.changes.md
