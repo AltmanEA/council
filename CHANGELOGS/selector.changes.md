@@ -1,3 +1,4 @@
+<!-- CHANGES v0.5.0: Layer 2 promoted to default Selector form (operator-approved 2026-11-21) -->
 <!-- CHANGES v0.4.0: Layer 2 реализован как явный opt-in: обновлены описание форм, контракт вывода v2, аудит и RU-зеркало; сравнительная проверка 20 пар носит наблюдательный характер -->
 <!-- CHANGES v0.3.1: синхронизация версии и перевода RU с EN 0.3.0 после уточнения контракта Layer 1 -->
 <!-- CHANGES v0.3.0: уточнение контракта Selector Layer 1 (discover, целостность до вызова, draft/archive, пустой ranked_ids, формат аудита, hint_acknowledgement) -->

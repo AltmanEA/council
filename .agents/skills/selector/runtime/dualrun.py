@@ -26,7 +26,7 @@ from pathlib import Path
 
 PAIRS: int = 20
 
-DEFAULT_MODE: str = "layer1"
+DEFAULT_MODE: str = "layer2"
 
 DEFAULT_QUERIES: tuple[str, ...] = (
     "selector specification",
@@ -344,7 +344,7 @@ def collect(manifest_path, *, queries=None, repo_root=None):
     ledger = {
         "kind": "selector-dual-run-ledger",
         "contract_version": "2.0.0",
-        "form_scope": "Layer 1 default / Layer 2 opt-in",
+        "form_scope": "Layer 2 default / Layer 1 opt-out",
         "pairs": PAIRS,
         "manifest_sha256": manifest_sha,
         "manifest_sha256_unchanged": manifest_sha_unchanged,

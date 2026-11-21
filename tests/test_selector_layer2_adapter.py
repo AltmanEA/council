@@ -11,12 +11,12 @@ Uses unittest + stdlib only.  Module loaded via importlib so tests fail with
 ImportError before the adapter file is created (red baseline).
 
 8 behavioural requirements from the spec:
-  1. resolve_mode routing (None/"layer1"/"" → layer1, "layer2" → layer2,
+  1. resolve_mode routing (None/"" → layer2 default, "layer1" → layer1 opt-out,
      unknown → ValueError).
   2. Layer 1 path: interim_form == "Layer 1", no key "form", validate_output == [].
   3. Layer 2 path: contract_version == "2.0.0", form == "Layer 2", all legacy
      + new keys, validate_output_v2 == [] AND validate_output == [].
-  4. Default stays Layer 1 after a Layer 2 call.
+  4. Default stays Layer 2 after a Layer 1 call.
   5. reveal_code default False → modes.code == "off".
   6. Determinism: two identical layer2 calls → identical output.
   7. Read-only: manifest/source sha256 unchanged; no files when audit_dir=None.
@@ -127,8 +127,8 @@ ALL_L2_KEYS = LEGACY_KEYS | NEW_KEYS
 #  Req 1 — resolve_mode routing
 # ============================================================================
 
-class TestResolveModeDefaultLayer1(unittest.TestCase):
-    """Req 1a: None, empty string, and 'layer1' all resolve to 'layer1'."""
+class TestResolveModeDefaultLayer2(unittest.TestCase):
+    """Req 1a: None and empty string resolve to the 'layer2' default; 'layer1' opts out."""
 
     @classmethod
     def setUpClass(cls):
@@ -137,15 +137,15 @@ class TestResolveModeDefaultLayer1(unittest.TestCase):
         except ImportError:
             cls.adapter = None
 
-    def test_none_resolves_layer1(self):
+    def test_none_resolves_layer2(self):
         if self.adapter is None:
             self.fail("Adapter module not found")
-        self.assertEqual(self.adapter.resolve_mode(None), "layer1")
+        self.assertEqual(self.adapter.resolve_mode(None), "layer2")
 
-    def test_empty_string_resolves_layer1(self):
+    def test_empty_string_resolves_layer2(self):
         if self.adapter is None:
             self.fail("Adapter module not found")
-        self.assertEqual(self.adapter.resolve_mode(""), "layer1")
+        self.assertEqual(self.adapter.resolve_mode(""), "layer2")
 
     def test_layer1_resolves_layer1(self):
         if self.adapter is None:
@@ -203,7 +203,7 @@ class TestResolveModeUnknownRaises(unittest.TestCase):
 # ============================================================================
 
 class TestLayer1Output(unittest.TestCase):
-    """Req 2: run(None, ...) and run('layer1', ...) produce Layer 1 output."""
+    """Req 2: run('layer1', ...) opts out to Layer 1; run(None, ...) uses the Layer 2 default."""
 
     @classmethod
     def setUpClass(cls):
@@ -214,7 +214,7 @@ class TestLayer1Output(unittest.TestCase):
             cls.adapter = None
             cls.runtime = None
 
-    def test_none_calls_layer1(self):
+    def test_none_calls_layer2_default(self):
         if self.adapter is None or self.runtime is None:
             self.fail("Module not found — adapter or runtime absent")
         with tempfile.TemporaryDirectory() as audit_dir:
@@ -223,7 +223,8 @@ class TestLayer1Output(unittest.TestCase):
                 audit_dir=audit_dir, call_id="l1-001",
             )
         output = result["output"]
-        self.assertEqual(output.get("interim_form"), "Layer 1")
+        self.assertEqual(output.get("form"), "Layer 2")
+        self.assertEqual(output.get("contract_version"), "2.0.0")
 
     def test_explicit_layer1_calls_layer1(self):
         if self.adapter is None or self.runtime is None:
@@ -430,12 +431,12 @@ class TestLayer2Output(unittest.TestCase):
 
 
 # ============================================================================
-#  Req 4 — Default stays Layer 1 after Layer 2 call
+#  Req 4 — Default stays Layer 2 after an explicit Layer 1 call
 # ============================================================================
 
-class TestDefaultStaysLayer1(unittest.TestCase):
-    """Req 4: After calling run('layer2', ...), a subsequent run(None, ...)
-    still produces Layer 1 output."""
+class TestDefaultStaysLayer2(unittest.TestCase):
+    """Req 4: After calling run('layer1', ...), a subsequent run(None, ...)
+    still produces Layer 2 output."""
 
     @classmethod
     def setUpClass(cls):
@@ -448,17 +449,16 @@ class TestDefaultStaysLayer1(unittest.TestCase):
             cls.runtime = None
             cls.layer2 = None
 
-    def test_after_layer2_call_default_is_layer1(self):
+    def test_after_layer1_call_default_is_layer2(self):
         if self.adapter is None or self.runtime is None:
             self.fail("Module not found")
-        # First, call Layer 2
+        # First, call Layer 1 (explicit opt-out)
         with tempfile.TemporaryDirectory() as audit_dir:
             self.adapter.run(
-                "layer2", _MANIFEST_SAMPLE, "selector specification",
-                repo_root=str(_ROOT),
+                "layer1", _MANIFEST_SAMPLE, "selector specification",
                 audit_dir=audit_dir, call_id="stale-001",
             )
-        # Then call with None (default → Layer 1)
+        # Then call with None (default → Layer 2)
         with tempfile.TemporaryDirectory() as audit_dir:
             result = self.adapter.run(
                 None, _MANIFEST_SAMPLE, "selector specification",
@@ -466,8 +466,8 @@ class TestDefaultStaysLayer1(unittest.TestCase):
             )
         output = result["output"]
         self.assertEqual(output.get("interim_form"), "Layer 1")
-        self.assertNotIn("form", output,
-                         "Layer 1 output must not have key 'form'")
+        self.assertEqual(output.get("form"), "Layer 2")
+        self.assertEqual(output.get("contract_version"), "2.0.0")
 
 
 # ============================================================================
@@ -695,7 +695,7 @@ class TestAdapterConstants(unittest.TestCase):
         if self.adapter is None:
             self.fail("Adapter not found")
         self.assertTrue(hasattr(self.adapter, "DEFAULT_MODE"))
-        self.assertEqual(self.adapter.DEFAULT_MODE, "layer1")
+        self.assertEqual(self.adapter.DEFAULT_MODE, "layer2")
 
 
 if __name__ == "__main__":

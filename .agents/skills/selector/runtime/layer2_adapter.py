@@ -4,12 +4,12 @@ Public API:
 
     MODE_LAYER1 = "layer1"
     MODE_LAYER2 = "layer2"
-    DEFAULT_MODE = MODE_LAYER1
+    DEFAULT_MODE = MODE_LAYER2
 
     resolve_mode(mode) -> "layer1" | "layer2"
-        None / "" / "layer1" -> "layer1"
-        "layer2"              -> "layer2"
-        anything else         -> ValueError (fail-closed)
+        None / "" / "layer2" -> "layer2" (default)
+        "layer1"             -> "layer1" (explicit opt-out)
+        anything else        -> ValueError (fail-closed)
 
     run(mode, manifest_path, query, *, hints=None, reveal_code=False,
         audit_dir=None, call_id=None, repo_root=None) -> {
@@ -28,7 +28,7 @@ from pathlib import Path
 
 MODE_LAYER1: str = "layer1"
 MODE_LAYER2: str = "layer2"
-DEFAULT_MODE: str = MODE_LAYER1
+DEFAULT_MODE: str = MODE_LAYER2
 
 # ── Path helpers ────────────────────────────────────────────────────────────
 
@@ -87,19 +87,20 @@ def resolve_mode(mode):
     """Normalise a mode token to ``'layer1'`` or ``'layer2'``.
 
     Args:
-        mode: ``None``, ``"layer1"``, ``""``, ``"layer2"``, or anything else.
+        mode: ``None``, ``""`` (default), ``"layer2"``, ``"layer1"`` (opt-out),
+            or anything else.
 
     Returns:
-        ``"layer1"`` or ``"layer2"``.
+        ``"layer2"`` for unset/default calls, ``"layer1"`` on explicit opt-out.
 
     Raises:
         ValueError for any value other than None, empty string,
         ``"layer1"``, or ``"layer2"``.
     """
-    if mode is None or mode == "" or mode == "layer1":
-        return "layer1"
-    if mode == "layer2":
-        return "layer2"
+    if mode is None or mode == "" or mode == MODE_LAYER2:
+        return MODE_LAYER2
+    if mode == MODE_LAYER1:
+        return MODE_LAYER1
     raise ValueError(f"Unknown mode: {mode!r} — expected 'layer1' or 'layer2'")
 
 

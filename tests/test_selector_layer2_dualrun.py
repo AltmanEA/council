@@ -185,7 +185,7 @@ class TestConstantLedgerFields(unittest.TestCase):
 
 
 class TestDefaultMode(unittest.TestCase):
-    """DEFAULT_MODE must be 'layer1'."""
+    """DEFAULT_MODE must be 'layer2' (Selector default form)."""
 
     @classmethod
     def setUpClass(cls):
@@ -194,10 +194,10 @@ class TestDefaultMode(unittest.TestCase):
         except ImportError:
             cls.dualrun = None
 
-    def test_default_mode_layer1(self):
+    def test_default_mode_layer2(self):
         if self.dualrun is None:
             self.fail("dualrun module not found")
-        self.assertEqual(self.dualrun.DEFAULT_MODE, "layer1")
+        self.assertEqual(self.dualrun.DEFAULT_MODE, "layer2")
 
 
 # ── collect() ledger structure ────────────────────────────────────────────
@@ -249,18 +249,18 @@ class TestCollectLedgerStructure(unittest.TestCase):
         self.assertEqual(len(ledger["results"]), 20)
 
     def test_default_mode(self):
-        """default_mode must be 'layer1'."""
+        """default_mode must be 'layer2'."""
         if self.dualrun is None:
             self.fail("dualrun module not found")
         ledger = self.dualrun.collect(_MANIFEST_SAMPLE)
-        self.assertEqual(ledger["default_mode"], "layer1")
+        self.assertEqual(ledger["default_mode"], "layer2")
 
     def test_form_scope(self):
-        """form_scope must be 'Layer 1 default / Layer 2 opt-in'."""
+        """form_scope must be 'Layer 2 default / Layer 1 opt-out'."""
         if self.dualrun is None:
             self.fail("dualrun module not found")
         ledger = self.dualrun.collect(_MANIFEST_SAMPLE)
-        self.assertEqual(ledger["form_scope"], "Layer 1 default / Layer 2 opt-in")
+        self.assertEqual(ledger["form_scope"], "Layer 2 default / Layer 1 opt-out")
 
     def test_kind(self):
         """kind must be 'selector-dual-run-ledger'."""
@@ -666,7 +666,7 @@ class TestWriteLedger(unittest.TestCase):
 # ── Adapter DEFAULT_MODE ──────────────────────────────────────────────────
 
 class TestAdapterDefaultMode(unittest.TestCase):
-    """adapter.DEFAULT_MODE must be 'layer1' — Layer 2 does not self-activate."""
+    """adapter.DEFAULT_MODE must be 'layer2'; the role does not change forms."""
 
     @classmethod
     def setUpClass(cls):
@@ -678,7 +678,7 @@ class TestAdapterDefaultMode(unittest.TestCase):
     def test_adapter_default_mode(self):
         if self.adapter is None:
             self.fail("Adapter module not found")
-        self.assertEqual(self.adapter.DEFAULT_MODE, "layer1")
+        self.assertEqual(self.adapter.DEFAULT_MODE, "layer2")
 
 
 # ── Iteration 2: additional invariants (diff-review blind spots) ───────────

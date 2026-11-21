@@ -39,10 +39,10 @@ class TestRoleFileContract(unittest.TestCase):
                         f"Role file not found: {_ROLE_PATH}")
 
     def test_frontmatter_version(self):
-        """Frontmatter must declare version '1.0.0'."""
+        """Frontmatter must declare version '1.1.0'."""
         content = _read_role()
-        self.assertIn('version: "1.0.0"', content,
-                      "Frontmatter must contain version: \"1.0.0\"")
+        self.assertIn('version: "1.1.0"', content,
+                      "Frontmatter must contain version: \"1.1.0\"")
 
     def test_deny_tokens(self):
         """Must contain deny: write, shell, edit."""

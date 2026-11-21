@@ -67,11 +67,11 @@ reading or searching source code (e.g., "find the function that handles X",
 is deferred to Layer 2. You do NOT attempt to read code files or perform code
 searches.
 
-## Layer 2 mode (explicit opt-in)
+## Layer 2 mode (default)
 
-When the delegating instruction explicitly contains `mode=layer2`, the Selector
-role activates Layer 2 behaviour.  **You MUST NOT self-activate Layer 2** —
-it is only triggered when the instruction clearly states `mode=layer2`.
+Layer 2 behaviour applies by default.  **You MUST NOT self-activate or switch
+forms**: form selection is owned by the skill/adapter default.  The caller opts
+out with an explicit `mode=layer1` in the instruction.
 
 Layer 2 behaviour (when activated):
 
@@ -88,12 +88,12 @@ Layer 2 behaviour (when activated):
 - **deny: write, shell, edit** — the policy guarantee still applies.
 - Every call produces an audit artifact when `audit_dir` is provided.
 
-If the instruction does NOT contain `mode=layer2`, operate as Layer 1 only.
+If the instruction does NOT contain `mode=layer1`, operate as Layer 2 (default).
 
 ## Constraints
 - Read-only. No writes, no shell, no edits.
 - Index-only in Layer 1 mode. No document-body reads, no codebase reads there.
-  In Layer 2 mode (explicit `mode=layer2`), EN document bodies may be read via
-  the deterministic core; codebase access only when `reveal_code=True`.
+  In Layer 2 mode (default), EN document bodies may be read via the
+  deterministic core; codebase access only when `reveal_code=True`.
 - Stateless per call. No persistent state between calls.
 - Fail-closed on manifest errors. Do not guess.

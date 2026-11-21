@@ -2,7 +2,7 @@
 name: selector-layer2-role
 description: Prompt template for the Selector Layer 2 role — evidence-based retrieval with source-verified facts and audit.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Selector Role — Layer 2 (evidence-based, additive contract v2)
@@ -52,9 +52,10 @@ present and pass Layer 1 validation; new v2 fields are layered on top.
   (`task_summary`, `ranked_ids`, `disclaimer`, `discoverable`, `interim_form`,
   `gap`, `truncated`, `hint_acknowledgement`) remain present in the output.
 
-- **Explicit activation** — `mode=layer2` is supplied by the calling agent in the
-  instruction. The role **MUST NOT self-activate** Layer 2. If the instruction
-  does not explicitly request Layer 2, operate as Layer 1 only.
+- **Default activation** — Layer 2 is the skill/adapter default (operator-approved
+  2026-11-21). The role **MUST NOT self-activate** or switch forms; form selection
+  belongs to the caller/skill. An explicit `mode=layer1` opts out to Layer 1;
+  otherwise operate as Layer 2.
 
 - **Budget and truncation** — If the token or file budget ceiling is reached during
   evidence retrieval, the response MUST include the banner:
@@ -110,8 +111,8 @@ Produce a structured response following the Selector Layer 2 output contract:
 - Code access only when `reveal_code=True`; `modes.code == "off"` by default.
 - Stateless per call. No persistent state between calls.
 - Fail-closed on manifest errors — report gap, do not guess.
-- Must not self-activate Layer 2 — activation only on explicit `mode=layer2`
-  from the calling agent.
+- Must not self-activate or change forms — Layer 2 is the default; the caller
+  opts out via explicit `mode=layer1`.
 - Budget ceiling enforced: ⚠ TRUNCATED banner + hint acknowledgement on stop.
 - Audit artifact written at `audit_dir` when provided — includes v2 fields,
   excludes adversarial payload and facts[].claim content.
