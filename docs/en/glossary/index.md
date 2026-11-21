@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.19.0
+Version: 0.20.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -150,41 +150,47 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 ## Tooling & Services
 
-**Documenter** (Документатор) An automated Supporting service that performs quality audits on project documentation and delegates write operations through the Documentation Worker skill. Implementation status: Tier 0–1 Operational (CLI and MCP stdio implemented; MCP server not registered); Tier 2+ write branch is Dormant behind the dual interlock (ADR-013). Specification: `documenter-service/index.md`.
+**Documenter** (Документатор) The project's documentation quality concept and thin operational process, reconstructed in v1.5.0. It is not a Council participant and not a runtime service. The current system consists of: the Documentation Worker skill as the sole writer of `docs/`, `docs-manifest.yaml`, and `CHANGELOGS/`; deterministic tools under `tools/` (including `check_all.py` as the read-only advisory audit engine); in-chat operator approval (OP-1); single-commit bundling; and git revert as the primary recovery path (OP-3). Audit findings are informational and never gating. Specification: `documenter-service/index.md`.
 
 **Documentation Worker** A reusable skill providing mechanical and structural operations on project documentation artifacts. NOT part of the Council framework itself — it is an operational instrument invoked via the skill tool by the primary agent.
 
+**Selector** (Селектор) A read-only information-retrieval utility invoked by other agents when they need relevant information from project documentation and/or the codebase. It is not a Council participant. Layer 2 is the current default: it returns facts with traceable references (additive v2 contract, EN authoritative, code opt-in via `reveal_code=True`). Layer 1 is available by explicit opt-out (`mode=layer1`) for index-only manifest relevance judgement. Specification: `selector/index.md`.
+
 **Operational** (Операционный) Documentation-status term: the described capability exists in code and is available to the operator in the current configuration. Does not imply registered or invoked autonomously.
-
-**Dormant** (Реализовано, не активировано) Documentation-status term: the described capability exists in code but is unreachable at runtime because a normative interlock blocks activation. Distinct from *structurally absent* and from *Operational*.
-
-**Activation Overlay** (Активационный оверлей) An external YAML configuration file (`~/.council/documenter_activation.yml` or via `DOCUMENTER_ACTIVATION_PATH`) that is loaded transparently by the Documenter policy loader and merged into the effective policy at read-time. Provides an alternative activation path to direct policy-file editing (Authorization Workflow step 5, ADR-020). Strict key allowlist, XOR between `scope` and `allowed_operations`, deterministic scope presets with narrowing-only `scope_targets`, and containment enforcement (absolute path outside workspace root). The base `documenter_policy.yml` stays at Tier 1 baseline and is never rewritten. Fail-closed on invalid overlay. Verified via `--verify-activation` CLI command.
-
-**Commit Order** (Порядок коммита) The fixed sequence of renames in a multi-file commit: document content → `index-RU.md` → changelog → `docs-manifest.yaml` → hash store. Chosen so a crash before the manifest step leaves orphaned but readable files.
-
-**Hash Store** (Хранилище хэшей) The Documenter-managed persistence structure storing content-hash tokens used for optimistic concurrency control on delegate-mode writes. A rebuildable cache (ADR-010), not authoritative state.
-
-**Rebuildable Cache** (Восстанавливаемый кэш) A derived state artifact that the owning service may discard and recompute from authoritative sources; a cache miss triggers rebuild-and-continue. Distinct from authoritative state.
-
-**Intent Record** (Журнал намерения) A crash-recovery journal written before the first rename in a multi-file commit. Records intended file transitions to enable roll-forward reconciliation at cold-start.
-
-**Roll-forward** (Прямая докатка) Reconciliation procedure re-applying staged renames from leftover `.tmp` files when no external modification occurred since the crash.
-
-**Trust Floor** (Базовый уровень доверия) The minimum trust level permitted for an operation. Two forms: *static floor* (computed at policy load from `change_type`) and *derived floor* (computed at invocation from the actual diff).
-
-**Mechanical Edit** (Механическое изменение) A deterministic, reversible change not altering semantic content. Seven enumerated categories: (1) patch-level version bump in YAML headers; (2) append-only changelog entry; (3) metadata corrections; (4) typographical corrections; (5) cross-reference anchor stabilization; (6) whitespace normalization; (7) format conversions within same document structure.
-
-**Effective Trust Level** (Фактический уровень доверия) The trust level applied to a `delegate()` invocation. Equal to the caller's requested level when at or above the derived floor; never a silently upgraded value.
-
-**Trust Tier** (Ступень доверия) One of four progressively broader write-capability levels: Tier 0 (audit only), Tier 1 (diff preview), Tier 2 (confirm-per-change), Tier 3 (pattern-based batch approve). Each advancement requires an explicit operator command.
-
-**Scope Preset** (Шаблон области) A deterministic mapping from a short identifier to a predefined set of `allowed_operations` entries (change type, trust level, target manifest IDs). Four scope presets exist in the current implementation: `pilot-safe-v1` (2-target safe pilot), `docs-maint-safe` (24-target mechanical maintenance), `docs-content-review` (24-target content review), and `ru-sync-review` (18-target RU sync). Selected via the `scope` field in the activation overlay; expanded at policy load time with `scope_targets` available for narrowing.
 
 **Write-Gate** (Гейт записи) A mandatory verification gate blocking automatic writing of a derived artifact until all checks pass. Used in RU translation synchronization.
 
 **Post-Approve Auto-Dispatch** (Автозапуск после утверждения) A mechanical follow-up action runs automatically only after the human operator's approval of the parent changeset.
 
 **Translation Opt-Out Flag** (Флаг отказа от перевода) A document frontmatter field (`no_auto_translation: true`) excluding a document from automatic Russian synchronization.
+
+### Historical Documenter Terms (superseded by Documenter v1.5.0)
+
+The terms below describe the superseded v0.x Documenter design (trust tiers, policy engine, dual interlock, approval surface, consent terminal, readiness sentinel, activation overlay, `documenter_service/` package). They are retained for reading archived documents and historical ADR/changelog context only; they are **not** current Documenter mechanisms.
+
+**Dormant (v0.x, historical)** (Реализовано, не активировано) Documentation-status term used in the v0.x Documenter model: a capability existed in code but was unreachable at runtime because a normative interlock blocked activation. Distinct from *structurally absent* and from *Operational*.
+
+**Activation Overlay (v0.x, historical)** (Активационный оверлей) A v0.x external YAML configuration file (`~/.council/documenter_activation.yml` or via `DOCUMENTER_ACTIVATION_PATH`) loaded by the former Documenter policy loader and merged into an effective policy at read-time. It provided an alternative activation path to direct policy-file editing (Authorization Workflow step 5, ADR-020) under the superseded dual-interlock model. The base `documenter_policy.yml` stayed at Tier 1 baseline and was never rewritten. Fail-closed on invalid overlay. Not part of the current Documenter.
+
+**Commit Order (v0.x, historical)** (Порядок коммита) The fixed rename sequence in a v0.x Documenter multi-file commit: document content → `index-RU.md` → changelog → `docs-manifest.yaml` → hash store. Chosen so a crash before the manifest step left orphaned but readable files.
+
+**Hash Store (v0.x, historical)** (Хранилище хэшей) The v0.x Documenter-managed persistence structure storing content-hash tokens used for optimistic concurrency control on delegate-mode writes. A rebuildable cache (ADR-010), not authoritative state.
+
+**Rebuildable Cache** (Восстанавливаемый кэш) A derived state artifact that the owning service may discard and recompute from authoritative sources; a cache miss triggers rebuild-and-continue. Distinct from authoritative state.
+
+**Intent Record (v0.x, historical)** (Журнал намерения) A v0.x crash-recovery journal written before the first rename in a multi-file commit. Recorded intended file transitions to enable roll-forward reconciliation at cold-start.
+
+**Roll-forward (v0.x, historical)** (Прямая докатка) A v0.x reconciliation procedure re-applying staged renames from leftover `.tmp` files when no external modification occurred since the crash.
+
+**Trust Floor (v0.x, historical)** (Базовый уровень доверия) The v0.x minimum trust level permitted for an operation. Two forms: *static floor* (computed at policy load from `change_type`) and *derived floor* (computed at invocation from the actual diff).
+
+**Mechanical Edit** (Механическое изменение) A deterministic, reversible change not altering semantic content. Seven enumerated categories: (1) patch-level version bump in YAML headers; (2) append-only changelog entry; (3) metadata corrections; (4) typographical corrections; (5) cross-reference anchor stabilization; (6) whitespace normalization; (7) format conversions within same document structure.
+
+**Effective Trust Level (v0.x, historical)** (Фактический уровень доверия) The v0.x trust level applied to a `delegate()` invocation. Equal to the caller's requested level when at or above the derived floor; never a silently upgraded value.
+
+**Trust Tier (v0.x, historical)** (Ступень доверия) One of four progressively broader v0.x Documenter write-capability levels: Tier 0 (audit only), Tier 1 (diff preview), Tier 2 (confirm-per-change), Tier 3 (pattern-based batch approve). Each advancement required an explicit operator command under the superseded policy/interlock model.
+
+**Scope Preset (v0.x, historical)** (Шаблон области) A deterministic v0.x mapping from a short identifier to a predefined set of `allowed_operations` entries (change type, trust level, target manifest IDs). Four scope presets existed in that implementation: `pilot-safe-v1`, `docs-maint-safe`, `docs-content-review`, and `ru-sync-review`. Selected via the `scope` field in the activation overlay; expanded at policy load time with `scope_targets` available for narrowing.
 
 **Drift Checker** (Инструмент проверки расхождений) A deterministic tool comparing English source and Russian candidate on structural invariants only (headings, tables, code fences, list markers, inline-code spans, separators, metadata fingerprint).
 
@@ -202,4 +208,4 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 
 ---
 
-*Aligned with project documents v0.9.0 — Glossary v0.17.0: consolidated severity definitions, restructured into operator-facing / tooling sections, added cross-references, fixed formatting invariants, purged meta-evaluation content.*
+*Aligned with project documents as of 2026-11-21 — Glossary v0.20.0: Documenter definition synchronized with v1.5.0 (OP-1/OP-2/OP-3 thin concept, no v0.x runtime machinery as current); v0.x Documenter terms moved to an explicit historical subsection; Selector term added; RU mirror synchronized.*

@@ -1,3 +1,4 @@
+<!-- CHANGES v0.20.0: Synchronized Documenter definition with v1.5.0 (thin concept, OP-1/OP-2/OP-3, no live v0.x runtime machinery); moved v0.x Documenter terms to explicit historical subsection; added Selector term; RU mirror synchronized. -->
 <!-- CHANGES v0.19.0: Added Activation Overlay and Scope Preset terms (ADR-020). RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.18.0: Added Operator Ingress term (RU Tocnica vhoda operatora) and deprecated Operator Surface alias per ADR-018 -->
 <!-- CHANGES v0.16.0: add translation-boundary terms (ADR-014, sess-translation-extraction) -->
