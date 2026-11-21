@@ -1,3 +1,4 @@
+<!-- CHANGES v0.3.0: Classification vocabulary: §5.2 Phase 3 delegation now carries classification mechanical|semantic instead of trust level (EN+RU, structure parity preserved) -->
 <!-- CHANGES v0.2.1: Promotion to active status per operator request 2026-11-20 (readiness review) -->
 <!-- CHANGES v0.2.0: status vocabulary extension and addition of the Archive Layout section -->
 # Changelog: documentation-rules

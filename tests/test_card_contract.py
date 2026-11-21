@@ -866,5 +866,52 @@ class TestAnchorStep5Approve(unittest.TestCase):
         )
 
 
+class TestAnchorActiveContractVocabulary(unittest.TestCase):
+    """Prose-anchor regression: active Documentation Worker contract vocabulary.
+
+    The v0.x `trust_level: safe | review` vocabulary is absent from the active
+    contract; delegation carries `classification: mechanical | semantic`, which
+    feeds the Approval Card `Classification` field and is advisory-only. Every
+    write still requires the in-chat step-(5) approve (OP-1); classification
+    only selects the approve form.
+    """
+
+    FORBIDDEN = (
+        "trust_level",              # legacy delegation field
+        "trust levels",             # legacy section heading (case-insensitive)
+        "without further approval", # removed governance bug
+        "solo self-approval",       # explicitly prohibited mechanism
+    )
+    REQUIRED = (
+        "classification: mechanical | semantic",
+        "it does not gate execution",
+        "Absence of approval is never consent",
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = ""
+        if os.path.exists(SKILL_PATH):
+            with open(SKILL_PATH, "r", encoding="utf-8") as fh:
+                cls.text = fh.read()
+
+    def test_legacy_vocabulary_absent(self):
+        lowered = self.text.lower()
+        for token in self.FORBIDDEN:
+            with self.subTest(forbidden=token):
+                self.assertNotIn(
+                    token, lowered,
+                    f"SKILL.md must not contain legacy token {token!r}",
+                )
+
+    def test_classification_vocabulary_present(self):
+        for token in self.REQUIRED:
+            with self.subTest(required=token):
+                self.assertIn(
+                    token, self.text,
+                    f"SKILL.md must contain active-contract anchor {token!r}",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

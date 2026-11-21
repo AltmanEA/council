@@ -1,6 +1,6 @@
 # Documentation Rules
 id: documentation-rules
-Version: 0.2.1
+Version: 0.3.0
 Status: active
 Abstraction: protocol
 has_translation: docs/ru/documentation-rules/index-RU.md
@@ -96,7 +96,7 @@ Every task proceeds through three phases controlled by the primary agent. Detail
 
 **Phase 1 — Understand:** The primary agent reads manifest, target documents, related docs, and glossary. The skill executes UNDERSTAND/ANALYZE report.
 **Phase 2 — Align:** The primary agent clarifies ambiguities with the human (see §6), proposes changes based on the skill's PROPOSE output, waits for explicit approval at step (5).
-**Phase 3 — Execute:** The primary agent delegates execution to the skill (trust level determined by change scope). The skill runs EXECUTE/VERIFY, produces diff + compliance report. Primary agent reviews results, then REPORTs to human.
+**Phase 3 — Execute:** The primary agent delegates execution to the skill (classification `mechanical` | `semantic` determined by change scope). The skill runs EXECUTE/VERIFY, produces diff + compliance report. Primary agent reviews results, then REPORTs to human.
 
 ### 5.3 Concurrent Work
 

@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # Documentation Worker
@@ -23,19 +23,19 @@ The invoking agent calls this skill via the `skill("documentation")` tool or exp
 
 ### How the Primary Agent Delegates
 
-Every delegation carries a trust level that determines what actions you may take autonomously versus requiring explicit approval before modifying live files. Maps to step (5) **Approve** in `documentation-rules` §5.2.
+Every delegation carries a `classification: mechanical | semantic` that fills the `Classification` field of the Approval Card. It is advisory only: it suggests which `approve` form the operator owes (bare `approve` for mechanical, `approve: <object>` for semantic) but never authorizes a write (see Authority note). Every write to `docs/`, `docs-manifest.yaml`, or `CHANGELOGS/` still requires the in-chat step-(5) `approve` — no exceptions. Maps to step (5) **Approve** in `documentation-rules` §5.2.
 
 ```yaml
 target_id: <document_identifier>
 change_type: update | split | create_ru | audit | custom
 description: <what needs to happen>
-trust_level: safe | review
+classification: mechanical | semantic
 constraints: [optional]
 ```
 
 Validate all required fields are present. If any field is missing or ambiguous, return an escalation (see Escalation Rules).
 
-**Authority note:** the operator is the sole authority (OP-1, `docs/en/documenter-service/index.md`). The `trust_level` in the delegation is the agent's advisory classification of the change's nature (mechanical vs semantic); it classifies work, it does not gate execution — the tools under `tools/` provide atomicity, not authority.
+**Authority note:** the operator is the sole authority (OP-1, `docs/en/documenter-service/index.md`). The `classification` in the delegation is advisory; it classifies work, it does not gate execution — the tools under `tools/` provide atomicity, not authority. Absence of approval is never consent: no write occurs without the operator's step-(5) `approve`.
 
 ### Step-(5) Approve (operator approval carrier — in-chat)
 
@@ -75,11 +75,11 @@ For complex updates spanning multiple steps (large rewrites, multi-document refa
 
 ---
 
-## Trust Levels
+## Change Classification
 
-### `safe` — Mechanical operations
+### `mechanical` — Mechanical operations
 
-Apply these changes directly without further approval. They are deterministic, reversible, and do not alter semantic content.
+Classify as `mechanical`; present the Approval Card and obtain step-(5) `approve` before writing. Deterministic, reversible, no semantic change.
 
 - Patch-level version bumps (X.Y.Z → X.Y.(Z+1))
 - Metadata corrections (typos in version, date, status enum values)
@@ -88,9 +88,9 @@ Apply these changes directly without further approval. They are deterministic, r
 - Correcting cross-reference anchors with clear typos (e.g., double dashes or wrong heading text)
 - Dispatch of `tools/` parameterized scripts (patch-level version bump, manifest regeneration) — permitted ONLY as a post-Approve action under `documentation-rules` §5.2 step (5), dispatched exclusively by this skill. Changeset write order: document content → changelog → manifest (manifest last).
 
-### `review` — Structural and substantive operations
+### `semantic` — Structural and substantive operations
 
-Produce a detailed change plan (see Response Contract), present it to the primary agent, and wait for explicit confirmation before modifying live files.
+Classify as `semantic`; produce a detailed change plan (see Response Contract), present it to the primary agent, and wait for the operator's step-(5) `approve: <object>` before modifying live files.
 
 - Content modifications to `index.md` bodies
 - Any manifest (`docs-manifest.yaml`) updates
@@ -102,7 +102,7 @@ Produce a detailed change plan (see Response Contract), present it to the primar
 
 ### When in doubt
 
-If a task could fall into either category, default to `review`. Conservative escalation is preferred over unauthorized substantive edits.
+If a task could fall into either category, default to `semantic`. A `semantic` classification only changes the required `approve` form — it never grants write authority; the in-chat step-(5) `approve` is always required.
 
 ---
 
@@ -123,7 +123,7 @@ After processing the request, produce a single structured markdown document foll
 ...
 
 ## Proposals
-(Optional — only for `review` trust level. List each proposed change with affected file and section.)
+(Optional — only for a `semantic` classification. List each proposed change with affected file and section.)
 
 ## Escalations
 (Optional — list any items escalated per the Escalation Rules below.)
@@ -200,7 +200,7 @@ After writing the file, perform a verification pass:
 
 1. **Line parity:** confirm that non-metadata, non-separator line N in RU aligns with line N in EN. Report any misalignment.
 2. **Completeness:** ensure every non-blank, non-separator content line from EN has a corresponding line in RU. Flag MISSING lines.
-3. **Language leakage:** scan for un-translated domain terms or stray English words/sentences within otherwise Russian text. **If trust_level is `safe`, fix trivial leakage items automatically** (e.g., untranslated single words like "configured" → "установленного"). If trust_level is `review`, present findings for approval before applying.
+3. **Language leakage:** scan for un-translated domain terms or stray English words/sentences within otherwise Russian text. Report every leakage finding. A correction is applied only if it is inside an already-approved changeset; otherwise present it on a separate Approval Card and obtain step-(5) `approve` before applying — even when the correction is deterministic. `classification` is advisory only and never grants write authority.
 4. **Glossary compliance:** cross-reference all glossary terms against `docs/en/glossary/index.md`; flag terms absent from glossary.
 5. **No drift:** confirm no sections were added, removed, or re-ordered relative to the source.
 
@@ -257,7 +257,7 @@ When `change_type: audit`:
   - **Rule 5 — abstraction consistency:** declared `abstraction:` matches actual content structure.
 - **Orphan classification (AI judgment):** when the manifest↔disk comparison reports on-disk documents absent from the manifest, distinguish truly orphaned files (no cross-reference anywhere) from auxiliary/operational files referenced from a parent document body (e.g., templates, prompts, helpers mentioned inside `fallback/fallback-mode.md`). Report only true orphans as compliance violations; flag auxiliaries as INFO-level notes.
 - Flag non-compliant documents in the REPORT with specific violations, naming the rule and the file.
-- DO NOT fix issues automatically during audit mode unless the trust level is `safe` AND the violation is a clear, deterministic correction already owned by a `tools/` script.
+- In audit mode, DO NOT fix issues on your own authority. A fix is applied only if it is inside an already-approved changeset; otherwise it requires a separate Approval Card and step-(5) `approve` — even when the correction is deterministic and owned by a `tools/` script. `classification` is advisory only (OP-1 non-gating).
 
 ---
 
@@ -281,7 +281,7 @@ Rules of engagement:
 1. **Atomicity, not authority.** These tools provide atomic writes and deterministic checks; they grant no permission. Every dispatch is permitted only after step (5) Approve of `documentation-rules` §5.2, and only by this skill.
 2. **No rule fork.** Any check available in `tools/check_all.py` is obtained by invoking it — duplicating the check in prose or ad-hoc commands is prohibited (no-rule-fork, `docs/en/documentation-rules/index.md` §8).
 3. **No coverage claims.** Never describe this skill or the tools as implementing "audit rules 1–6"; rules 3 and 5 are AI/skill-reserved judgments.
-4. **Advisory classification alignment.** The lists in §Trust Levels MUST stay aligned with the shipped `tools/` behavior; the `trust_level` labels are advisory work-classification (mechanical vs semantic), never an execution gate (OP-1). A mismatch with tool behavior is escalated, not resolved silently.
+4. **Advisory classification alignment.** The lists in §Change Classification MUST stay aligned with the shipped `tools/` behavior; the `classification` labels (`mechanical` | `semantic`) are advisory work-classification, never an execution gate (OP-1). They inform the required `approve` form only; every write still needs the in-chat step-(5) `approve`. A mismatch with tool behavior is escalated, not resolved silently.
 5. **Structured failure handling.** A tool exit code 2 is a refusal or a rollback — report it as such and escalate; never retry with weakened arguments. (Audit findings use check_all's own 0/1/2 codes — informational, never gating; for check_all, exit 2 means critical (high) findings were reported or the validator hit an internal error — the output marker `🚨 critical` vs `check_all: INTERNAL ERROR` tells the two apart; neither gates, both are operator-report material.)
 
 ---
@@ -333,7 +333,7 @@ Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skil
 - [ ] Metadata header follows `documentation-rules` §7.2 conventions (no `Language` field, `Source:` present for RU)
 - [ ] Split decision (if size exceeded) escalated to the operator with 2–3 candidate points (§7.3)
 - [ ] Changelog `--note` reason string is operator-supplied or quoted verbatim from the approved plan
-- [ ] `trust_level` is advisory work-classification (mechanical vs semantic), aligned with shipped `tools/` behavior and OP-1 non-gating (§Trust Levels, `AGENTS.md` §1.7)
+- [ ] `classification` (`mechanical` | `semantic`) is advisory work-classification, aligned with shipped `tools/` behavior and OP-1 non-gating (§Change Classification, `AGENTS.md` §1.7); no write occurred without step-(5) `approve`
 - [ ] Russian synchronization per `documentation-rules` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
   - [ ] For explicit or `auto_sync` writes: line number parity verified; all four Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance)
   - [ ] External engine used per ADR-014 contract (lock file read, `--contract-version` passed, exit code 0, report stored); provenance sidecar + `STATUS.md` regenerated after write
