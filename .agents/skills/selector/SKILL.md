@@ -1,8 +1,8 @@
 ---
 name: selector
-description: Interim Selector Layer 1 — index-only document relevance judgment over manifest metadata.
+description: Selector — Layer 1 (default, index-only manifest relevance) and Layer 2 (explicit opt-in, additive facts+references contract).
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   interim_form: Layer 1
 ---
 
@@ -15,8 +15,9 @@ document relevance from `docs-manifest.yaml` **metadata only** (`id`, `title`,
 `abstraction`, `path`, `has_translation`, `description`, `status`). You do **not**
 read document bodies, codebase content, or create new external tool types.
 
-This is the **interim form**: a layered approach where Layer 1 provides index-only
-relevance judgement. Layer 2 (full codebase+docs discovery) is deferred.
+This skill wraps both forms: Layer 1 (default) provides index-only relevance
+judgement. Layer 2 (full docs+codebase discovery) is implemented but requires
+explicit `mode=layer2` opt-in and never self-activates.
 
 ## Activation
 
@@ -24,6 +25,43 @@ This skill activates when any agent needs a curated, ordered list of relevant
 documents from the project's documentation index, based on a natural-language
 request. You operate statelessly: each invocation receives its full context from
 the delegating agent and produces a self-contained response.
+
+## Invocation mode
+
+Layer 2 is available but **NOT activated by default**.  Layer 1 remains the
+default; Layer 2 requires an **explicit opt-in**.
+
+**`mode=layer1`** — *default*.  Index-only relevance judgement from manifest
+metadata.  No document-body reads, no codebase reads.  See the existing
+layered sections above.
+
+**`mode=layer2`** — *explicit opt-in only*.  When the delegating agent sends
+`mode=layer2` in the instruction, activate Layer 2 behaviour:
+
+- **Facts + references**: output includes `facts[]` (evidence-based claims),
+  `sources[]` (verifiable references with SHA-256), and `integrity{}`.
+- **EN authoritative**: English documentation (`docs/en/`) is the source of
+  truth.  Russian translations (`docs/ru/`) are derivative convenience and
+  do NOT appear in the output unless explicitly requested by the caller.
+- **Docs by default**: documents are discovered from manifest entries with
+  existing regular-file paths.
+- **Code opt-in**: codebase search is disabled by default (`modes.code == "off"`);
+  the caller must pass `reveal_code=True` to enable it.
+- **Additive contract v2**: `contract_version="2.0.0"`, `form="Layer 2"`.  The
+  Layer 2 output is additive on top of Layer 1 — all legacy Layer 1 fields
+  are present and pass Layer 1 validation.
+- **deny write, shell, edit**: the policy guarantee still applies.
+- **Audit artifact**: every call writes a markdown audit file when
+  `audit_dir` is provided (see Audit Artifact section).
+- **In-process adapter**: the call is dispatched through the in-process
+  adapter at `.agents/skills/selector/runtime/layer2_adapter.py`; no
+  subprocess or network calls are involved.
+
+**Important**: Layer 2 is NEVER activated automatically.  If the caller does
+not send `mode=layer2`, operate as Layer 1.
+
+**Note**: the `skill` tool has no `mode` keyword argument; the calling agent
+must pass `mode=layer2` in the natural-language instruction.
 
 ## Layer 1 Scope
 
@@ -163,8 +201,10 @@ Documents with `status: archive` or located under archived paths:
 
 ## Constraints
 
-- **Index-only**: operate solely on manifest metadata. No document-body reads.
-  No codebase reads.
+- **Index-only in Layer 1 mode**: operate solely on manifest metadata. No
+  document-body reads. No codebase reads. In Layer 2 mode (explicit opt-in),
+  follow the `Invocation mode` section instead: EN document bodies via the
+  deterministic core, codebase only when `reveal_code=True`.
 - **Fail-closed**: on missing manifest, parse errors, or integrity failures,
   report the gap rather than guessing.
 - **Stateless**: no cross-call persistent state by default.
@@ -176,6 +216,7 @@ Documents with `status: archive` or located under archived paths:
 - `docs-manifest.yaml` — authoritative document index
 - `fallback/index.md` — fallback-mode procedure and artifact conventions
 - `docs/en/glossary/index.md` — project terminology
+- `.agents/skills/selector/roles/selector_layer2.md` — Layer 2 role constraints
 
 ## Internal Runtime Harness (deterministic Layer 1)
 

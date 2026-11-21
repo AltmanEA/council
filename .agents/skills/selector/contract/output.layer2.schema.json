@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Selector Layer 2 Output Schema",
+  "description": "Schema v2.0.0 — Layer 2 output with facts, sources, modes, integrity.",
+  "type": "object",
+  "properties": {
+    "task_summary": {
+      "type": "string",
+      "description": "Human-readable summary of the query task."
+    },
+    "ranked_ids": {
+      "type": "object",
+      "description": "Dictionary of ranked document IDs to ranked items.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "rank": {"type": "integer", "minimum": 1},
+          "rationale": {"type": "string"},
+          "discoverable": {"type": "string", "enum": ["yes", "no"]},
+          "status": {"type": "string"}
+        },
+        "required": ["id", "rank", "discoverable", "status"]
+      }
+    },
+    "disclaimer": {
+      "type": "string",
+      "description": "Standard disclaimer."
+    },
+    "discoverable": {
+      "type": "string",
+      "enum": ["yes", "no"]
+    },
+    "interim_form": {
+      "type": "string",
+      "const": "Layer 1",
+      "description": "Legacy form identifier (backward compatibility)."
+    },
+    "gap": {
+      "type": "object",
+      "properties": {
+        "gap_type": {"type": "string"},
+        "searched_sources": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "covered_items": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "omitted_items": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "excluded_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "code_paths_searched": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "required": [
+        "gap_type",
+        "searched_sources",
+        "covered_items",
+        "omitted_items",
+        "excluded_paths",
+        "code_paths_searched"
+      ]
+    },
+    "hint_acknowledgement": {
+      "type": "string",
+      "description": "Acknowledgement of applied budget hints."
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "Whether the query was truncated due to budget limits."
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "description": "SHA-256 hex digest of the manifest file."
+    },
+    "contract_version": {
+      "type": "string",
+      "const": "2.0.0",
+      "description": "Contract version — Layer 2."
+    },
+    "form": {
+      "type": "string",
+      "const": "Layer 2",
+      "description": "Authoritative form identifier — Layer 2."
+    },
+    "facts": {
+      "type": "array",
+      "description": "Evidence facts with claims and source references.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {"type": "string"},
+          "sources": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1
+          },
+          "status": {"type": "string", "enum": ["verified", "draft"]}
+        },
+        "required": ["claim", "sources", "status"]
+      }
+    },
+    "sources": {
+      "type": "array",
+      "description": "Verifiable source references with SHA-256.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "minLength": 64},
+          "kind": {"type": "string", "enum": ["doc", "code"]},
+          "status": {"type": "string"},
+          "abstraction": {"type": "string"},
+          "section": {"type": ["string", "null"]},
+          "anchor": {"type": ["string", "null"]},
+          "lines": {"type": ["string", "null"]},
+          "symbol": {"type": ["string", "null"]}
+        },
+        "required": ["id", "path", "sha256", "kind", "status", "abstraction"]
+      }
+    },
+    "modes": {
+      "type": "object",
+      "properties": {
+        "docs": {"type": "string", "const": "default"},
+        "code": {"type": "string", "enum": ["on", "off"]},
+        "excluded_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "required": ["docs", "code", "excluded_paths"]
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "manifest_sha256": {"type": "string", "minLength": 64},
+        "sources_verified": {"type": "boolean"},
+        "injection_detected": {"type": "boolean"},
+        "injection_count": {"type": "integer", "minimum": 0}
+      },
+      "required": [
+        "manifest_sha256",
+        "sources_verified",
+        "injection_detected",
+        "injection_count"
+      ]
+    }
+  },
+  "required": [
+    "task_summary",
+    "ranked_ids",
+    "disclaimer",
+    "discoverable",
+    "interim_form",
+    "gap",
+    "hint_acknowledgement",
+    "truncated",
+    "manifest_sha256",
+    "contract_version",
+    "form",
+    "facts",
+    "sources",
+    "modes",
+    "integrity"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "task_summary": "Index-only discovery for selector specification: 2 relevant documents found with evidence.",
+  "ranked_ids": {
+    "selector-spec": {
+      "id": "selector-spec",
+      "rank": 1,
+      "rationale": "Authoritative spec for the Selector service — primary reference.",
+      "discoverable": "yes",
+      "status": "draft"
+    },
+    "documenter-service": {
+      "id": "documenter-service",
+      "rank": 2,
+      "rationale": "Defines operator principles and audit contract relevant to Selector operational constraints.",
+      "discoverable": "yes",
+      "status": "active"
+    }
+  },
+  "disclaimer": "recommended starting set, not a boundary",
+  "discoverable": "yes",
+  "interim_form": "Layer 1",
+  "gap": {
+    "gap_type": "partial",
+    "searched_sources": ["docs-manifest.yaml"],
+    "covered_items": ["selector-spec", "documenter-service"],
+    "omitted_items": ["fallback-mode"],
+    "excluded_paths": [],
+    "code_paths_searched": []
+  },
+  "hint_acknowledgement": "hints applied",
+  "truncated": false,
+  "manifest_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "contract_version": "2.0.0",
+  "form": "Layer 2",
+  "facts": [
+    {
+      "claim": "Selector is an index-only information-retrieval utility for project documentation.",
+      "sources": ["selector-spec"],
+      "status": "verified"
+    },
+    {
+      "claim": "The Documenter specification defines operator principles for the Council framework.",
+      "sources": ["documenter-service"],
+      "status": "verified"
+    }
+  ],
+  "sources": [
+    {
+      "id": "selector-spec",
+      "path": "docs/en/selector/index.md",
+      "sha256": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6abcd",
+      "kind": "doc",
+      "section": "Introduction",
+      "status": "active",
+      "abstraction": "conceptual"
+    },
+    {
+      "id": "documenter-service",
+      "path": "docs/en/documenter-service/index.md",
+      "sha256": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6abcd12",
+      "kind": "doc",
+      "section": "Overview",
+      "status": "active",
+      "abstraction": "operational"
+    }
+  ],
+  "modes": {
+    "docs": "default",
+    "code": "off",
+    "excluded_paths": []
+  },
+  "integrity": {
+    "manifest_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sources_verified": true,
+    "injection_detected": false,
+    "injection_count": 0
+  }
+}
