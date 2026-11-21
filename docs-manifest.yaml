@@ -268,7 +268,7 @@ documents:
   - id: selector
     path: docs/en/selector/index.md
     title: Selector
-    version: 0.5.0
+    version: 0.6.0
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/selector/index-RU.md

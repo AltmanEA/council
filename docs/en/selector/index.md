@@ -1,7 +1,7 @@
 # Selector
 
 id: selector
-Version: 0.5.0
+Version: 0.6.0
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/selector/index-RU.md
@@ -18,7 +18,7 @@ Selector is **independent** of the built-in OpenCode `explore` subagent/capabili
 ## Non-goals
 
 - Participation in Council roles, discussion, consensus, or escalation as an agent role.
-- Writing, modifying, or committing project artifacts (including `docs/`, `docs-manifest.yaml`, `CHANGELOGS/`); Selector is read-only.
+- Writing, modifying, or committing project artifacts (including `docs/`, `docs-manifest.yaml`, `CHANGELOGS/`); read-only with respect to project artifacts and sources, the sole exception being the audit file at `audit_dir` when provided.
 - Replacing the Documentation Worker skill, Documenter audit, or the Operator's approval authority, or switching the default Selector form without a separate operator signature.
 - Acting as a general-purpose autonomous coding or execution agent.
 
@@ -51,7 +51,7 @@ Selector begins from the caller's request and available context (including `AGEN
 - The strategy is designed to be extensible so that, in future, separate rules/policies for documentation and code discovery can be applied without changing the caller-facing contract.
 
 ### Boundaries and Safety
-- Selector MUST NOT write or modify files, persist caches across calls by default in the interim form, or perform actions outside read-only discovery/summarization.
+- Selector MUST NOT write or modify project artifacts or source files (including docs/, manifest, changelogs, or code); persist caches across calls by default in the interim form; or perform actions outside read-only discovery/summarization. The sole permitted write is the audit file at the caller-provided `audit_dir`.
 - Selector MUST NOT claim Council authority or act as `explore`. Out-of-scope or disallowed reads MUST NOT be performed; limitations are reported explicitly.
 
 ## Input Contract
@@ -77,9 +77,9 @@ Selector returns **relevant facts with references for possible clarification** i
 
 ## Operational Behavior and Observability
 
-- **Read-only and stateless by default:** no writes, no cross-call persistent cache in the interim form. Any future optimization MUST NOT serve stale results without source-state awareness.
+- **Read-only with respect to docs, manifest and codebase:** no writes to project artifacts or sources. No cross-call persistent cache in the interim form. The only file write is the optional audit artifact at `audit_dir`. Any future optimization MUST NOT serve stale results without source-state awareness.
 - **Repeatability:** for the same request and unchanged relevant sources, output structure and cited references SHOULD be stable; exact wording may vary when LLM-assisted summarization is used.
-- **Auditability:** Selector SHOULD make consulted sources inspectable. In fallback/interim contexts, record a summary of request intent, searched/consulted sources, outcome/limits, and the pre-call manifest `sha256` in the session artifacts or invocation result. Every call produces an audit artifact at `sessions/<id>/selector-<call-id>.md` with required markers (including `# Selector audit`, `call_id`, `manifest_sha256`, and safe injection-detection fields without payload). In future runtime, emit an equivalent structured event/log (design target, e.g. `selector.query` with request/result metadata and consulted sources) when available. In Layer 2 the same audit carries the extended v2 fields in both validation branches.
+- **Auditability:** Selector SHOULD make consulted sources inspectable. In fallback/interim contexts, record a summary of request intent, searched/consulted sources, outcome/limits, and the pre-call manifest `sha256` in the session artifacts or invocation result. Every call returns an audit record with required markers (including `# Selector audit`, `call_id`, `manifest_sha256`); a markdown file is written to caller-provided `audit_dir` (conventionally `sessions/<id>/selector-<call-id>.md`) only when supplied. Without `audit_dir`, `audit_path` is empty. In future runtime, emit an equivalent structured event/log (design target, e.g. `selector.query` with request/result metadata and consulted sources) when available. In Layer 2 the same audit carries the extended v2 fields in both validation branches.
 - **Failure handling:** on missing sources, access/parse issues, or tool errors, return partial results when safe with explicit errors/gaps; never fabricate sources or facts.
 
 ## Cross-References

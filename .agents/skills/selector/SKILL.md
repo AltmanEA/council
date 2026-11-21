@@ -2,7 +2,7 @@
 name: selector
 description: Selector — Layer 2 (default, additive facts+references contract) and Layer 1 (explicit opt-out, index-only manifest relevance).
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   interim_form: Layer 1
 ---
 
@@ -55,8 +55,9 @@ Layer 1.  Activate Layer 2 behaviour:
   Layer 2 output is additive on top of Layer 1 — all legacy Layer 1 fields
   are present and pass Layer 1 validation.
 - **deny write, shell, edit**: the policy guarantee still applies.
-- **Audit artifact**: every call writes a markdown audit file when
-  `audit_dir` is provided (see Audit Artifact section).
+- **Audit artifact**: an audit record is always returned in output.audit;
+  the markdown audit file is written only when `audit_dir` is provided
+  (see Audit Artifact section).
 - **In-process adapter**: the call is dispatched through the in-process
   adapter at `.agents/skills/selector/runtime/layer2_adapter.py`; no
   subprocess or network calls are involved.
@@ -147,9 +148,7 @@ Integrity is checked before processing (pre-call/read-time) as part of this flow
 - Integrity is verified as part of `discover()` by computing and recording the
   **sha256** checksum of `docs-manifest.yaml` before processing (pre-call/read-time).
   Record `manifest_sha256` in output and audit.
-- Every call produces an audit artifact at: `sessions/<id>/selector-<call-id>.md`
-  (where `<id>` is the calling session's ID and `<call-id>` is a unique call
-  identifier, e.g. a short UUID).
+- Every call returns an audit record (call_id, manifest_sha256, request/results/gap markers); a markdown audit file is written to the caller-provided `audit_dir` (conventionally sessions/<id>/selector-<call-id>.md) only when `audit_dir` is supplied.
 
 ## Gap Core
 
@@ -172,7 +171,7 @@ Additionally, `gap` MAY include:
 
 ## Audit Artifact
 
-Every call produces an audit artifact at `sessions/<id>/selector-<call-id>.md`.
+Every call returns an audit record (call_id, manifest_sha256, request/results/gap markers); a markdown audit file is written to the caller-provided `audit_dir` (conventionally sessions/<id>/selector-<call-id>.md) only when `audit_dir` is supplied.
 The audit includes:
 
 - Header: `# Selector audit`
@@ -187,10 +186,12 @@ The audit includes:
 Selector provides `deny: write, shell, edit` as a policy guarantee — **not**
 technical isolation. The Selector role is constrained by policy to read-only
 access to the manifest index (Layer 1) and to EN document/code sources (Layer 2).
+The sole permitted file write is the audit file at the caller-provided `audit_dir`;
+no project artifact, source file, cache or state file is written.
 No filesystem write, shell execution, or file edit capability
-is granted or implied. In production, this policy constraint may be
-supplemented with technical enforcement, but the interim form relies on
-policy-level, not technical isolation.
+is granted or implied, except the audit file at `audit_dir`. In production, this
+policy constraint may be supplemented with technical enforcement, but the interim
+form relies on policy-level, not technical isolation.
 
 ## Draft and Archive Labels
 
@@ -214,7 +215,7 @@ Documents with `status: archive` or located under archived paths:
 - **Fail-closed**: on missing manifest, parse errors, or integrity failures,
   report the gap rather than guessing.
 - **Stateless**: no cross-call persistent state by default.
-- **Read-only**: no writes, no file modifications, no cache persistence.
+- **Read-only with respect to project artifacts and sources**: no writes to docs/, manifest, changelogs or code; no cache persistence. The sole exception is the optional audit file at `audit_dir`.
 
 ## References
 
