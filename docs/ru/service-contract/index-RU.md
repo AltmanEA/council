@@ -1,7 +1,7 @@
 # Кросс-сервисный контракт на Артефакты и события
 
 id: service-contract
-Version: 0.3.1
+Version: 0.3.2
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/index-RU.md
@@ -184,11 +184,11 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 
 ## Управление ошибками
 
-Коды ошибок, приоритет конфигураций, версионирование схем, проверка критических **Вывод** и эталонные тестовые данные находятся в `error-management/index.md`.
+Коды ошибок, приоритет конфигураций, версионирование схем, проверка критических **Вывод** и эталонные тестовые данные находятся в `error-management.md`.
 
 ## Перекрестные ссылки
 
-- `error-management/index.md` — коды ошибок, конфигурация, процесс валидации, золотые тестовые данные
+- `error-management.md` — коды ошибок, конфигурация, процесс валидации, золотые тестовые данные
 - `planned-architecture/layer-0.md` — функции, потребляющие эти схемы
 - `planned-architecture/layer-1.md` — производители артефактов Роли
 - `execution-runtime/index.md` — семантика Фазы и персистентности

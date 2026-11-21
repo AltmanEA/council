@@ -23,7 +23,7 @@ documents:
   - id: documentation-rules
     path: docs/en/documentation-rules/index.md
     title: Documentation Rules
-    version: 0.3.0
+    version: 0.4.0
     status: active
     abstraction: protocol
     has_translation: docs/ru/documentation-rules/index-RU.md
@@ -277,7 +277,7 @@ documents:
   - id: service-contract
     path: docs/en/service-contract/index.md
     title: Cross-Service Artifact & Event Contract
-    version: 0.3.1
+    version: 0.3.2
     status: draft
     abstraction: format
     has_translation: docs/ru/service-contract/index-RU.md
@@ -289,7 +289,7 @@ documents:
   - id: service-contract-error-management
     path: docs/en/service-contract/error-management.md
     title: Error Management & Policy
-    version: 0.2.4
+    version: 0.3.0
     status: draft
     abstraction: format
     has_translation: docs/ru/service-contract/error-management-RU.md

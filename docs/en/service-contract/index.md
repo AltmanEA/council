@@ -1,7 +1,7 @@
 # Cross-Service Artifact & Event Contract
 
 id: service-contract
-Version: 0.3.1
+Version: 0.3.2
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/index-RU.md
@@ -184,11 +184,11 @@ Redaction rule: manifests and events MUST NOT contain secrets, full prompts, or 
 
 ## Error Management
 
-Error codes, configuration precedence, schema versioning, critical finding validation, and golden fixtures are in `error-management/index.md`.
+Error codes, configuration precedence, schema versioning, critical finding validation, and golden fixtures are in `error-management.md`.
 
 ## Cross-References
 
-- `error-management/index.md` — error codes, config, validation process, golden fixtures
+- `error-management.md` — error codes, config, validation process, golden fixtures
 - `planned-architecture/layer-0.md` — functions consuming these schemas
 - `planned-architecture/layer-1.md` — producers of role artifacts
 - `execution-runtime/index.md` — phase and persistence semantics

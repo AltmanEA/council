@@ -1,6 +1,6 @@
 # Documentation Rules
 id: documentation-rules
-Version: 0.3.0
+Version: 0.4.0
 Status: active
 Abstraction: protocol
 has_translation: docs/ru/documentation-rules/index-RU.md
@@ -24,7 +24,7 @@ Multi-document exceptions: The following pre-existing folders contain additional
 
 ### 2.2 AI View (Manifest)
 
-The **manifest** file (`docs-manifest.yaml` or equivalent index) is a **generated index**: frontmatter is the truth; the manifest is its printout. The sole writer of the manifest is the generator (`tools/gen_manifest.py`, Stage A); until Stage A lands, the Documentation Worker skill is the sole writer. Hand-editing `docs-manifest.yaml` is prohibited; fixing a wrong manifest means fixing document frontmatter and regenerating. Manifest `version` fields are derivative of document frontmatter; parity is enforced by regenerate-and-diff: regenerate and compare against the on-disk manifest. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated / archive), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. For content authority when documents conflict, see the Content Precedence rules in `service-contract/index.md`. The per-field provenance table for manifest fields is normative in `documenter-service/configuration-guide.md`, §Manifest Field Provenance.
+The **manifest** file (`docs-manifest.yaml` or equivalent index) is a **generated index**: frontmatter is the truth; the manifest is its printout. The sole writer of the manifest is the generator (`tools/gen_manifest.py`, Stage A); until Stage A lands, the Documentation Worker skill is the sole writer. Hand-editing `docs-manifest.yaml` is prohibited; fixing a wrong manifest means fixing document frontmatter and regenerating. Manifest `version` fields are derivative of document frontmatter; parity is enforced by regenerate-and-diff: regenerate and compare against the on-disk manifest. Agents MUST NOT scan the filesystem blindly. The manifest lists every document with: file path (pointing to `index.md` under `docs/en/`), title, version, status (active / draft / deprecated / archive), abstraction level, and optionally `has_translation` to indicate a Russian variant exists. The manifest does **not** include separate entries for Russian translations — they are tracked inline via the `has_translation` field, which contains the relative path from the manifest location to the Russian file (e.g., `docs/ru/glossary/index-RU.md`). Each document entry also omits the `language` field; English is implied by presence in the manifest. For content authority when documents conflict, see §2.7 (Content Authority and Precedence) of this document. The per-field provenance table for manifest fields is normative in `documenter-service/configuration-guide.md`, §Manifest Field Provenance.
 
 ### 2.3 Relationship Rules
 
@@ -45,6 +45,17 @@ Changelog files store version history separately from document content in `CHANG
 ### 2.6 Archive Layout
 
 Superseded documents that must remain readable for decision history live under `docs/en/archive/<id>/` (Russian mirrors under `docs/ru/archive/<id>/`), with `Status: archive` in their frontmatter. The archive root carries a guard file (`docs/en/archive/index.md`) stating that archived content is history only, never authority, and must not be deleted. Archived documents stay manifest-tracked and follow the naming conventions of §7.1; they are exempt from content-compliance audit (the audit engine filters the archive path prefix — see `documenter-service/index.md`, §Archive and §Audit tool) and from scheduled translation duty: a stale RU mirror inside an archive is expected, not a defect. Moving a live document into the archive is a semantic change surfaced on the Approval Card's `Archive:` line.
+
+### 2.7 Content Authority and Precedence
+
+When documents conflict, resolve authority in this order; a lower tier never overrides a higher one on the same point.
+
+1. **Language.** English under `docs/en/` is authoritative; Russian under `docs/ru/` is a derivative convenience. This is a dimension, not a tier: it applies within every tier below.
+2. **Status.** `active` > `draft` > `archive`. An archived document is history only and never current authority, regardless of how recent its text looks.
+3. **Domain and abstraction.** Process rules (`AGENTS.md`, this document, `documenter-service/index.md`) govern process; format contracts (`service-contract/*`) govern wire schemas; protocol specs govern phases; conceptual documents govern goals and terms only.
+4. **Explicit local rules.** `documenter-service/index.md` outranks `impl-guide.md` on behavior; `impl-guide.md` outranks the skill on tool mechanics only.
+5. **Specificity.** Inside one document, a specific rule overrides a general one.
+6. **Escalation.** If the order above still leaves the conflict open, escalate under §6. The agent must not resolve it by silent choice.
 
 ---
 
@@ -157,4 +168,5 @@ At the end of any session that modifies documentation files, perform a final com
 - `docs/en/glossary/index.md` — canonical term definitions
 - `.agents/skills/documentation/SKILL.md` — Documentation Worker skill (sole write executor)
 - `fallback/index.md` — fallback-mode operator workflow
-- `service-contract/index.md` — Content Precedence rules
+- §2.7 — Content Authority and Precedence (this document)
+- `service-contract/error-management.md` — schema-level conflicts only

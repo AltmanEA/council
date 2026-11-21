@@ -1,7 +1,7 @@
 # Error Management & Policy
 
 id: service-contract-error-management
-Version: 0.2.4
+Version: 0.3.0
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/error-management-RU.md
@@ -92,15 +92,9 @@ Golden fixtures live in `tests/fixtures/contracts/golden_test_cases.yaml`. Each 
 
 Each entry must be validated by injecting the corresponding error_category into a documenter event and verifying the emitted registry code matches exactly. Duplicate mappings are prohibited.
 
-## Content Precedence
+## Content Precedence (schema-level only)
 
-When specifications conflict across documents, the following precedence order applies (highest to lowest):
-
-1. Format contracts (`service-contract`) — schema fields, enumerations, error codes, event schemas.
-2. Protocol/runtime specs (`protocol-core`, `execution-runtime`, `operator-surface`) — phase transitions, escalation logic, session semantics.
-3. Configuration/service docs (`planned-architecture`, `documenter-service/*`) — interfaces, policies, tooling behavior.
-4. Fallback and scenario docs (`fallback`, `scenario`) — operational notes tied to specific modes or scenarios.
-5. Conceptual and legacy docs (`project-concept`, `project-reference`) — goals, roles, roadmap references.
+Schema-level conflicts only (fields, enumerations, error codes, event schemas); documentation precedence lives in `documentation-rules` §2.7.
 
 ## Cross-References
 

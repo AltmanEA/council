@@ -10,7 +10,7 @@ This file is the **context router** for AI agents working in this repository. It
 ## 1. Context for All Agents (Reading Documentation)
 
 - The **manifest** (`docs-manifest.yaml`) is the generated index and single source of truth for documentation layout: every project document with path, title, version, status, abstraction, and RU translation path (`has_translation`). Read documentation **only via manifest paths**; do NOT scan the filesystem blindly. Frontmatter is the truth; the manifest is its printout (§2.2 in `documentation-rules`).
-- English under `docs/en/<id>/` is authoritative; Russian under `docs/ru/<id>/` is derivative convenience. When documents conflict, apply the Content Precedence rules in `service-contract/index.md`.
+- English under `docs/en/<id>/` is authoritative; Russian under `docs/ru/<id>/` is derivative convenience. When documents conflict, apply the Content Authority and Precedence rules in `documentation-rules` §2.7.
 - Read the glossary (`docs/en/glossary/index.md`) before using domain terms verbatim.
 
 ## 2. The Write Rule (All Changes Go Through the Documentation Worker)
