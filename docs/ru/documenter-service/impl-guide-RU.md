@@ -1,7 +1,7 @@
 # Руководство по реализации Документатора
 
 id: documenter-service-impl-guide
-Version: 0.5.0
+Version: 0.6.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/documenter-service/impl-guide-RU.md
@@ -190,10 +190,10 @@ soak-режима хука; 10 чистых коммитов soak предшес
 ## Инвариант единого коммита и стейджинг
 
 Владение единственное: упаковка и порядок content → changelog → manifest
-принадлежат `bump_version.py` / `gen_manifest.py`; стейджинг размещается в
-gitignored области `sessions/<id>/staging/` вне дерева `docs/`.
-Поле `State:` Карточки согласования — структурная защита от одобрения частичных
-пакетов. Другие разделы ссылаются на этот, никогда не пересказывая его.
+принадлежат `bump_version.py` / `gen_manifest.py`; один `git commit` после
+approve выполняет основной агент (навык этого не делает). Стейджинг размещается
+в gitignored области `sessions/<id>/staging/` вне дерева `docs/`; поле `State:`
+защищает от частичных пакетов. Другие разделы ссылаются на этот.
 
 ## Ссылки
 

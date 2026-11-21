@@ -1,3 +1,4 @@
+<!-- CHANGES v0.6.0: Clarify who executes the single commit after step-5 Approve -->
 <!-- CHANGES v0.5.0: Replace OP-2 ceiling compliance section with non-normative simplicity/displacement guidance after ceiling removal (operator-approved) -->
 <!-- CHANGES v0.4.0: Adopted as normative (impl-guide Phase 3, operator approve 'Выполняй' on card 'approve impl-guide: adoption as normative'): Status draft->active, Version 0.2.0-draft->0.4.0; stale pending-annotations actualized for Phases 0-1 -->
 <!-- CHANGES v0.4.0: RU mirror docs/ru/documenter-service/impl-guide-RU.md realigned (post-Approve auto_sync §3.3 mode b; mirrors adoption + phase-status actualization; Version 0.2.0-draft→0.4.0, Status→active). Write-gates: check_drift --phase4 exit 0, line parity 207/207, drift clean -->

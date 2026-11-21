@@ -1,7 +1,7 @@
 # Documenter Implementation Guide
 
 id: documenter-service-impl-guide
-Version: 0.5.0
+Version: 0.6.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/documenter-service/impl-guide-RU.md
@@ -190,10 +190,10 @@ evaluates gate outcomes by reading prose.
 ## Single-commit invariant and staging
 
 Ownership is singular: bundling and the content → changelog → manifest order
-are owned by `bump_version.py` / `gen_manifest.py`; staging lives in the
-gitignored `sessions/<id>/staging/` area outside the `docs/` tree. The
-Approval Card `State:` field is the structural guard against approving partial
-bundles. Other sections reference this one, never restate it.
+are owned by `bump_version.py` / `gen_manifest.py`; the primary agent alone
+executes the single `git commit` after step-(5) Approve (the skill never does).
+Staging lives in the gitignored `sessions/<id>/staging/` area outside the
+`docs/` tree; `State:` guards partial bundles. Other sections reference this.
 
 ## References
 

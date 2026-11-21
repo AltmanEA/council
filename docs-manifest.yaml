@@ -32,7 +32,7 @@ documents:
   - id: documenter-service
     path: docs/en/documenter-service/index.md
     title: Documenter
-    version: 1.4.0
+    version: 1.5.0
     status: active
     abstraction: conceptual
     has_translation: docs/ru/documenter-service/index-RU.md
@@ -64,7 +64,7 @@ documents:
   - id: documenter-service-impl-guide
     path: docs/en/documenter-service/impl-guide.md
     title: Documenter Implementation Guide
-    version: 0.5.0
+    version: 0.6.0
     status: active
     abstraction: reference
     has_translation: docs/ru/documenter-service/impl-guide-RU.md

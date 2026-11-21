@@ -60,7 +60,7 @@ The step-(5) **Approve** of `documentation-rules` §5.2 — the human act that a
    - **Archive-awareness (before any write):** consult the manifest for the target and every affected file; a file under the archive path prefix (`docs/en/archive/`, `docs/ru/archive/`) or a `Status: archive` frontmatter means an archived document. Archived documents are read-only by discipline (`documenter-service/index.md` §Archive): refuse content edits to them and escalate, and render the `Archive:` line for any write that would enter the archive — the operator sees it at the approve moment (accepted risk 7, archive blind spot). Moving a live document into the archive is a **semantic** change.
    - The machine-checkable contract of this template (field order, formats, the silent-when-clean rule, the override bracket form) is verified by `tests/test_card_contract.py` against `tests/card_contract.py`; the agent renders the card, the test suite guards its shape.
 3. **Wait for the operator's reply (approve grammar).** (a) A bare `approve` approves a **mechanical** change. (b) A **semantic** change (substantive rewrite of meaning) requires `approve: <noun phrase>` naming its object (e.g. `approve: rewrite of the Safety section`). (c) Boundary rulings: version bump + changelog = mechanical; glossary term addition = semantic. (d) The agent always renders classification as a labeled card field, never buried in prose; the operator may override. Absence of approval is never consent: without an `approve` reply in the conversation, do not write.
-4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).
+4. **Single-commit bundling.** The skill's apply phase bundles all files of one logical update (document content → changelog → manifest) into one changeset; after the operator's step-(5) Approve the primary agent executes exactly one `git commit` for it (the single-commit invariant — the foundation of revert-based recovery under OP-3). The skill never commits on its own.
 
 There is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/archive/documenter-service/` — do not reintroduce it).
 
@@ -312,7 +312,7 @@ Since this skill performs direct filesystem edits, the following safety measures
 2. **Read-before-write**: immediately before writing any file, re-read it to detect external concurrent modifications. Abort and escalate if the file has changed since the last read.
 3. **Post-change diff verification**: after applying edits, generate a diff of all changed files and include it in the report. The primary agent can inspect this to confirm correctness.
 4. **Atomic operation assumption**: treat a complete execution cycle (read → modify → verify → report) as a logical unit. On failure mid-cycle, abort remaining steps and roll back to pre-change state using the captured git snapshot.
-5. **No auto-commit**: modifies files but never commits them to git. The primary agent handles version control.
+5. **Single commit after Approve**: the skill assembles and writes the approved bundle but never runs `git` itself; after step-(5) Approve the primary agent creates exactly one commit from that bundle and reports its hash. No other commits belong to this changeset.
 
 ---
 

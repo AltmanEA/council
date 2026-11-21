@@ -1,7 +1,7 @@
 # Documenter
 
 id: documenter-service
-Version: 1.4.0
+Version: 1.5.0
 Status: active
 Abstraction: conceptual
 has_translation: docs/ru/documenter-service/index-RU.md
@@ -25,10 +25,10 @@ This specification replaces the v0.x Documenter suite from scratch. The previous
 
 The loop per change:
 
-1. An agent (or the operator) proposes a changeset; the Documentation Worker skill prepares it and bundles **all files of one logical update into one commit** (the single-commit invariant — the foundation that keeps revert a viable recovery).
+1. An agent (or the operator) proposes a changeset; the Documentation Worker skill prepares it and bundles **all files of one logical update into one changeset**; after the operator's `approve` the primary agent lands that changeset as **exactly one commit** (the single-commit invariant — the foundation that keeps revert a viable recovery). The skill itself never runs `git`.
 2. The agent runs the audit tool on the change (advisory pre-commit pass). The result is merged into the approval summary: **silent when clean**; findings appear as a short list with one-line fix hints. The audit never blocks — findings inform the operator, the operator decides.
 3. The operator reviews the summary (affected files, change category, line delta, mechanical/semantic flag) and answers `approve`. A **semantic** change (substantive rewrite of meaning) must name its object: `approve: rewrite of the Safety section`. A mechanical change accepts a bare `approve`. The agent proposes the mechanical/semantic classification; the operator may override it.
-4. The Documentation Worker skill writes the files (its dispatches to `tools/` keep the order: document content → changelog → manifest) and the change lands as a single atomic commit.
+4. The Documentation Worker skill writes the files (its dispatches to `tools/` keep the order: document content → changelog → manifest); the primary agent then commits the assembled bundle as one atomic commit and reports its hash.
 5. Later, on demand, the operator runs the audit over recent commits; on a bad commit the operator reverts it. The revert decision is entirely the operator's judgment.
 
 The Documentation Worker skill (`.agents/skills/documentation/SKILL.md`) remains the sole writer of `docs/`, `docs-manifest.yaml`, and `CHANGELOGS/`. There is no Documenter service, no MCP interface, and no intermediate authority between the proposal and the operator's yes.

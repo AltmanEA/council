@@ -1,3 +1,4 @@
+<!-- CHANGES v1.5.0: Clarify single-commit ownership: skill assembles the bundle, primary agent executes the one git commit -->
 <!-- CHANGES v1.4.0: Remove the OP-2 hard ceiling: no fixed numeric ceiling, operator judges complexity at approval; displacement becomes a recommendation (operator-approved) -->
 <!-- CHANGES v1.3.2: Promotion to active status per operator request 2026-11-20 (readiness review; -draft suffix dropped) -->
 <!-- CHANGES v1.3.1-draft: legacy archive migrated to docs/en/archive/documenter-service per Archive convention (sess-archive-design-2026-11-19 item 5) -->
