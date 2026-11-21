@@ -1,3 +1,5 @@
+<!-- CHANGES v0.3.1: синхронизация версии и перевода RU с EN 0.3.0 после уточнения контракта Layer 1 -->
+<!-- CHANGES v0.3.0: уточнение контракта Selector Layer 1 (discover, целостность до вызова, draft/archive, пустой ranked_ids, формат аудита, hint_acknowledgement) -->
 <!-- CHANGES v0.2.0: Clarify interim Layer 1 (index-only) vs deferred Layer 2 (facts+references) output contracts per sess-selector-impl-plan-2026-11-20 -->
 <!-- CHANGES v0.1.0: Added RU translation docs/ru/selector/index-RU.md (explicit operator request, post-approve; engine local Qwen3.6-35B-A3B-NVFP4, prompt 2026.11-r5; phase4 write-gates: fail=0, parity 90/90, identity OK, glossary OK, exit 0) -->
 <!-- CHANGES v0.1.0: Initial draft specification for Selector (read-only information-retrieval utility for docs and codebase; interim skill+subagent, final separate module), published per operator approval 2026-11-20 (sess-selector-spec-2026-11-20) -->

@@ -4,8 +4,9 @@
     "selector-spec": {
       "id": "selector-spec",
       "rank": 1,
-      "rationale": "Primary reference — included before budget stop.",
-      "discoverable": "yes"
+      "rationale": "Primary reference — included before budget stop. [draft]",
+      "discoverable": "yes",
+      "status": "draft"
     }
   },
   "disclaimer": "recommended starting set, not a boundary",

@@ -125,15 +125,16 @@ class TestOutputSchema(unittest.TestCase):
         items = ranked.get("patternProperties", {}).get("^.*$", {})
         self.assertIn("rationale", items.get("required", []))
 
-    def test_ranked_ids_items_required_rank_and_discoverable(self):
-        """Ordering must be explicit via rank; advisory must be per document."""
+    def test_ranked_ids_items_required_rank_discoverable_status(self):
+        """Ordering must be explicit via rank; advisory/status must be per document."""
         ranked = self.schema["properties"]["ranked_ids"]
         items = ranked.get("patternProperties", {}).get("^.*$", {})
-        for field in ("rank", "discoverable"):
+        for field in ("rank", "discoverable", "status"):
             self.assertIn(field, items.get("required", []))
-        self.assertGreaterEqual(ranked.get("minProperties", 0), 1)
+        self.assertNotIn("minProperties", ranked, "ranked_ids may be empty for manifest_missing/not_found")
         disc = items.get("properties", {}).get("discoverable", {})
         self.assertEqual(disc.get("enum"), ["yes", "no"])
+        self.assertIn("warning", items.get("properties", {}))
 
     def test_gap_type_enum_covers_fail_closed_and_spec_values(self):
         """gap_type enum must include SKILL.md fail-closed values and spec values."""

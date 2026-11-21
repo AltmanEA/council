@@ -1,7 +1,7 @@
 # Selector
 
 id: selector
-Version: 0.2.0
+Version: 0.3.1
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/selector/index-RU.md
@@ -31,7 +31,7 @@ Selector is intended to work in:
 
 ### Interim and Final Forms
 
-- **Interim form — Layer 1 (current implementation target):** an independent **skill + subagent** form, packaged separately from OpenCode `explore`. Layer 1 performs **index-only relevance judgement** over manifest metadata for project documents: it returns a task summary, an ordered recommended starting set of document IDs with a short rationale per ID, an explicit "recommended starting set, not a boundary" disclaimer, and a `Discoverable: yes/no` advisory per document. It MUST NOT read document bodies or codebase content; a code-discovery request receives an explicit deferral response. `discover()` is an internal, fail-closed, checksum-validated helper that fetches content for a selected ID on demand; it is not a new externally callable tool type. Consulted sources MUST be recorded for auditability in fallback sessions, and a system-level budget ceiling MUST override caller hints.
+- **Interim form — Layer 1 (current implementation target):** an independent **skill + subagent** form, packaged separately from OpenCode `explore`. Layer 1 performs **index-only relevance judgement** over manifest metadata for project documents: it returns a task summary, an ordered recommended starting set of document IDs with a short rationale per ID, an explicit "recommended starting set, not a boundary" disclaimer, and a `Discoverable: yes/no` advisory per document. Each ranked item MUST carry its manifest `status`; `draft` items are included when relevant and labeled `draft`, while `archive` items are included only on explicit archive request and labeled `archive` with a historical/non-authoritative warning. It MUST NOT read document bodies or codebase content; a code-discovery request receives an explicit deferral response (Layer 2). `discover()` is an internal, fail-closed helper that loads and validates the manifest index and records its pre-call/read-time `sha256` checksum for auditability; it is not a new externally callable tool type and does not read document bodies. `ranked_ids` MAY be empty only when `gap_type` is `manifest_missing` or `not_found`. Consulted sources MUST be recorded for auditability in fallback sessions, and a system-level budget ceiling MUST override caller hints.
 - **Final form — Layer 2 (deferred design target):** a separate module/service analogous in role to Documenter (utility, non-participant), realising the full facts+references information-retrieval scope of this specification across documentation and codebase content, with a versioned interface compatible with the interim contract. Transition is an operator-approved milestone with a documented checklist **and security review**; compatibility guarantees: the contract/schema may evolve by addition but MUST NOT silently drop provenance, safety, or traceability fields relied upon by callers.
 
 Context-specific rules (fallback Markdown artifacts vs future runtime structured envelopes/events) MUST NOT leak across contexts.
@@ -43,7 +43,7 @@ Selector begins from the caller's request and available context (including `AGEN
 ### Documentation (docs)
 - Documentation discovery MUST be **manifest-first**: resolve project documents via `docs-manifest.yaml` paths/IDs; do not blindly scan the filesystem for project docs.
 - Treat English under `docs/en/` as authoritative; Russian mirrors as derivative (per project policy). Surface document `status`/version and source identity in outputs.
-- **Archive sources** (`docs/en/archive/`, manifest entries with archive status): may be consulted when relevant but MUST be reported with explicit status/provenance and a warning that they are historical/non-authoritative; never present archived content as current authority. If a caller explicitly requests archive material, include it with the same warnings.
+- **Archive sources** (`docs/en/archive/`, manifest entries with archive status): may be consulted only on explicit archive request and MUST be reported with explicit status/provenance and a warning that they are historical/non-authoritative; never present archived content as current authority. If a caller explicitly requests archive material, include it with the same warnings.
 
 ### Codebase
 - Code discovery uses targeted, scoped search/read operations appropriate to the request (paths, symbols, patterns). Selector MUST remain read-only.
@@ -62,7 +62,7 @@ Selector begins from the caller's request and available context (including `AGEN
 
 ## Output Contract
 
-**Form-scoped output.** Layer 1 delivers the index-only output defined in §Interim and Final Forms (task summary → ranked recommended IDs with rationale → starting-set disclaimer → `Discoverable` advisory). The facts+references requirements below describe Layer 2 and are NOT claimed by Layer 1. Every response MUST carry an `interim_form: Layer 1` label, a clearly delimited gaps section with structured core `{gap_type, searched_sources, covered_items, omitted_items}` and optional free-form `suggestion`, and a one-line hint acknowledgement (`hints applied` / `hints not fully applied` with reason). On a budget stop, a top-of-response `⚠ TRUNCATED` banner is MANDATORY.
+**Form-scoped output.** Layer 1 delivers the index-only output defined in §Interim and Final Forms (task summary → ranked recommended IDs with rationale/status and per-document `Discoverable` advisory → starting-set disclaimer → aggregate `Discoverable` advisory). The facts+references requirements below describe Layer 2 and are NOT claimed by Layer 1. Every response MUST carry an `interim_form: Layer 1` label, a clearly delimited gaps section with structured core `{gap_type, searched_sources, covered_items, omitted_items}` and optional free-form `suggestion`, and a one-line hint acknowledgement (`hints applied` / `hints not fully applied` with reason / `no hints provided`). `ranked_ids` MAY be empty only when `gap_type` is `manifest_missing` or `not_found`. On a budget stop, a top-of-response `⚠ TRUNCATED` banner is MANDATORY.
 
 Selector returns **relevant facts with references for possible clarification** in free form, with the following requirements:
 
@@ -79,7 +79,7 @@ Selector returns **relevant facts with references for possible clarification** i
 
 - **Read-only and stateless by default:** no writes, no cross-call persistent cache in the interim form. Any future optimization MUST NOT serve stale results without source-state awareness.
 - **Repeatability:** for the same request and unchanged relevant sources, output structure and cited references SHOULD be stable; exact wording may vary when LLM-assisted summarization is used.
-- **Auditability:** Selector SHOULD make consulted sources inspectable. In fallback/interim contexts, record a summary of request intent, searched/consulted sources, and outcome/limits in the session artifacts or invocation result. In future runtime, emit an equivalent structured event/log (design target, e.g. `selector.query` with request/result metadata and consulted sources) when available.
+- **Auditability:** Selector SHOULD make consulted sources inspectable. In fallback/interim contexts, record a summary of request intent, searched/consulted sources, outcome/limits, and the pre-call manifest `sha256` in the session artifacts or invocation result. Every call produces an audit artifact at `sessions/<id>/selector-<call-id>.md` with required markers (including `# Selector audit`, `call_id`, `manifest_sha256`, and safe injection-detection fields without payload). In future runtime, emit an equivalent structured event/log (design target, e.g. `selector.query` with request/result metadata and consulted sources) when available.
 - **Failure handling:** on missing sources, access/parse issues, or tool errors, return partial results when safe with explicit errors/gaps; never fabricate sources or facts.
 
 ## Cross-References

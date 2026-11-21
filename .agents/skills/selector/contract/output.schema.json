@@ -21,11 +21,10 @@
     "ranked_ids": {
       "type": "object",
       "additionalProperties": false,
-      "minProperties": 1,
       "patternProperties": {
         "^.*$": {
           "type": "object",
-          "required": ["id", "rank", "rationale", "discoverable"],
+          "required": ["id", "rank", "rationale", "discoverable", "status"],
           "properties": {
             "id": {
               "type": "string",
@@ -44,11 +43,19 @@
               "type": "string",
               "enum": ["yes", "no"],
               "description": "Per-document advisory: whether a follow-up discover() is worthwhile."
+            },
+            "status": {
+              "type": "string",
+              "description": "Manifest status label for the document (e.g. draft, active, archive)."
+            },
+            "warning": {
+              "type": "string",
+              "description": "Optional warning; required in practice for archive items (historical/non-authoritative)."
             }
           }
         }
       },
-      "description": "Recommended starting set of document IDs with explicit rank, rationale and per-document discoverability."
+      "description": "Recommended starting set of document IDs with explicit rank, rationale, per-document discoverability and status. May be empty for gap_type manifest_missing or not_found."
     },
     "disclaimer": {
       "type": "string",

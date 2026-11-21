@@ -4,14 +4,16 @@
     "selector-spec": {
       "id": "selector-spec",
       "rank": 1,
-      "rationale": "Authoritative spec for the Selector service — primary reference for the selector layer.",
-      "discoverable": "yes"
+      "rationale": "Authoritative spec for the Selector service — primary reference for the selector layer. [draft]",
+      "discoverable": "yes",
+      "status": "draft"
     },
     "documenter-service": {
       "id": "documenter-service",
       "rank": 2,
       "rationale": "Defines operator principles and audit contract relevant to Selector operational constraints.",
-      "discoverable": "no"
+      "discoverable": "no",
+      "status": "active"
     }
   },
   "disclaimer": "recommended starting set, not a boundary",

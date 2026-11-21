@@ -7,6 +7,7 @@
 Публичный API:
     - sha256_file(path) -> str
     - load_manifest(path) -> list[dict]
+    - discover(manifest_path) -> tuple[list[dict], str, bool, int, str]
     - sanitize_metadata(text) -> tuple[str, bool]
     - rank(request, entries, max_files) -> list[dict]
     - run_query(manifest_path, request, hints, audit_dir, call_id) -> dict
@@ -72,7 +73,7 @@ def sha256_file(path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Загрузка манифеста
+# Загрузка манифеста / discover (Layer 1, fail-closed)
 # ---------------------------------------------------------------------------
 
 
@@ -227,6 +228,42 @@ def _load_manifest_fallback(path: str) -> list[dict]:
     return entries
 
 
+def discover(manifest_path: str) -> tuple[list[dict], str, bool, int, str]:
+    """Fail-closed helper Layer 1: загрузка и проверка манифеста (index-only).
+
+    Читает манифест, вычисляет SHA-256, определяет наличие инъекций в сыром
+    тексте и загружает/санитизирует записи. Не читает тела документов.
+
+    Args:
+        manifest_path: Путь к YAML-файлу манифеста.
+
+    Returns:
+        Кортеж (entries, manifest_sha256, raw_injection_detected,
+        raw_injection_count, error_text). При ошибке entries=[] и error_text
+        содержит описание; при успехе error_text="".
+    """
+    manifest_sha = ""
+    raw_injection_detected = False
+    raw_injection_count = 0
+    try:
+        manifest_sha = sha256_file(manifest_path)
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            raw_text = f.read()
+        for _pat in INJECTION_PATTERNS:
+            _m = re.findall(_pat, raw_text)
+            if _m:
+                raw_injection_detected = True
+                raw_injection_count += len(_m)
+        entries = load_manifest(manifest_path)
+        if not isinstance(entries, list) or not entries:
+            return [], manifest_sha, raw_injection_detected, raw_injection_count, "Manifest is empty — no documents found"
+        return entries, manifest_sha, raw_injection_detected, raw_injection_count, ""
+    except FileNotFoundError:
+        return [], manifest_sha, False, 0, f"Manifest file not found: {manifest_path}"
+    except Exception as exc:
+        return [], manifest_sha, raw_injection_detected, raw_injection_count, f"Manifest parse error: {exc}"
+
+
 # ---------------------------------------------------------------------------
 # Санитизация метаданных
 # ---------------------------------------------------------------------------
@@ -262,20 +299,27 @@ def rank(request: str, entries: list[dict], max_files: int) -> list[dict]:
     """Ранжировать документы по релевантности запросу.
 
     Алгоритм детерминирован: каждый документ получает балл на основе
-    совпадений слов в полях id, title, description, abstraction.
+    совпадений слов в полях id, title, description, abstraction, status.
     Порядок сортировки: балл (убывание), id (возрастание).
 
+    Детерминированно отражает status (draft/archive): archive включается
+    только при явном запросе архива в request, иначе исключается.
+
     Args:
-        request: Текстовый запрос пользователя (например, "selector specification").
+        request: Текстовый запрос пользователя.
         entries: Список словарей документов из manifest.
         max_files: Максимальное количество элементов в результате.
 
     Returns:
         Список ранжированных элементов — каждый:
-        {id, rank, rationale, discoverable}.
+        {id, rank, rationale, discoverable, status[, warning]}.
     """
     # Разбираем запрос на слова
     words = set(re.findall(r"\w+", request.lower()))
+    req_l = request.lower()
+    archive_requested = any(
+        k in req_l for k in ("archive", "archived", "historical", "архив", "истор")
+    )
 
     scored: list[tuple[int, str, int]] = []  # (score, id, index)
 
@@ -285,6 +329,10 @@ def rank(request: str, entries: list[dict], max_files: int) -> list[dict]:
         description = entry.get("description", "")
         abstraction = entry.get("abstraction", "")
         status = entry.get("status", "")
+
+        # archive только по явному запросу
+        if status == "archive" and not archive_requested:
+            continue
 
         score = 0
 
@@ -313,8 +361,7 @@ def rank(request: str, entries: list[dict], max_files: int) -> list[dict]:
         # По умолчанию — базовый балл за наличие ключевых полей
         if description:
             score += 1
-            # Приоритет для статусов 'draft', 'active' — они указывают на
-            # авторитетные документы
+            # Приоритет для статусов 'draft', 'active'
             if status in ("draft", "active"):
                 score += 1
 
@@ -355,18 +402,26 @@ def rank(request: str, entries: list[dict], max_files: int) -> list[dict]:
         if abstraction:
             rationale_parts.append(f"Abstraction: {abstraction}.")
 
+        if status == "draft":
+            rationale_parts.append("[draft]")
+        elif status == "archive":
+            rationale_parts.append("[archive] Historical/non-authoritative.")
+
         rationale = " ".join(rationale_parts)
 
-        # discoverable: 'yes' если есть description (документ имеет описательное
-        # содержание, которое может быть уточнено), 'no' иначе
+        # discoverable: 'yes' если есть description
         discoverable = "yes" if description else "no"
 
-        results.append({
+        item = {
             "id": doc_id,
             "rank": rank_num,
             "rationale": rationale,
             "discoverable": discoverable,
-        })
+            "status": status,
+        }
+        if status == "archive":
+            item["warning"] = "archive: historical/non-authoritative"
+        results.append(item)
 
     return results
 
@@ -386,9 +441,9 @@ def run_query(
     """Выполнить запрос к Selector Layer 1.
 
     Это основная функция-точка входа. Она:
-    1. Вычисляет SHA-256 манифеста до обработки.
-    2. Загружает и санитизирует метаданные.
-    3. Ранжирует документы.
+    1. Загружает и проверяет манифест (discover, fail-closed), фиксируя SHA-256.
+    2. Санитизирует метаданные.
+    3. Ранжирует документы (с детерминированной маркировкой draft/archive).
     4. Формирует output, audit, audit_path.
 
     Args:
@@ -409,41 +464,26 @@ def run_query(
     if call_id is None:
         call_id = uuid.uuid4().hex[:8]
 
-    result: dict = {}
+    hints_provided = bool(hints)
 
-    # --- Загрузка манифеста (fail-closed) ---
-    entries: list[dict] = []
-    error_text: str = ""
-    manifest_sha: str = ""
-    raw_injection_detected: bool = False
-    raw_injection_count: int = 0
-
-    try:
-        manifest_sha = sha256_file(manifest_path)
-        # Считываем сырой текст для обнаружения инъекций ДО санитизации
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            _raw_text = f.read()
-        for _pat in INJECTION_PATTERNS:
-            _m = re.findall(_pat, _raw_text)
-            if _m:
-                raw_injection_detected = True
-                raw_injection_count += len(_m)
-        entries = load_manifest(manifest_path)
-    except FileNotFoundError:
-        error_text = f"Manifest file not found: {manifest_path}"
-    except Exception as exc:
-        error_text = f"Manifest parse error: {exc}"
+    # --- Загрузка манифеста (fail-closed, discover) ---
+    entries, manifest_sha, raw_injection_detected, raw_injection_count, error_text = discover(
+        manifest_path
+    )
 
     # --- Fail-closed: манифест отсутствует или повреждён ---
-    if not error_text:
-        error_text = ""
-    if not error_text and entries:
-        error_text = ""
-    if error_text or not entries:
-        if error_text:
-            error_text += " (manifest structure invalid)"
-        elif not entries:
-            error_text = "Manifest is empty — no documents found"
+    if error_text:
+        # сохраняем текст ошибки как есть для явности
+        if "Manifest file not found" not in error_text and "Manifest is empty" not in error_text:
+            if "(manifest structure invalid)" not in error_text:
+                error_text = f"{error_text} (manifest structure invalid)"
+        elif error_text == "Manifest is empty — no documents found":
+            pass
+
+        if hints_provided:
+            hint_ack = "hints not fully applied — manifest unavailable"
+        else:
+            hint_ack = "no hints provided; manifest unavailable"
 
         output: dict = {
             "task_summary": f"Error: {error_text}",
@@ -459,7 +499,7 @@ def run_query(
                 "omitted_items": [],
                 "suggestion": "Provide a valid manifest path with 'documents:' key.",
             },
-            "hint_acknowledgement": "hints not applied — manifest unavailable",
+            "hint_acknowledgement": hint_ack,
             "truncated": False,
         }
 
@@ -483,13 +523,9 @@ def run_query(
         if audit_dir:
             audit_path = write_audit(audit_dir, call_id, audit_dict)
 
-        result = {"output": output, "audit": audit_dict, "audit_path": audit_path}
-        return result
+        return {"output": output, "audit": audit_dict, "audit_path": audit_path}
 
     # --- Санитизация метаданных ---
-    injection_detected = False
-    injection_count = 0
-
     sanitized_entries: list[dict] = []
     for entry in entries:
         clean_entry: dict = {}
@@ -497,8 +533,8 @@ def run_query(
             if isinstance(value, str):
                 cleaned, was_injected = sanitize_metadata(value)
                 if was_injected:
-                    injection_detected = True
-                    injection_count += 1
+                    # фиксация на уровне поля не обязательна здесь, используем raw-флаги
+                    pass
                 clean_entry[key] = cleaned
             else:
                 clean_entry[key] = value
@@ -551,9 +587,16 @@ def run_query(
     # --- Формируем output ---
     task_summary = f"Index-only discovery for {request}: {len(covered_ids)} relevant documents found."
     if truncated:
-        task_summary = f"\u26a0 TRUNCATED \u2014 Budget ceiling reached during index-only discovery."
+        task_summary = "\u26a0 TRUNCATED \u2014 Budget ceiling reached during index-only discovery."
 
-    hint_ack = "hints not fully applied: budget ceiling reached" if truncated else "hints applied"
+    if truncated:
+        hint_ack = "hints not fully applied: budget ceiling reached" if hints_provided else "no hints provided; budget ceiling reached"
+    else:
+        hint_ack = "hints applied" if hints_provided else "no hints provided"
+
+    suggestion = "Consider narrowing the request to the documentation area of interest." if gap_type == "partial" else None
+    if gap_type == "budget_stop":
+        suggestion = "Refine the request to reduce scope, or split into multiple focused queries."
 
     output = {
         "task_summary": task_summary,
@@ -567,7 +610,7 @@ def run_query(
             "searched_sources": ["docs-manifest.yaml"],
             "covered_items": covered_ids,
             "omitted_items": omitted_items,
-            "suggestion": "Consider narrowing the request to the documentation area of interest." if gap_type == "partial" else None,
+            "suggestion": suggestion,
         },
         "hint_acknowledgement": hint_ack,
         "truncated": truncated,
@@ -595,8 +638,7 @@ def run_query(
     if audit_dir:
         audit_path = write_audit(audit_dir, call_id, audit_dict)
 
-    result = {"output": output, "audit": audit_dict, "audit_path": audit_path}
-    return result
+    return {"output": output, "audit": audit_dict, "audit_path": audit_path}
 
 
 # ---------------------------------------------------------------------------
@@ -627,6 +669,7 @@ REQUIRED_RANKED_ITEM_KEYS: list[str] = [
     "rank",
     "rationale",
     "discoverable",
+    "status",
 ]
 
 
@@ -659,8 +702,7 @@ def validate_output(output: dict) -> list[str]:
             if key not in gap:
                 errors.append(f"Missing required gap key: {key!r}")
 
-        # gap_type: проверяем что empty ranked_ids допустим только для
-        # manifest_missing и not_found
+        # gap_type: пустой ranked_ids допустим только для manifest_missing/not_found
         gap_type = gap.get("gap_type", "")
         ranked_ids = output.get("ranked_ids", {})
         if not ranked_ids and gap_type not in ("manifest_missing", "not_found"):

@@ -1,11 +1,13 @@
 # Selector audit
 
-| Field | Value |
-|-------|-------|
-| call_id | {call_id} |
-| manifest_sha256 | {manifest_sha256} |
-| request_intent | {request_intent} |
-| timestamp | {timestamp} |
+call_id: {call_id}
+manifest_sha256: {manifest_sha256}
+
+injection_detected: {injection_detected}
+injection_count: {injection_count}
+
+request_intent: {request_intent}
+timestamp: {timestamp}
 
 ## Searched Sources
 - {searched_sources}

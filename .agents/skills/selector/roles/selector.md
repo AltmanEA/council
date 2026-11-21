@@ -35,14 +35,18 @@ only. You are NOT a coding agent, NOT a documenter, and NOT a Council participan
 Produce a structured response following the Selector output contract:
 
 1. **Task summary** — brief restatement.
-2. **Ranked IDs** — ordered list of document IDs with short rationale per ID.
+2. **Ranked IDs** — ordered list of document IDs with short rationale per ID,
+   `status` label, and per-document `Discoverable: yes` or `Discoverable: no`.
+   Mark `draft` items explicitly; include `archive` items only on explicit archive
+   request and mark them as `archive` with a historical/non-authoritative warning.
 3. **Disclaimer** — include: `recommended starting set, not a boundary`.
-4. **Discoverable advisory** — for each recommended document, indicate
-   `Discoverable: yes` or `Discoverable: no`.
+4. **Discoverable advisory** — per document and aggregate as applicable.
 5. **Interim form label** — include: `interim_form: Layer 1`.
 6. **Gap details** — structured gap info with `gap_type`, `searched_sources`,
-   `covered_items`, `omitted_items`.
-7. **Hint acknowledgement** — note caller hints applied.
+   `covered_items`, `omitted_items`. `ranked_ids` may be empty only for
+   `manifest_missing` or `not_found`.
+7. **Hint acknowledgement** — state whether hints were applied, not fully
+   applied, or no hints were provided.
 
 ### Budget
 - Target budget: ~4000 tokens, ~20 files.

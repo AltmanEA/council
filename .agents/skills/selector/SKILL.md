@@ -44,15 +44,19 @@ Every caller-facing response MUST follow this ordered chain:
 1. **Task summary** — one-line restatement of the request.
 2. **Ranked IDs** — recommended starting set keyed by `id`; every entry carries an
    explicit 1-based `rank` (object key order is not authoritative), a 1–2 line
-   `rationale`, and its own `Discoverable: yes/no` advisory.
+   `rationale`, its own `Discoverable: yes/no` advisory, and `status`. For
+   `status: draft` include the entry with a `draft` label in rationale; for
+   `status: archive` include only on explicit archive request and label as
+   `archive` with a historical/non-authoritative warning. `ranked_ids` may be
+   empty only for `gap_type: manifest_missing` or `gap_type: not_found`.
 3. **Disclaimer** — the exact phrase: `recommended starting set, not a boundary`.
 4. **Discoverable advisory** — `Discoverable: yes/no` per document
    (whether a follow-up `discover()` on that ID is likely worthwhile).
 5. **Interim form label** — `interim_form: Layer 1`.
 6. **Gap core** — structured gap information (see Gap Core section below).
 7. **Optional suggestion** — free-form suggestion for refining the request.
-8. **Hint acknowledgement** — note which caller hints were applied or why they
-   could not be applied.
+8. **Hint acknowledgement** — explicitly state whether hints were applied, not
+   fully applied, or no hints were provided.
 
 ## Budgets and Truncation
 
@@ -75,36 +79,34 @@ ceiling**. If processing stops due to budget exhaustion, prepend the response wi
 
 and include an explicit gap entry for omitted items.
 
-## discover() — Internal Manifest Read
+## discover() — Internal Manifest Read (fail-closed)
 
-`discover()` is an internal, fail-closed helper that fetches and validates content
-for a selected document ID on demand. It is **not** a new externally callable tool
-type; it is invoked by the Selector on behalf of the caller.
+`discover()` is an internal, fail-closed helper that loads and validates the
+manifest index for Layer 1 (index-only). It is **not** a new externally callable
+tool type and does **not** read document bodies.
 
 Procedure:
 
-1. Read `docs-manifest.yaml` from the repository root.
+1. Read `docs-manifest.yaml` (index path provided by caller/runtime).
 2. Compute **sha256** checksum of the manifest file content.
-3. Validate structure: must contain a `documents:` key with a list of entries,
-   each having `id`, `path`, `title`, `version`, `status`, `abstraction`.
+3. Load and validate structure: must contain a `documents:` key with a list of
+   document entries.
 4. If the manifest file is missing, unreadable, or structurally malformed:
-   — **fail-closed**: do NOT guess. Return a gap with `gap_type: manifest_missing`
-     and an explicit error in the task summary. Record the call in the audit artifact.
+   — **fail-closed**: do NOT guess. Return `gap_type: manifest_missing`, empty
+     `ranked_ids`, and an explicit error in `task_summary`. Record the call in
+     the audit artifact.
 
-The manifest checksum is recorded in every audit artifact as `manifest_sha256`
-to detect manifest tampering between the call and the audit.
+The manifest checksum is recorded as `manifest_sha256` in output and audit.
+Integrity is checked before processing (pre-call/read-time) as part of this flow.
 
-## Post-Call Integrity Check
+## Integrity and Audit Artifact
 
-After every Selector call, perform an integrity check:
-
-1. Recompute the sha256 checksum of `docs-manifest.yaml`.
-2. Compare with the checksum recorded at call start.
-3. If checksums differ, flag the result as `⚠ MANIFEST CHANGED` and append a
-   note to the audit artifact.
-4. The audit artifact is written at: `sessions/<id>/selector-<call-id>.md`
-   (where `<id>` is the calling session's ID and `<call-id>` is a unique call
-   identifier, e.g. a short UUID).
+- Integrity is verified as part of `discover()` by computing and recording the
+  **sha256** checksum of `docs-manifest.yaml` before processing (pre-call/read-time).
+  Record `manifest_sha256` in output and audit.
+- Every call produces an audit artifact at: `sessions/<id>/selector-<call-id>.md`
+  (where `<id>` is the calling session's ID and `<call-id>` is a unique call
+  identifier, e.g. a short UUID).
 
 ## Gap Core
 
@@ -122,6 +124,8 @@ Additionally, `gap` MAY include:
 | Field       | Type   | Description                                  |
 |-------------|--------|----------------------------------------------|
 | `suggestion`| string | Optional free-form suggestion for the caller   |
+
+`ranked_ids` MAY be empty only when `gap_type` is `manifest_missing` or `not_found`.
 
 ## Audit Artifact
 

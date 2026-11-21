@@ -256,9 +256,9 @@ class TestSmokeScenarioAuditTemplate(unittest.TestCase):
         """audit.template.md must contain a manifest_sha256 placeholder."""
         self.assertIn("manifest_sha256", self.audit_text)
 
-    def test_audit_template_has_separated_table(self):
-        """audit.template.md must use a markdown table for metadata fields."""
-        self.assertIn("|", self.audit_text)
+    def test_audit_template_has_call_id_marker(self):
+        """audit.template.md must contain a call_id marker (canonical key-value format)."""
+        self.assertIn("call_id:", self.audit_text)
 
     def test_audit_template_has_results_section(self):
         """audit.template.md must have a results section (## Results)."""
