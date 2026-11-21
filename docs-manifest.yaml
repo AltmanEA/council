@@ -20,14 +20,6 @@ documents:
     changelog-path: CHANGELOGS/documenter-service.changes.md
     allow_non_index_paths: true
 
-  - id: council-distribution
-    path: docs/en/planned-architecture/council-distribution.md
-    title: Council Distribution System
-    version: 0.1.0
-    status: draft
-    abstraction: protocol
-    changelog-path: CHANGELOGS/council-distribution.changes.md
-
   - id: documentation-rules
     path: docs/en/documentation-rules/index.md
     title: Documentation Rules
@@ -185,7 +177,7 @@ documents:
   - id: planned-architecture
     path: docs/en/planned-architecture/index.md
     title: Planned Architecture
-    version: 0.6.0
+    version: 0.5.0
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/planned-architecture/index-RU.md
@@ -195,7 +187,6 @@ documents:
       - planned-architecture-layer-1
       - planned-architecture-layer-2
       - planned-architecture-decisions
-      - council-distribution
     allow_non_index_paths: true
 
   - id: planned-architecture-decisions

@@ -1,11 +1,11 @@
 # Planned Architecture
 
 id: planned-architecture
-Version: 0.6.0
+Version: 0.5.0
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/planned-architecture/index-RU.md
-references: [planned-architecture-layer-0, planned-architecture-layer-1, planned-architecture-layer-2, planned-architecture-decisions, council-distribution]
+references: [planned-architecture-layer-0, planned-architecture-layer-1, planned-architecture-layer-2, planned-architecture-decisions]
 allow_non_index_paths: true
 changelog-path: CHANGELOGS/planned-architecture.changes.md
 
@@ -58,13 +58,6 @@ Supporting services sit outside the layer chain. They may call Layer 1 and MUST 
 | Documenter | Documentation audit and delegated writes | Invoked by the Layer 2 Operator Ingress; LLM-backed writes use a Layer 1 execution port |
 | JSON persistence | Session state store (`sessions/<id>/`) | Used by Layer 1 `persistence/`; local-only, not committed |
 
-## Distribution
-
-The Council framework is distributed as a self-contained archive via an
-installer/updater pair described in `council-distribution.md`. See
-`council-distribution` §Architecture Overview for file classification
-(core vs. templates), `init`/`overlay` modes, and the update mechanism.
-
 ## Operational Modes
 
 **Fallback mode** is an operational mode that replaces the code-based Moderator before implementation (see `fallback/index.md`). It operates via named subagents launched through this agent harness. Fallback sessions are excluded from `SessionManifest` requirements (see `execution-runtime/index.md` §Namespace Rule) and share only the artifact format with the canonical specification. The code-based Moderator, once implemented, will replace fallback as the default mode for development.
@@ -77,4 +70,4 @@ If orchestration outgrows Layer 1, extract an Orchestration Core behind Layer 1'
 
 All six functional enhancements from Architecture B are integrated; none require changes to the layer boundaries. Deferred items — ScenarioLoader catalog, schema migration chain, quick-review classifier, Typer CLI, checkpoint/resume, distributed locking — are listed in the consensus document that produced this revision and will be tracked in the service specifications.
 
-See: `layer-0.md`, `layer-1.md`, `layer-2.md`, `decisions/index.md`, `council-distribution.md`.
+See: `layer-0.md`, `layer-1.md`, `layer-2.md`, `decisions/index.md`.
