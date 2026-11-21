@@ -1,4 +1,4 @@
-"""Prose-anchor tests for the Selector audit-contract / read-only clarification (v0.6.0).
+"""Prose-anchor tests for the Selector audit-contract / read-only clarification (v0.7.0).
 
 Verifies that every document-body reference to audit behavior and read-only policy
 is qualified: audit record always present in output; markdown file only at
@@ -174,18 +174,18 @@ class TestEnRuLineParity(unittest.TestCase):
 
 
 class TestVersionAlignment(unittest.TestCase):
-    """Version must be 0.6.0 in both EN and RU frontmatter."""
+    """Version must be 0.7.0 in both EN and RU frontmatter."""
 
     @classmethod
     def setUpClass(cls):
         cls.spec_en = _read(SPEC_EN_PATH)
         cls.spec_ru = _read(SPEC_RU_PATH)
 
-    def test_en_version_060(self):
-        self.assertIn("Version: 0.6.0", self.spec_en)
+    def test_en_version_070(self):
+        self.assertIn("Version: 0.7.0", self.spec_en)
 
-    def test_ru_version_060(self):
-        self.assertIn("Version: 0.6.0", self.spec_ru)
+    def test_ru_version_070(self):
+        self.assertIn("Version: 0.7.0", self.spec_ru)
 
 
 if __name__ == "__main__":

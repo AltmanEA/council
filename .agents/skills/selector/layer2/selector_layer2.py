@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import uuid
 from datetime import datetime, timezone
 
@@ -75,6 +76,27 @@ def _count_injections(text: str) -> tuple[bool, int]:
     for pat in _INJECTION_PATTERNS:
         count += len(re.findall(pat, text))
     return count > 0, count
+
+
+def _postcondition_errors(output: dict) -> list[str]:
+    """Validate the assembled output through both contract validators.
+
+    The Layer 1 validator is picked up only when the adapter has preloaded
+    ``selector_runtime``; Layer 2 validation always runs.  Errors are
+    surfaced in the audit record (never silently dropped).
+    """
+    errors: list[str] = []
+    try:
+        errors.extend(_contract_mod.validate_output_v2(output))
+    except Exception as exc:  # fail loud in the audit, never crash the call
+        errors.append(f"Layer 2 validator error: {exc}")
+    runtime_mod = sys.modules.get("selector_runtime")
+    if runtime_mod is not None and hasattr(runtime_mod, "validate_output"):
+        try:
+            errors.extend(runtime_mod.validate_output(output))
+        except Exception as exc:
+            errors.append(f"Layer 1 validator error: {exc}")
+    return errors
 
 
 def _write_audit(
@@ -296,7 +318,11 @@ def run_query(
 
     # ── 2. Fail-closed: ошибка манифеста ─────────────────────────────────
     if error_text:
-        gap_type = "manifest_missing" if "not found" in error_text.lower() or "empty" in error_text.lower() else "conflict"
+        error_kind = _manifest_mod.classify_manifest_error(error_text)
+        # Any unavailable/invalid manifest is reported as "manifest_missing":
+        # it is the only gap_type both validators allow with empty facts and
+        # ranked_ids. The concrete reason lives in error_kind.
+        gap_type = "manifest_missing"
         hint_ack = "hints not fully applied — manifest unavailable" if hints else "no hints provided; manifest unavailable"
 
         output = {
@@ -308,6 +334,7 @@ def run_query(
             "interim_form": "Layer 1",
             "gap": {
                 "gap_type": gap_type,
+                "error_kind": error_kind,
                 "searched_sources": ["docs-manifest.yaml"],
                 "covered_items": [],
                 "omitted_items": [],
@@ -342,6 +369,7 @@ def run_query(
             "documents_found": 0,
             "documents_skipped": 0,
             "gap_description": gap_type,
+            "error_kind": error_kind,
             "limitations": "evidence-based",
             "integrity_result": "n/a",
             "sha256_verified": "false",
@@ -357,6 +385,8 @@ def run_query(
             "sources": [],
             "code_paths_searched": [],
         }
+
+        audit_dict["validation_errors"] = _postcondition_errors(output)
 
         audit_path = ""
         if audit_dir:
@@ -590,7 +620,9 @@ def run_query(
         "code_paths_searched": code_paths,
     }
 
-    # ── 16. Пишем audit ──────────────────────────────────────────────────
+    # ── 16. Postcondition + пишем audit ──────────────────────────────────
+    audit_dict["validation_errors"] = _postcondition_errors(output)
+
     audit_path = ""
     if audit_dir:
         audit_path = _write_audit(audit_dir, call_id, audit_dict, call_id)

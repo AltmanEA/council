@@ -22,6 +22,24 @@ _INJECTION_PATTERNS: list[str] = [
 ]
 
 
+def classify_manifest_error(error_text: str) -> str:
+    """Map a fail-closed error message to a stable ``error_kind`` token.
+
+    Used by the Layer 2 fail-closed branch so the specific reason is kept
+    without overloading ``gap_type`` (which both validators constrain).
+    """
+    text = (error_text or "").lower()
+    if "not found" in text:
+        return "not_found"
+    if "empty" in text or "missing 'documents' key" in text:
+        return "empty"
+    if "parse error" in text:
+        return "parse_error"
+    if "unreadable" in text or "permission" in text:
+        return "io_error"
+    return "unknown"
+
+
 def _sha256_of(path: str) -> str:
     """Вычислить SHA-256 файла."""
     h = hashlib.sha256()

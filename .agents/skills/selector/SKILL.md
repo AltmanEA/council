@@ -24,10 +24,11 @@ owned by the skill/adapter default, not by the role.
 
 ## Activation
 
-This skill activates when any agent needs a curated, ordered list of relevant
-documents from the project's documentation index, based on a natural-language
-request. You operate statelessly: each invocation receives its full context from
-the delegating agent and produces a self-contained response.
+This skill activates when an agent needs relevant information from project
+documentation and/or the codebase: facts with traceable references (Layer 2,
+default) or a manifest-indexed starting set (Layer 1, explicit `mode=layer1`
+opt-out). You operate statelessly: each invocation receives its full context
+from the delegating agent and produces a self-contained response.
 
 ## Invocation mode
 
@@ -67,6 +68,16 @@ Layer 1.  Activate Layer 2 behaviour:
 
 **Note**: the `skill` tool has no `mode` keyword argument; the calling agent
 must pass `mode=layer1` in the natural-language instruction to opt out.
+
+**Execution boundary (policy-level).** The deterministic core under `runtime/`
+and `layer2/` is a developer/test entry point reached through the in-process
+adapter. The registered `selector` subagent (`.opencode/agents/selector.md`)
+has no shell and no edit outside its audit file, so it cannot invoke that core:
+in subagent form the budgets, SHA-256 audit and validators are *descriptive*
+policy guarantees, not machine-enforced. Never claim they were enforced in a
+call that did not actually dispatch through `runtime/layer2_adapter.py`. This
+qualifies, rather than removes, the "deny: write, shell, edit" guarantee in
+§Policy-Level Isolation.
 
 ## Layer 1 Scope
 
