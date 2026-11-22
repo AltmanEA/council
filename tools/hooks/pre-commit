@@ -97,7 +97,22 @@ cd -- "$(dirname "$CHECKER")/.." || exit 1
 # Compute --root from the resolved checker's parent tools/ dir → one level up.
 RESOLVED_ROOT="$(pwd)"
 
-OUTPUT="$(python3 "$CHECKER" --root "$RESOLVED_ROOT" 2>&1)"
+# Host (isolated) installs: the hook lives under <git-root>/.council/tools/hooks,
+# so RESOLVED_ROOT is .council/ — auditing it alone would check only the CORE
+# corpus and miss host documents entirely (and report false manifest-drift
+# against .council/docs-manifest.yaml).  When the checker's parent differs from
+# the git root, audit the host corpus with the framework root as read-only
+# second resolution space (--core-root).  Absolute paths are passed because the
+# hook has already cd'ed into RESOLVED_ROOT (check_all resolves relative paths
+# against the process CWD).  In the source repo both roots are equal and
+# behaviour is unchanged (no --core-root).
+HOOK_ARGS=(--root "$RESOLVED_ROOT")
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || GIT_ROOT=""
+if [ -n "$GIT_ROOT" ] && [ "$RESOLVED_ROOT" != "$GIT_ROOT" ]; then
+  HOOK_ARGS=(--root "$GIT_ROOT" --core-root "$RESOLVED_ROOT")
+fi
+
+OUTPUT="$(python3 "$CHECKER" "${HOOK_ARGS[@]}" 2>&1)"
 RC=$?
 
 if [ -n "$OUTPUT" ]; then
