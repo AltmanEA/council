@@ -325,6 +325,11 @@ clean_text = '\n'.join(lines)
 data = json.loads(clean_text)
 
 skills_val = './.council/skills'
+if 'skills' not in data:
+    print(f'  WARNING: {path} has no "skills" array — please add "./.council/skills" manually.')
+    print(f'  To fix, edit {path} and add:')
+    print(f'    "skills": ["{skills_val}", ...]')
+    sys.exit(0)
 skills_list = data.get('skills', [])
 if isinstance(skills_list, list):
     if skills_val not in skills_list:
@@ -348,7 +353,11 @@ print(f"  [opencode] merged skills into {path}")
 PYEOF
 )
   rc=$?
-  [[ $rc -ne 0 ]] && echo "  WARNING: could not merge opencode config — create $OPENCODE_PATH manually:" && echo "    {\"\$schema\": \"...\",\"skills\": [\"./\\.council/skills\"]}"
+  [[ -n "$MERGED" ]] && echo "$MERGED"
+  if [[ $rc -ne 0 ]]; then
+    echo "  WARNING: could not merge opencode config — create $OPENCODE_PATH manually:"
+    echo "    {\"\$schema\": \"...\", \"skills\": [\"./.council/skills\"]}"
+  fi
 fi
 
 # Create opencode.jsonc if it does not exist yet
@@ -425,7 +434,11 @@ done
 if [[ -n "$HOOK_INSTALLER" ]]; then
   echo ""
   echo "Installing git hooks ..."
-  bash "$HOOK_INSTALLER" 2>/dev/null || echo "  WARNING: hook installation failed"
+  # install-hooks.sh cds to the git root and validates the hooks dir RELATIVE
+  # to it; derive the dir from the installer's own location (.council/tools/
+  # hooks for the isolated layout, tools/hooks in the source repo).
+  HOOKS_ARG="$(dirname "${HOOK_INSTALLER#"$TARGET_ABS"/}")/hooks"
+  bash "$HOOK_INSTALLER" "$HOOKS_ARG" 2>/dev/null || echo "  WARNING: hook installation failed"
 fi
 
 # ---------------------------------------------------------------------------
