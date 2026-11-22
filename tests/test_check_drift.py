@@ -51,6 +51,7 @@ class TestPhase4FailGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_good.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 0)
         self.assertNotIn("rule=phase4-", out)
@@ -62,6 +63,7 @@ class TestPhase4FailGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_good.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail2.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 1)
         self.assertIn("rule=phase4-fail", out)
@@ -74,6 +76,7 @@ class TestPhase4FailGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_good.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_malformed.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 2)
         self.assertIn("ERROR", err)
@@ -85,6 +88,7 @@ class TestPhase4FailGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_good.md"),
             "--report", "/nonexistent/report.json",
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 2)
         self.assertIn("ERROR", err)
@@ -100,6 +104,7 @@ class TestPhase4FailGate(unittest.TestCase):
                 os.path.join(FIXTURES_DIR, "en.md"),
                 os.path.join(FIXTURES_DIR, "ru_good.md"),
                 "--report", bad_report,
+                "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
             )
             self.assertEqual(rc, 2)
             self.assertIn("ERROR", err)
@@ -115,6 +120,7 @@ class TestPhase4ParityGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_good.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 0)
         self.assertNotIn("rule=phase4-parity", out)
@@ -126,6 +132,7 @@ class TestPhase4ParityGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_parity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 1)
         # Exactly one parity line
@@ -140,6 +147,7 @@ class TestPhase4ParityGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_parity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertNotIn("rule=phase4-identity", out)
         self.assertNotIn("rule=phase4-glossary", out)
@@ -155,6 +163,7 @@ class TestPhase4IdentityGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_identity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 1)
         self.assertIn("rule=phase4-identity", out)
@@ -167,6 +176,7 @@ class TestPhase4IdentityGate(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_partially_translated.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertNotIn("rule=phase4-identity", out)
 
@@ -189,6 +199,7 @@ class TestPhase4IdentityGate(unittest.TestCase):
             rc, out, _ = _run_cli(
                 "--phase4", en, ru,
                 "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+                "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
             )
             # Zero body → no findings (phase4 now implemented)
             self.assertNotIn("rule=phase4-identity", out)
@@ -246,12 +257,12 @@ class TestPhase4GlossaryGate(unittest.TestCase):
         # Should NOT have identity finding (body not fully identical)
         self.assertNotIn("rule=phase4-identity", out)
 
-    def test_glossary_no_glossary_flag_uses_default(self):
-        """Without --glossary, default path is used (repo-level glossary).
+    def test_glossary_explicit_flag_determinism(self):
+        """With explicit --glossary flag, behavior is deterministic (mini-glossary fixture).
 
-        If default doesn't exist or has different terms, behavior depends on
-        the default. We test the fixture mini-glossary via --glossary for
-        determinism.
+        The old implicit default from __file__ is removed: the contract now requires
+        either --glossary <path> or --glossary none. This test exercises the explicit
+        flag path with the known-good mini-glossary fixture.
         """
         # With our mini-glossary that has all terms covered in ru_good
         rc, out, _ = _run_cli(
@@ -305,6 +316,7 @@ class TestTableHyphenParityRegression(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en_table_hyphens.md"),
             os.path.join(FIXTURES_DIR, "ru_table_no_hyphens.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         # After fix: hyphens should NOT cause structural divergence
         self.assertNotIn("structural divergence", out)
@@ -366,6 +378,7 @@ class TestPhase4Isolation(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_good.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail2.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 1)
         self.assertIn("rule=phase4-fail", out)
@@ -380,6 +393,7 @@ class TestPhase4Isolation(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_parity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 1)
         self.assertIn("rule=phase4-parity", out)
@@ -391,6 +405,7 @@ class TestPhase4Isolation(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_identity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         self.assertEqual(rc, 1)
         self.assertIn("rule=phase4-identity", out)
@@ -420,6 +435,7 @@ class TestJsonOutput(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_identity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", "none",
             "--json",
         )
         self.assertEqual(rc, 1)
@@ -436,6 +452,7 @@ class TestJsonOutput(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_identity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
             "--json",
         )
         self.assertNotIn("coverage:", out)
@@ -451,6 +468,7 @@ class TestHumanRendering(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_identity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", "none",
         )
         self.assertEqual(rc, 1)
         finding_lines = [l for l in out.splitlines() if "rule=" in l]
@@ -466,6 +484,7 @@ class TestHumanRendering(unittest.TestCase):
             os.path.join(FIXTURES_DIR, "en.md"),
             os.path.join(FIXTURES_DIR, "ru_bad_identity.md"),
             "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "mini-glossary.md"),
         )
         # Footer should reference phase4 rules
         self.assertTrue(any("phase4" in l.lower() or "gate" in l.lower() for l in out.splitlines()))

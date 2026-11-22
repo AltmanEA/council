@@ -5,10 +5,10 @@ Usage:
     python3 tools/check_drift.py <en_path> <ru_path> [--json]
     python3 tools/check_drift.py --files docs/en/scenario/index.md docs/ru/scenario/index-RU.md
     python3 tools/check_drift.py --phase4 <en_path> <ru_path> --report <run_report.json>
-        [--glossary <glossary.md>] [--json]
+        --glossary <glossary.md|none> [--json]
 
 Exit codes (per check_all contract):
-    0  no findings
+    0  no findings (or vacuous gate)
     1  findings present
     2  internal error (fail loud)
 """
@@ -420,21 +420,19 @@ def _check_phase4_identity(en_lines, ru_lines, known_keys, ru_file):
 
 def _check_phase4_glossary(en_lines, ru_lines, known_keys,
                            glossary_path, ru_file):
-    """Gate: phase4-glossary — EN-body terms must have RU equivalents (stem-prefix)."""
-    findings = []
+    """Gate: phase4-glossary — EN-body terms must have RU equivalents (stem-prefix).
 
-    if not os.path.isfile(glossary_path):
-        return findings  # no glossary → nothing to check
+    NOTE: The caller must validate that glossary_path exists and is readable.
+    This function assumes a valid file is passed.
+    """
+    findings = []
 
     glossary_re = re.compile(r'^\*\*([^*]+)\*\*\s*\(([^)]+)\)')
     terms = {}
-    try:
-        with open(glossary_path, "r", encoding="utf-8") as f:
-            for line in f:
-                m = glossary_re.match(line.strip())
-                if m: terms[m.group(1).strip()] = m.group(2).strip()
-    except OSError:
-        return findings
+    with open(glossary_path, "r", encoding="utf-8") as f:
+        for line in f:
+            m = glossary_re.match(line.strip())
+            if m: terms[m.group(1).strip()] = m.group(2).strip()
 
     en_body_idx = _collect_body_lines(en_lines, known_keys)
     ru_body_idx = _collect_body_lines(ru_lines, known_keys)
@@ -550,7 +548,11 @@ def print_results_phase4(findings, gate_rules, json_output):
 
 
 def _run_phase4(en_path, ru_path, report_path, glossary_path, json_output):
-    """Run the four phase4 gate rules."""
+    """Run the four phase4 gate rules.
+
+    glossary_path must be validated by the caller (main or wrapper).
+    If glossary_path == "none", gate 4 is skipped (vacuous).
+    """
     # Import KNOWN_KEYS (same as drift mode)
     try:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -570,6 +572,14 @@ def _run_phase4(en_path, ru_path, report_path, glossary_path, json_output):
     findings = []
     ru_file = ru_path
 
+    # Provenance state (filled during gate 4 processing)
+    provenance_path = "none"
+    provenance_terms = 0
+    provenance_matched = 0
+    provenance_status = "vacuous"
+
+    is_vacuous = (glossary_path == "none")
+
     # Gate 1: phase4-fail
     err, gate_findings = _check_phase4_fail(report_path, ru_file)
     if err == 2:
@@ -582,18 +592,56 @@ def _run_phase4(en_path, ru_path, report_path, glossary_path, json_output):
         # Length mismatch → STOP further checks (no identity/glossary)
         findings.extend(gate_findings)
         print_results_phase4(findings, ["phase4-fail", "phase4-parity"], json_output)
+        _print_provenance(provenance_path, provenance_terms,
+                          provenance_matched, provenance_status, json_output)
         return 1 if findings else 0, findings
     findings.extend(gate_findings)
 
     # Gate 3: phase4-identity
     findings.extend(_check_phase4_identity(en_lines, ru_lines, KNOWN_KEYS, ru_file))
 
-    # Gate 4: phase4-glossary
-    findings.extend(_check_phase4_glossary(en_lines, ru_lines, KNOWN_KEYS, glossary_path, ru_file))
+    # Gate 4: phase4-glossary (only if not vacuous)
+    if not is_vacuous:
+        # Collect EN body text for matched count
+        _ic = lambda s: re.sub(r'`[^`]+`', '', s)
+        en_body_idx = _collect_body_lines(en_lines, KNOWN_KEYS)
+        en_body_text = " ".join(_ic(en_lines[i].strip()) for i in en_body_idx).lower()
 
-    gate_rules = ["phase4-fail", "phase4-parity", "phase4-identity", "phase4-glossary"]
+        # Parse glossary terms (same regex as _check_phase4_glossary)
+        glossary_re = re.compile(r'^\*\*([^*]+)\*\*\s*\(([^)]+)\)')
+        terms = {}
+        with open(glossary_path, "r", encoding="utf-8") as f:
+            for line in f:
+                m = glossary_re.match(line.strip())
+                if m:
+                    terms[m.group(1).strip()] = m.group(2).strip()
+        provenance_path = os.path.realpath(glossary_path)
+        provenance_terms = len(terms)
+        for term in terms:
+            word_re = re.compile(r'(?:^|\s)' + re.escape(term) + r'(?:$|\s|[^\w-])', re.IGNORECASE)
+            if word_re.search(en_body_text):
+                provenance_matched += 1
+        provenance_status = "checked"
+
+        gate_findings = _check_phase4_glossary(en_lines, ru_lines, KNOWN_KEYS, glossary_path, ru_file)
+        findings.extend(gate_findings)
+
+    gate_rules = ["phase4-fail", "phase4-parity", "phase4-identity"]
+    if not is_vacuous:
+        gate_rules.append("phase4-glossary")
     print_results_phase4(findings, gate_rules, json_output)
+    _print_provenance(provenance_path, provenance_terms,
+                      provenance_matched, provenance_status, json_output)
     return 1 if findings else 0, findings
+
+
+def _print_provenance(path, terms, matched, status, json_output):
+    """Print the provenance line."""
+    provenance_line = f"glossary: path={path} | terms={terms} | matched={matched} | status={status}"
+    if json_output:
+        print(provenance_line, file=sys.stderr)
+    else:
+        print(provenance_line)
 
 
 def main():
@@ -623,7 +671,7 @@ def main():
 
         if len(args) != 2:
             print("Usage: check_drift.py --phase4 <en_path> <ru_path> "
-                  "--report <report.json> [--glossary <glossary.md>] [--json]",
+                  "--report <report.json> --glossary <glossary.md|none> [--json]",
                   file=sys.stderr)
             sys.exit(2)
 
@@ -633,10 +681,54 @@ def main():
             print("ERROR: --report is required in --phase4 mode", file=sys.stderr)
             sys.exit(2)
 
-        tools_dir = os.path.dirname(os.path.abspath(__file__))
-        repo_root = os.path.dirname(tools_dir)
         if not glossary_path:
-            glossary_path = os.path.join(repo_root, "docs", "en", "glossary", "index.md")
+            print("ERROR: --glossary is required in --phase4 mode", file=sys.stderr)
+            sys.exit(2)
+
+        # Resolve and validate glossary path (before running gates)
+        if glossary_path != "none":
+            if not os.path.isfile(glossary_path):
+                print(f"ERROR: glossary file not found: {glossary_path}", file=sys.stderr)
+                sys.exit(2)
+            try:
+                # Validate readable + parse terms
+                glossary_re = re.compile(r'^\*\*([^*]+)\*\*\s*\(([^)]+)\)')
+                terms = {}
+                with open(glossary_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        m = glossary_re.match(line.strip())
+                        if m:
+                            terms[m.group(1).strip()] = m.group(2).strip()
+
+            except OSError:
+                print(f"ERROR: cannot read glossary file: {glossary_path}", file=sys.stderr)
+                sys.exit(2)
+
+            # Re-read EN lines to check for non-empty body
+            try:
+                en_check_lines = _read_lines(en_path)
+                # Re-import for this check
+                try:
+                    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+                    from docmeta import KNOWN_KEYS as _KK
+                except ImportError:
+                    _KK = ("id", "Version", "Status", "Abstraction", "changelog-path",
+                           "title", "has_translation", "references",
+                           "allow_non_index_paths", "Last Modified")
+                en_body_idx = _collect_body_lines(en_check_lines, _KK)
+                _ic = lambda s: re.sub(r'`[^`]+`', '', s)
+                en_body_text = " ".join(_ic(en_check_lines[i].strip()) for i in en_body_idx).lower()
+                has_en_body = bool(en_body_text.strip())
+                if not terms and has_en_body:
+                    print(f"ERROR: glossary has 0 parsed terms but EN body is non-empty: {glossary_path}",
+                          file=sys.stderr)
+                    sys.exit(2)
+            except OSError as e:
+                print(f"ERROR: could not read files: {e}", file=sys.stderr)
+                sys.exit(2)
+            except ImportError:
+                # docmeta not available, skip 0-term check (fallback)
+                pass
 
         exit_code, _ = _run_phase4(en_path, ru_path, report_path, glossary_path,
                                    phase4_json_output)
