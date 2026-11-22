@@ -293,9 +293,13 @@ done
 echo "$VERSION" > "$OUT_DIR/$DIST_NAME/version.txt"
 echo "$VERSION" > "$OUT_DIR/$DIST_NAME/core/version.txt"
 
-# Core manifest: list of every file under core/ relative to core/
+# Core manifest: list of every file under core/ relative to core/, with the
+# .council/ host prefix baked in (AC-1, sess-dist-isolated-install-2026-11-22).
+# The ARCHIVE itself keeps the plain layout under core/; only the manifest is
+# prefixed.  install.sh/update.sh derive archive src paths by stripping the
+# .council/ prefix from each entry.
 cd "$OUT_DIR/$DIST_NAME/core"
-find . -type f | sed 's|^\./||' > "../core-manifest.txt"
+find . -type f | sed 's|^\./|\.council/|' > "../core-manifest.txt"
 cd "$ROOT_DIR"
 echo "  [meta] core-manifest.txt ($(wc -l < "$OUT_DIR/$DIST_NAME/core-manifest.txt") files)"
 

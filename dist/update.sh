@@ -85,6 +85,14 @@ if ! python3 -c "import yaml" 2>/dev/null; then
   exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# AC-8: Preflight — reject if .council is a symlink or not a directory
+# ---------------------------------------------------------------------------
+if [ -e ".council" ] && [ ! -d ".council" ] || [ -L ".council" ]; then
+  echo "ERROR: .council exists but is not a regular directory (symlink?). Refusing to update."
+  exit 1
+fi
+
 CURRENT_VERSION=$(cat .council/version.lock)
 echo "Current Council version: $CURRENT_VERSION"
 
@@ -136,21 +144,28 @@ UNION_FILE=$(mktemp)
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
   if [[ -e "$f" ]]; then
-    mkdir -p "$BACKUP_DIR/$(dirname "$f")"
-    cp -R "$f" "$BACKUP_DIR/$f" 2>/dev/null || true
+    # Strip .council/ prefix to avoid double-nesting in backup
+    rel="${f#.council/}"
+    mkdir -p "$BACKUP_DIR/$(dirname "$rel")"
+    cp -R "$f" "$BACKUP_DIR/$rel" 2>/dev/null || true
   fi
 done < "$UNION_FILE"
+
+# Write restore-instructions.txt after entries so restore won't clobber it
+RESTORE_CMD="cp -R $BACKUP_DIR/* .council/"
+echo "$RESTORE_CMD" > "$BACKUP_DIR/restore-instructions.txt"
 
 # ---------------------------------------------------------------------------
 # Apply update — iterate UNION so that files present in old manifest but
 # absent from the new one are also removed (MF-3 orphan removal).
+# Manifest entries carry .council/ prefix; archive core/ uses plain layout.
 # ---------------------------------------------------------------------------
 echo "Applying update ..."
 
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
-  src="$NEW_DIR/core/$f"
-  dst="./$f"
+  src="$NEW_DIR/core/${f#.council/}"
+  dst="$f"
   if [[ -e "$src" ]]; then
     mkdir -p "$(dirname "$dst")"
     cp -R "$src" "$dst"
@@ -160,16 +175,27 @@ while IFS= read -r f; do
     # it will be removed.  Loud warning + restore path (backup already made
     # above).  Per operator decision core files are not hand-edited on hosts;
     # if that ever changes, keep a .council/customizations.txt checklist.
+    rel="${f#.council/}"  # stripped path for backup reference
     echo "  [removed] $f  (not in new distribution)"
     if [[ -e "$dst" ]]; then
       echo "            It will be DELETED from the host."
-      echo "            A copy is preserved at: $BACKUP_DIR/$f"
-      echo "            Restore if needed with: cp -R $BACKUP_DIR/$f $dst"
+      echo "            A copy is preserved at: ${BACKUP_DIR}/${rel}"
+      echo "            Restore if needed with: cp -R ${BACKUP_DIR}/${rel} \"$dst\""
     fi
     rm -rf "$dst"
   fi
 done < "$UNION_FILE"
 rm -f "$UNION_FILE"
+
+# ---------------------------------------------------------------------------
+# Skills refresh: copy .agents/skills → .council/skills so opencode.jsonc
+# registrations stay in sync with what the manifest installs under .agents/
+# ---------------------------------------------------------------------------
+if [[ -d ".council/.agents/skills" ]]; then
+  rm -rf ".council/skills"
+  cp -R ".council/.agents/skills" ".council/skills"
+  echo "  [core] re-mapped .council/.agents/skills -> .council/skills"
+fi
 
 # ---------------------------------------------------------------------------
 # Update metadata
@@ -192,5 +218,5 @@ echo "  $CURRENT_VERSION → $NEW_VERSION"
 echo "  Backup: $BACKUP_DIR"
 echo ""
 echo "If anything breaks, restore with:"
-echo "  cp -R $BACKUP_DIR/* ."
+echo "$RESTORE_CMD"
 echo ""

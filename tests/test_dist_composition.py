@@ -245,60 +245,81 @@ class TestBytecodeExclusion(BuildHelper):
 # Test 3: Content set — core (Variant B)
 # ---------------------------------------------------------------------------
 class TestContentSetCore(BuildHelper):
-    """The core manifest lists the correct files per Variant B."""
+    """The core manifest lists the correct files per Variant B.
+
+    Per .council/ layout (AC-1): all manifest entries carry .council/ prefix.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.archive_path = None
+        env = os.environ.copy()
+        env["COUNCIL_ALLOW_DIRTY"] = "1"
+        result = _run(["bash", BUILD_SH, "composition-test"], env=env)
+        cls.archive_path = os.path.join(DIST, "out", "council-dist-composition-test.tar.gz")
+        cls.assertTrue(
+            os.path.isfile(cls.archive_path),
+            f"build.sh did not produce {cls.archive_path}: {result.stderr}",
+        )
 
     def test_archive_core_contents(self):
-        archive, _ = self.build_archive("core-test")
         tmpdir = tempfile.mkdtemp()
         try:
-            with tarfile.open(archive, "r:gz") as tf:
+            with tarfile.open(self.archive_path, "r:gz") as tf:
                 tf.extractall(tmpdir)
             manifest_path = os.path.join(tmpdir, "council-dist", "core-manifest.txt")
             with open(manifest_path) as f:
                 entries = sorted(f.read().strip().split("\n"))
 
-            # Must contain tools
-            self.assertTrue(any("tools/" in e for e in entries))
+            # Must contain tools (under .council/ prefix)
+            self.assertTrue(any(".council/tools/" in e for e in entries))
 
-            # defaults/translation.lock must be present
+            # defaults/translation.lock must be present (with .council/ prefix)
             self.assertTrue(
-                any("defaults/translation.lock" in e for e in entries),
+                any(".council/defaults/translation.lock" in e for e in entries),
                 "defaults/translation.lock must be in core manifest",
             )
 
-            # defaults/policy.yaml must NOT be present
+            # defaults/policy.yaml must NOT be present (with .council/ prefix check)
             self.assertFalse(
-                any("defaults/policy.yaml" in e for e in entries),
+                any(".council/defaults/policy.yaml" in e for e in entries),
                 "defaults/policy.yaml must NOT be in core manifest",
             )
 
-            # docs/en/archive/index.md must be present (exactly 1 archive doc)
+            # docs/en/archive/index.md must be present (exactly 1 archive doc,
+            # with .council/ prefix)
             self.assertTrue(
-                any("docs/en/archive/index.md" in e for e in entries),
+                any(".council/docs/en/archive/index.md" in e for e in entries),
                 "docs/en/archive/index.md must be in core manifest",
             )
 
-            # No other archive files
-            archive_entries = [e for e in entries if "docs/en/archive/" in e]
+            # No other archive files (only .council/ entries in core manifest)
+            archive_entries = [e for e in entries if ".council/docs/en/archive/" in e]
             self.assertEqual(
-                archive_entries, ["docs/en/archive/index.md"],
+                archive_entries, [".council/docs/en/archive/index.md"],
                 f"Archive subtree must have only index.md, got: {archive_entries}",
             )
 
-            # NO docs/ru entries
-            ru_entries = [e for e in entries if "docs/ru/" in e]
+            # NO docs/ru entries (in manifest)
+            ru_entries = [e for e in entries if ".council/docs/ru/" in e]
             self.assertEqual(ru_entries, [], f"docs/ru entries found: {ru_entries}")
 
-            # Check selector agent
+            # Check selector agent (with .council/ prefix)
             self.assertTrue(
-                any(".opencode/agents/selector.md" in e for e in entries),
+                any(".council/.opencode/agents/selector.md" in e for e in entries),
                 "selector agent must be in core",
             )
 
-            # Check fallback
+            # Check fallback (with .council/ prefix)
             self.assertTrue(
-                any("fallback/index.md" in e for e in entries),
+                any(".council/fallback/index.md" in e for e in entries),
                 "fallback/index.md must be in core",
+            )
+
+            # Templates must NOT be in core manifest (they install to host root)
+            self.assertFalse(
+                any(e.startswith("templates/") for e in entries),
+                "templates/ must not appear in core manifest",
             )
 
         finally:
@@ -371,7 +392,14 @@ class TestContentSetTemplates(BuildHelper):
 # Test 5: Host installation — no docs/ru, guard exists, templates purge
 # ---------------------------------------------------------------------------
 class TestHostInstall(BuildHelper):
-    """After install.sh on a clean host, the expected files/directories exist or don't."""
+    """After install.sh on a clean host, the expected files/directories exist or don't.
+
+    Per .council/ layout (AC-2):
+    - Framework files under <host>/.council/
+    - Host-owned templates at host root
+    - No core docs at host root (only project-concept)
+    - No docs/ru anywhere
+    """
 
     def test_host_no_ru(self):
         archive, _ = self.build_archive("host-test")
@@ -391,28 +419,61 @@ class TestHostInstall(BuildHelper):
             )
             self.assertEqual(result.returncode, 0, f"install.sh failed: {result.stderr}")
 
-            # No docs/ru
+            # No docs/ru anywhere on host
             self.assertFalse(
                 os.path.isdir(os.path.join(host, "docs", "ru")),
                 "docs/ru must NOT exist on host",
             )
 
-            # Guard file exists
+            # Core docs are under .council/ — NOT at host root docs/
+            core_doc_dirs = [
+                "documentation-rules",
+                "glossary",
+                "protocol-core",
+                "documenter-service",
+                "translation-project",
+            ]
+            host_docs_en = os.path.join(host, "docs", "en")
+            for d in core_doc_dirs:
+                self.assertFalse(
+                    os.path.isdir(os.path.join(host_docs_en, d)),
+                    f"host root must NOT contain core docs/ ({d}/)",
+                )
+
+            # Framework files under .council/
             self.assertTrue(
-                os.path.isfile(os.path.join(host, "docs", "en", "archive", "index.md")),
-                "docs/en/archive/index.md must exist on host",
+                os.path.isfile(os.path.join(host, ".council", "tools", "check_all.py")),
+                ".council/tools/check_all.py must exist on host",
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join(host, ".council", "update.sh")),
+                ".council/update.sh must exist on host",
             )
 
-            # defaults/translation.lock present
+            # defaults/translation.lock under .council/
             self.assertTrue(
-                os.path.isfile(os.path.join(host, "defaults", "translation.lock")),
-                "defaults/translation.lock must exist on host",
+                os.path.isfile(os.path.join(host, ".council", "defaults", "translation.lock")),
+                ".council/defaults/translation.lock must exist on host",
             )
 
-            # defaults/policy.yaml absent
+            # defaults/policy.yaml absent from .council/
             self.assertFalse(
-                os.path.isfile(os.path.join(host, "defaults", "policy.yaml")),
-                "defaults/policy.yaml must NOT exist on host",
+                os.path.isfile(os.path.join(host, ".council", "defaults", "policy.yaml")),
+                ".council/defaults/policy.yaml must NOT exist on host",
+            )
+
+            # Host-owned templates at host root
+            self.assertTrue(
+                os.path.isfile(os.path.join(host, "AGENTS.md")),
+                "AGENTS.md (host template) must exist at host root",
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join(host, "docs", "en", "project-concept", "index.md")),
+                "docs/en/project-concept/index.md (host template) must exist at host root",
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join(host, "CHANGELOGS", "project-concept.changes.md")),
+                "CHANGELOGS/project-concept.changes.md (host template) must exist at host root",
             )
 
             # Templates purge
@@ -423,12 +484,6 @@ class TestHostInstall(BuildHelper):
             self.assertFalse(
                 os.path.isdir(os.path.join(host, "templates", "docs", "en", "service-contract")),
                 "service-contract must NOT be in templates on host",
-            )
-
-            # CHANGELOGS/project-concept.changes.md present (installed directly to host root)
-            self.assertTrue(
-                os.path.isfile(os.path.join(host, "CHANGELOGS", "project-concept.changes.md")),
-                "CHANGELOGS/project-concept.changes.md must exist on host",
             )
 
         finally:
@@ -483,8 +538,11 @@ class TestHasTranslationSanitization(BuildHelper):
             with open(manifest_path) as f:
                 content = f.read()
             self.assertNotIn("has_translation", content)
-            archive_entries = [l for l in content.strip().split("\n") if "docs/en/archive/" in l]
-            self.assertEqual(archive_entries, ["docs/en/archive/index.md"])
+            archive_entries = [l for l in content.strip().split("\n")
+                               if ".council/docs/en/archive/" in l]
+            self.assertEqual(
+                archive_entries, [".council/docs/en/archive/index.md"],
+            )
 
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -586,7 +644,12 @@ class TestInstallFatalPrecheck(BuildHelper):
 # Test 9: install.sh — host verification after clean install
 # ---------------------------------------------------------------------------
 class TestInstallVerification(BuildHelper):
-    """After install.sh succeeds, all required files must exist on the host."""
+    """After install.sh succeeds, all required files must exist on the host.
+
+    Per .council/ layout (AC-2):
+    - Framework files install under <host>/.council/
+    - Host-owned templates (project-concept, AGENTS.md, CHANGELOGS) stay at host root
+    """
 
     def test_install_verification(self):
         archive, _ = self.build_archive("verify-test")
@@ -607,17 +670,29 @@ class TestInstallVerification(BuildHelper):
                 result.returncode, 0, f"install.sh failed: {result.stderr}"
             )
 
+            # Framework files under .council/
             required_files = [
-                "tools/check_all.py",
+                ".council/tools/check_all.py",
                 ".council/update.sh",
-                "AGENTS.md",
-                "fallback/index.md",
-                "docs/en/documentation-rules/index.md",
+                ".council/fallback/index.md",
+                ".council/docs/en/documentation-rules/index.md",
             ]
             for rel in required_files:
                 fpath = os.path.join(host, rel)
                 self.assertTrue(
                     os.path.isfile(fpath), f"Missing after install: {rel}"
+                )
+
+            # Host-owned templates at host root (not under .council/)
+            host_templates = [
+                "AGENTS.md",
+                "CHANGELOGS/project-concept.changes.md",
+                "docs/en/project-concept/index.md",
+            ]
+            for rel in host_templates:
+                fpath = os.path.join(host, rel)
+                self.assertTrue(
+                    os.path.isfile(fpath), f"Host template missing: {rel}"
                 )
 
         finally:
@@ -742,7 +817,12 @@ class TestUpdateOrphanRemoval(unittest.TestCase):
 # Test 11: check_all.py passes on fresh host (regression test)
 # ---------------------------------------------------------------------------
 class TestCheckAllOnHost(unittest.TestCase):
-    """On a freshly installed host, check_all.py must exit 0."""
+    """On a freshly installed host, check_all.py must exit 0 on the host corpus.
+
+    Per .council/ layout: invoke with --root . (host root) and --core-root .council
+    so it audits only the host's project-concept (clean) instead of the core corpus
+    (which has unrelated low §-refs).
+    """
 
     @unittest.skipUnless(
         subprocess.run(
@@ -771,10 +851,32 @@ class TestCheckAllOnHost(unittest.TestCase):
                 cwd=dist_dir,
             )
 
-            result = _run(["python3", "tools/check_all.py"], cwd=host)
+            # AC-4: the installer itself must have generated the host manifest at root
+            self.assertTrue(
+                os.path.isfile(os.path.join(host, "docs-manifest.yaml")),
+                "install.sh must generate host docs-manifest.yaml at host root (AC-4)",
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join(host, ".council", "docs-manifest.yaml")),
+                "install.sh must generate core manifest at .council/docs-manifest.yaml (AC-4)",
+            )
+
+            # On a fresh install, host has no root-level docs-manifest.yaml yet.
+            # Generate it (real-world first step) so check_all can audit cleanly.
+            _run(
+                ["python3", ".council/tools/gen_manifest.py", "--root", ".", "--write"],
+                cwd=host,
+            )
+
+            # Audit HOST corpus (not core) with --core-root resolving core docs
+            result = _run(
+                ["python3", ".council/tools/check_all.py", "--root", ".",
+                 "--core-root", ".council"],
+                cwd=host,
+            )
             self.assertEqual(
                 result.returncode, 0,
-                f"check_all.py failed on fresh host (exit {result.returncode}):\n"
+                f"check_all.py failed on host corpus (exit {result.returncode}):\n"
                 f"{result.stderr[:2000]}",
             )
         finally:

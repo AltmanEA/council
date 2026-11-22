@@ -65,14 +65,26 @@ fail_closed_exit() {
   exit 0
 }
 
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
-if [ -z "$ROOT" ]; then
-  echo "[pre-commit] !!! cannot resolve repository root (git rev-parse failed)" >&2
-  echo "[pre-commit] !!! remediation: run 'git rev-parse --show-toplevel' from the repo; no documentation check was performed" >&2
-  fail_closed_exit
+# Resolve checker location: first try relative to this hook file, then
+# fall back to <repo-root>/tools/check_all.py (backward compat for
+# Council's own repo where hooks live under tools/hooks/).
+CHECKER=""
+REL_CHECKER="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../check_all.py"
+if [ -f "$REL_CHECKER" ]; then
+  CHECKER="$REL_CHECKER"
+else
+  # Fallback: try the standard tools/ path under the git root.
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
+  if [ -n "$ROOT" ] && [ -f "$ROOT/tools/check_all.py" ]; then
+    CHECKER="$ROOT/tools/check_all.py"
+  fi
 fi
 
-CHECKER="${ROOT}/tools/check_all.py"
+if [ -z "$CHECKER" ]; then
+  echo "[pre-commit] !!! CHECK_ALL NOT RUN — validator not found near the hook ($REL_CHECKER) or under $ROOT/tools/check_all.py" >&2
+  echo "[pre-commit] !!! remediation: ensure check_all.py exists adjacent to the hooks directory or at <repo>/tools/check_all.py" >&2
+  fail_closed_exit
+fi
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "[pre-commit] !!! CHECK_ALL NOT RUN — python3 missing from PATH" >&2
@@ -80,18 +92,12 @@ if ! command -v python3 >/dev/null 2>&1; then
   fail_closed_exit
 fi
 
-if [ ! -f "$CHECKER" ]; then
-  echo "[pre-commit] !!! CHECK_ALL NOT RUN — validator missing at tools/check_all.py" >&2
-  echo "[pre-commit] !!! remediation: restore tools/check_all.py; no documentation check was performed" >&2
-  fail_closed_exit
-fi
+cd -- "$(dirname "$CHECKER")/.." || exit 1
 
-cd "$ROOT" || exit 1
+# Compute --root from the resolved checker's parent tools/ dir → one level up.
+RESOLVED_ROOT="$(pwd)"
 
-# Capture combined stdout+stderr and the exit code (set -e is NOT in effect).
-# Run the checker by absolute path: the hook cd's to ROOT first, so relative
-# paths in remediation hints below resolve from the repository root.
-OUTPUT="$(python3 "$CHECKER" --root "$ROOT" 2>&1)"
+OUTPUT="$(python3 "$CHECKER" --root "$RESOLVED_ROOT" 2>&1)"
 RC=$?
 
 if [ -n "$OUTPUT" ]; then
