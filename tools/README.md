@@ -19,8 +19,13 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) | `tools/install-hooks.sh` |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational | `tools/tests_helpers.py` |
 | `tests/` | (empty after ADR-014; the translation test suite moved to the external project) | removed | — |
+| `collect_telemetry.sh` | Local opt-in diagnostics collector: reads JSONL from stdin, redacts sensitive data, bundles to gzip-tar. Manual, no network, no daemon. | operational | `dist/RUNBOOK.md` §Telemetry |
 
 <!-- check_parity.py displaced by check_drift.py phase4 rules — 2026-11-19, impl-guide Phase 1 -->
+
+**Safety:** `check_all.py` does not initiate telemetry collection; the collector
+is not git-aware — it never touches `.git/` or registers hooks, and it never
+transmits data.
 
 ## Rule coverage (check_all.py)
 

@@ -133,7 +133,65 @@ cp .env.example .env
 Without `.env` the core framework (docs, audit, manifest) still works; only
 EN→RU translation is unavailable.
 
-## 8. Test run before the first real host
+## 8. Telemetry (opt-in)
+
+The Council framework includes a local, opt-in diagnostics collector
+(`tools/collect_telemetry.sh`). No data is collected or transmitted by
+default.
+
+### Enable
+
+```bash
+bash install.sh --target <dir> --mode init --project-name <name> --enable-telemetry
+```
+
+This creates `.council/telemetry.yml` with `enabled: true` and sets up
+`diagnostics/` and `metrics/` directories.
+
+### Collected / Not collected
+
+| Item | Collected? |
+|------|------------|
+| Error records (JSONL) in `diagnostics/` | Yes, when enabled and fed via `--collect` |
+| Record count and categories via `--inspect` | Yes (summary only) |
+| Bundled export via `--bundle` | Yes (manual, gzip-tar to stdout) |
+| Source code, env vars, prompts | No — never transmitted |
+| API keys / tokens | No — redacted to `[REDACTED]` |
+| Private/loopback IPs | No — redacted to `[local]` |
+| Public IPs | No — redacted to `[external]` |
+
+### Opt-out
+
+Create the file `.council/opt-out-telemetry` to prevent all collection:
+
+```bash
+touch .council/opt-out-telemetry
+```
+
+### Commands
+
+```bash
+bash tools/collect_telemetry.sh --collect        # read JSONL from stdin, write to diagnostics/
+bash tools/collect_telemetry.sh --inspect         # print summary only
+bash tools/collect_telemetry.sh --bundle          # write gzip-tar bundle to stdout
+bash tools/collect_telemetry.sh --read <bundle>   # list files from a bundle
+```
+
+### Update survival
+
+Telemetry data lives in the host-owned `.council/telemetry/` directory, outside
+the core manifest. It survives `update.sh` operations — `update.sh` only manages
+core framework files.
+
+### No data leaves the host
+
+- The collector is local and manual; there is no daemon, no network, no TLS.
+- `check_all.py` does not initiate telemetry collection.
+- The collector is not git-aware — it never touches `.git/` or registers hooks.
+- Sampling and scientific validity are the researcher's task, not the
+  collector's.
+
+## 9. Test run before the first real host
 
 From the source repo:
 
@@ -144,7 +202,7 @@ bash dist/test-dry-run.sh          # exit 0 = install → update → restore →
 Run it once after any change to `dist/*.sh`, before shipping an archive to a
 real host.
 
-## 9. First release (source repo side)
+## 10. First release (source repo side)
 
 The pinned channel is anchored to git tags. The first release is tagged
 `v0.1.0`:

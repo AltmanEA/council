@@ -3,7 +3,7 @@ set -euo pipefail
 # install.sh — install or overlay the Council framework into a target directory.
 #
 # Usage:
-#   bash install.sh --target <dir> [--mode init | overlay] [--project-name <name>] [--skip-deps-check]
+#   bash install.sh --target <dir> [--mode init | overlay] [--project-name <name>] [--skip-deps-check] [--enable-telemetry]
 #
 # Modes:
 #   init    — create a new directory, run git init if needed, install everything.
@@ -14,6 +14,7 @@ MODE="init"
 TARGET=""
 PROJECT_NAME=""
 SKIP_DEPS=0
+ENABLE_TELEMETRY=0
 
 usage() {
   cat <<EOF
@@ -24,20 +25,23 @@ Options:
   --mode init | overlay    Installation mode (default: init)
   --project-name <name>    Project identifier (default: basename of target)
   --skip-deps-check        Skip Python / PyYAML / git checks
+  --enable-telemetry       Create telemetry config and directories
 
 Examples:
   bash install.sh --target ../my-project --mode init --project-name my-project
   bash install.sh --target /path/to/existing --mode overlay --project-name existing
+  bash install.sh --target ../my-project --mode init --project-name my-project --enable-telemetry
 EOF
   exit 1
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --target)       TARGET="$2"; shift 2 ;;
-    --mode)         MODE="$2"; shift 2 ;;
-    --project-name) PROJECT_NAME="$2"; shift 2 ;;
-    --skip-deps-check) SKIP_DEPS=1; shift ;;
+    --target)           TARGET="$2"; shift 2 ;;
+    --mode)             MODE="$2"; shift 2 ;;
+    --project-name)     PROJECT_NAME="$2"; shift 2 ;;
+    --skip-deps-check)  SKIP_DEPS=1; shift ;;
+    --enable-telemetry) ENABLE_TELEMETRY=1; shift ;;
     -h|--help) usage ;;
     *) echo "Unknown option: $1"; usage ;;
   esac
@@ -259,6 +263,90 @@ if [[ -f "vendor/techdoc-translator/.env.example" ]]; then
     echo "    # edit .env with your API endpoint / key"
   fi
 fi
+
+# ---------------------------------------------------------------------------
+# Telemetry config (opt-in diagnostics)
+# ---------------------------------------------------------------------------
+if [[ "$ENABLE_TELEMETRY" == "1" ]]; then
+  TELEMETRY_DIR="$TARGET_ABS/.council/telemetry"
+  mkdir -p "$TELEMETRY_DIR/diagnostics"
+  mkdir -p "$TELEMETRY_DIR/metrics"
+
+  # Create telemetry.yml — only if it does not already exist (overlay-safe).
+  TELEMETRY_CFG="$TARGET_ABS/.council/telemetry.yml"
+  if [[ ! -f "$TELEMETRY_CFG" ]]; then
+    cat > "$TELEMETRY_CFG" <<TELEOF
+enabled: true
+project_name: ${PROJECT_NAME}
+redact_symbols: false
+max_file_size_mb: 10
+max_total_dir_mb: 50
+retention_days: 30
+collect:
+TELEOF
+    echo "  [telemetry] created .council/telemetry.yml"
+  else
+    echo "  [telemetry] telemetry.yml already exists — skipped (overlay-safe)"
+  fi
+
+  # Create .gitignore in telemetry/
+  cat > "$TELEMETRY_DIR/.gitignore" <<'GITEOF'
+# Telemetry data — collected diagnostics (opt-in, manual export).
+# See RUNBOOK.md §Telemetry for details.
+*.jsonl
+GITEOF
+
+  # Create telemetry README with checklist
+  cat > "$TELEMETRY_DIR/README.md" <<'READMEEOF'
+# Telemetry Directory
+
+This directory holds opt-in diagnostics data collected by the Council framework.
+
+## Checklist
+
+| Item | Status |
+|------|--------|
+| `*.jsonl` files are listed in `.gitignore` | Not collected (safe) |
+| Diagnostics are local, manual export only | Collected (manual) |
+| No data leaves the host automatically | Not collected |
+| Export via `--bundle` is the only path | Collected (manual) |
+| `check_all.py` never initiates collection | Not collected |
+
+## How to disable
+
+Create the file `.council/opt-out-telemetry` to prevent any collection.
+
+See `RUNBOOK.md` for the full Telemetry section.
+READMEEOF
+
+  echo "  [telemetry] created diagnostics/, metrics/, .gitignore, README.md"
+fi
+
+# ---------------------------------------------------------------------------
+# Disclosure (always printed, per OP-2 transparency)
+# ---------------------------------------------------------------------------
+echo ""
+echo "========================================"
+echo "Telemetry (opt-in diagnostics)"
+echo "========================================"
+echo ""
+echo "  Telemetry is OFF BY DEFAULT — nothing is collected"
+echo "  until you explicitly enable it with --enable-telemetry."
+echo ""
+echo "  When enabled, the following is collected:"
+echo "    - Error records (JSONL) written to .council/telemetry/diagnostics/"
+echo "    - Record count, categories, and directory size via --inspect"
+echo "    - Bundled export via --bundle (gzip-tar to stdout)"
+echo ""
+echo "  The following is NEVER collected or transmitted:"
+echo "    - Source code, environment variables, prompts"
+echo "    - API keys, tokens, credentials (redacted automatically)"
+echo "    - Any data is never transmitted — export is manual only"
+echo ""
+echo "  Opt-out: create .council/opt-out-telemetry to disable collection"
+echo "           even when enabled in telemetry.yml."
+echo ""
+echo "  Data stays on the host. No daemon, no network, no git hooks."
 
 # ---------------------------------------------------------------------------
 # Done
