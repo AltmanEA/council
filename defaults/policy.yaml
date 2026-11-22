@@ -13,14 +13,11 @@ defaults:
     top_p: 0.9                          # nucleus sampling; tokens with cumulative probability < p are excluded
     frequency_penalty: 0.0             # reduces token repetition; positive values penalize repeated tokens
 
-  # Documenter security parameters (MVP safe values)
-  documenter:
-    audit_freshness: 30                  # minutes; max age of audit_id accepted by delegate() pre-audit gate
-    rescan_batch_ceiling: 50             # docs scanned per audit() invocation
-    retry_backoff_base_seconds: 1        # exponential backoff base delay
-    retry_max_attempts: 3                # max retries before giving up
-    trust_floor_safe_changes: true       # Tier 1 safe changes allowed?
-    approval_expiry_window: 30           # minutes; Tier 2+ approval validity window
+  # NOTE: Documenter security parameters (audit_freshness, rescan_batch_ceiling,
+  # trust_floor_safe_changes, approval_expiry_window, ...) were removed 2026-11-22:
+  # the v0.x Documenter service they belonged to was deleted in the 2026-11-19
+  # reconstruction (AGENTS.md §1.5). Documenter never loaded this file; its policy
+  # lived in documenter_policy.yml (removed). Do not re-add without a live consumer.
 
   # Execution runtime parameters
   execution_runtime:
