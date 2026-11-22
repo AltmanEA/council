@@ -38,6 +38,27 @@ done
 [[ -f "$ARCHIVE" ]] || { echo "ERROR: Archive not found: $ARCHIVE"; exit 1; }
 
 # ---------------------------------------------------------------------------
+# Integrity: verify archive checksum when SHA256SUMS is present next to it
+# ---------------------------------------------------------------------------
+# build.sh always produces SHA256SUMS alongside the archive.  Verification is
+# automatic (no flag to remember); it is skipped with a loud warning if the
+# sidecar file was not copied — see dist/RUNBOOK.md §Integrity.
+CHECKSUMS="$(dirname "$ARCHIVE")/SHA256SUMS"
+if [[ -f "$CHECKSUMS" ]]; then
+  echo "Verifying archive checksum ..."
+  if ! (cd "$(dirname "$ARCHIVE")" && sha256sum -c "SHA256SUMS" >/dev/null 2>&1); then
+    echo "ERROR: Checksum verification FAILED for $ARCHIVE."
+    echo "       The archive is corrupted or has been tampered with.  Refusing to update."
+    echo "       Re-copy the archive and SHA256SUMS from the build machine."
+    exit 1
+  fi
+  echo "  Checksum OK ✓"
+else
+  echo "WARNING: $(dirname "$ARCHIVE")/SHA256SUMS not found — integrity NOT verified."
+  echo "         Expected it next to the archive (build.sh generates it automatically)."
+fi
+
+# ---------------------------------------------------------------------------
 # Sanity checks
 # ---------------------------------------------------------------------------
 if [[ ! -f ".council/version.lock" ]]; then
@@ -49,6 +70,16 @@ fi
 if [[ ! -f ".council/core-manifest.txt" ]]; then
   echo "ERROR: Missing .council/core-manifest.txt"
   echo "       Cannot determine which files are safe to update."
+  exit 1
+fi
+
+# PyYAML is required by the core tools shipped with the update
+# (gen_manifest.py, docmeta.py, check_all.py).  Failing here beats discovering
+# it post-update when the first audit run crashes.
+if ! python3 -c "import yaml" 2>/dev/null; then
+  echo "ERROR: PyYAML is not installed — Council core tools will not work."
+  echo "       Affected after update: tools/check_all.py, tools/gen_manifest.py, tools/docmeta.py"
+  echo "       Install it first:  pip install pyyaml"
   exit 1
 fi
 
@@ -118,7 +149,16 @@ while IFS= read -r f; do
     cp -R "$src" "$dst"
     echo "  [updated] $f"
   else
-    echo "  [removed] $f (not in new distribution)"
+    # The file is core in the OLD manifest but absent from the new release:
+    # it will be removed.  Loud warning + restore path (backup already made
+    # above).  Per operator decision core files are not hand-edited on hosts;
+    # if that ever changes, keep a .council/customizations.txt checklist.
+    echo "  [removed] $f  (not in new distribution)"
+    if [[ -e "$dst" ]]; then
+      echo "            It will be DELETED from the host."
+      echo "            A copy is preserved at: $BACKUP_DIR/$f"
+      echo "            Restore if needed with: cp -R $BACKUP_DIR/$f $dst"
+    fi
     rm -rf "$dst"
   fi
 done < "$MANIFEST"
