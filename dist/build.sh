@@ -300,6 +300,24 @@ for f in "$OUT_DIR/$DIST_NAME/core/docs/en/documentation-rules/index.md"; do
   fi
 done
 
+# (d) Host path remap: AGENTS.md.template and the shipped SKILL.md files are
+#     verbatim copies of the SOURCE-REPO layout (tools/, docs/en/<framework-id>/,
+#     .agents/skills/), which does not resolve on a host where the framework is
+#     isolated under .council/ (sess-dist-isolated-install-2026-11-22).  Without
+#     this remap host agents conclude "tools/ and documentation-rules are
+#     missing" and try to hand-write the manifest.  The script prefixes every
+#     framework path with .council/, adds explicit --root flags to audit and
+#     manifest commands (tool defaults would otherwise point at .council/), and
+#     appends a layout note to AGENTS.md.template.  Host-owned paths
+#     (root docs-manifest.yaml, host docs/en/<id>/, CHANGELOGS/, documenter/)
+#     are deliberately left unprefixed.
+python3 "$SCRIPT_DIR/remap_host_paths.py" \
+  "$OUT_DIR/$DIST_NAME/templates/AGENTS.md.template" \
+  "$OUT_DIR/$DIST_NAME/core/.agents/skills/documentation/SKILL.md" \
+  "$OUT_DIR/$DIST_NAME/core/.agents/skills/selector/SKILL.md" \
+  "$OUT_DIR/$DIST_NAME/core/.opencode/agents/selector.md" \
+  --host-note
+
 # ---------------------------------------------------------------------------
 # Metadata
 # ---------------------------------------------------------------------------

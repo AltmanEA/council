@@ -99,6 +99,21 @@ council-dist/
 > service-contract, selector, project-reference) and the council CHANGELOGS
 > bulk no longer ship to hosts.
 
+> Host path remap (build-time transform (d), `remap_host_paths.py`):
+> `AGENTS.md.template` and the shipped `SKILL.md` files (documentation,
+> selector) plus `.opencode/agents/selector.md` are verbatim source-repo
+> copies whose paths (`tools/`, framework `docs/en/<id>/`, `.agents/skills/`,
+> `defaults/`, `fallback/`) do not resolve on a host where the framework is
+> isolated under `.council/`.  The remap prefixes every framework path with
+> `.council/`, maps `.agents/skills/` to the installer's `.council/skills/`
+> location, adds explicit `--root .` (`--core-root .council` for `check_all`)
+> to audit/manifest commands (the tools' default root is their own parent,
+> i.e. `.council/`), and appends a layout note to `AGENTS.md.template`.
+> Host-owned paths (host `docs/en/<id>/`, root `docs-manifest.yaml`,
+> `CHANGELOGS/`, `documenter/`) stay unprefixed.  Without this transform host
+> agents conclude that `tools/` and `documentation-rules/` are missing and
+> attempt to hand-write the manifest.
+
 > Layout note (`sess-dist-isolated-install-2026-11-22`): the archive's `core/`
 > keeps the plain source-repo layout, while `core-manifest.txt` entries carry
 > the `.council/` destination prefix (e.g.
