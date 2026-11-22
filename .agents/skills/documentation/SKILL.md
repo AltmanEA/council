@@ -17,7 +17,7 @@ You operate statelessly: each invocation receives its full context from the dele
 
 ## Activation
 
-This skill activates when any task involves editing, creating, or deleting project documentation files (`.md` files within the documented layout: `docs/en/` and `docs/ru/` directory trees). Operational files at repository root (`AGENTS.md`, `fallback/`, `documenter-service/`, `.opencode/`, `CHANGELOGS/`, `defaults/`, `archive/`, `tests/`, `consensus-non-controlled-files.md`, `notes.md`) are excluded from the Documentation Worker's scope per `AGENTS.md` §1.6 (Documentation Separation). The skill's authority is scoped exclusively to project documentation files managed through the manifest (`docs-manifest.yaml`).
+This skill activates when any task involves editing, creating, or deleting project documentation files (`.md` files within the documented layout: `docs/en/` and `docs/ru/` directory trees). Operational files at repository root (`AGENTS.md`, `fallback/`, `documenter-service/`, `.opencode/`, `CHANGELOGS/`, `defaults/`, `archive/`, `tests/`, `notes.md`) are excluded from the Documentation Worker's scope per `AGENTS.md` §1.6 (Documentation Separation). The skill's authority is scoped exclusively to project documentation files managed through the manifest (`docs-manifest.yaml`).
 
 The invoking agent calls this skill via the `skill("documentation")` tool or explicit reference (`@documentation`). The skill provides all instructions below as context.
 
