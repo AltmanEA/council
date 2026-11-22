@@ -1,6 +1,6 @@
 # Documentation Rules
 id: documentation-rules
-Version: 0.5.0
+Version: 0.6.0
 Status: active
 Abstraction: protocol
 has_translation: docs/ru/documentation-rules/index-RU.md
@@ -116,8 +116,6 @@ Agents working on different documents must coordinate through the manifest. No t
 ### 5.4 Subagent Delegation Budget
 
 Before launching a subagent, the primary agent MUST estimate the task's expected size (rough token budget). If the estimate exceeds 40,000 tokens, the primary agent MUST consider splitting the work into smaller subtasks and delegate each separately rather than launching one oversized run. The estimate is recorded in the delegation brief. This keeps subagent outputs reviewable and prevents context exhaustion mid-task.
-
-**Concurrency limit.** The number of subagents the primary agent may run concurrently depends on the subagent model configured in `.opencode/opencode.jsonc` (see the comment block there for switching): local model — at most **1** concurrent subagent (queue sequentially); cloud model — at most **2**. The limit is behavioral (executed by the primary agent); the config carries no mechanical cap. Subtasks must be sequenced to respect it.
 
 ---
 

@@ -1,3 +1,4 @@
+<!-- CHANGES v0.6.0: удаление нормы Concurrency limit из §5.4 documentation-rules -->
 <!-- CHANGES v0.5.0: Fixed stale normative references after Documenter v1.5.0 reconstruction (manifest provenance anchored in §2.2/gen_manifest.py; removed archived configuration-guide/mvp-interfaces pointers; clarified session workspace scope outside Documentation Worker/Documenter docs scope). RU mirror synchronized. -->
 <!-- CHANGES v0.4.0: Add §2.7 Content Authority and Precedence as the normative conflict-resolution home; redirect AGENTS and service-contract pointers -->
 <!-- CHANGES v0.3.0: Classification vocabulary: §5.2 Phase 3 delegation now carries classification mechanical|semantic instead of trust level (EN+RU, structure parity preserved) -->

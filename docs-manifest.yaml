@@ -31,7 +31,7 @@ documents:
   - id: documentation-rules
     path: docs/en/documentation-rules/index.md
     title: Documentation Rules
-    version: 0.5.0
+    version: 0.6.0
     status: active
     abstraction: protocol
     has_translation: docs/ru/documentation-rules/index-RU.md
