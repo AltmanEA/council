@@ -2,12 +2,22 @@
 set -euo pipefail
 # build.sh — assemble a distributable council-dist archive from the current checkout.
 # Usage: bash dist/build.sh [VERSION]
-#   VERSION defaults to "git describe --tags --always" or "dev".
-# Output: dist/out/council-dist-<VERSION>.tar.gz
+#   VERSION defaults to "git describe --tags"; without a tag a "dev-" prefixed
+#   version is used (warning printed) — dev builds must not be shipped to hosts.
+# Output: dist/out/council-dist-<VERSION>.tar.gz  +  dist/out/SHA256SUMS
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="${1:-$(git -C "$ROOT_DIR" describe --tags --always 2>/dev/null || echo 'dev')}"
+VERSION="${1:-}"
+if [[ -z "$VERSION" ]]; then
+  VERSION=$(git -C "$ROOT_DIR" describe --tags 2>/dev/null || true)
+  if [[ -z "$VERSION" ]]; then
+    echo "WARNING: no git tag in source repo — building a DEV build."
+    echo "         Dev builds are for testing only; for a host release create a tag"
+    echo "         (see dist/README.md §Releasing)."
+    VERSION="dev-$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  fi
+fi
 OUT_DIR="$SCRIPT_DIR/out"
 DIST_NAME="council-dist"
 ARCHIVE="$DIST_NAME-$VERSION.tar.gz"
@@ -99,6 +109,12 @@ chmod +x "$OUT_DIR/$DIST_NAME/install.sh"
 chmod +x "$OUT_DIR/$DIST_NAME/update.sh"
 echo "  [meta] install.sh, update.sh"
 
+# Operator runbook (host-side procedure) — shipped with every archive.
+if [[ -f "$SCRIPT_DIR/RUNBOOK.md" ]]; then
+  cp "$SCRIPT_DIR/RUNBOOK.md" "$OUT_DIR/$DIST_NAME/RUNBOOK.md"
+  echo "  [meta] RUNBOOK.md"
+fi
+
 # ---------------------------------------------------------------------------
 # Metadata
 # ---------------------------------------------------------------------------
@@ -117,9 +133,18 @@ echo "  [meta] core-manifest.txt ($(wc -l < "$OUT_DIR/$DIST_NAME/core-manifest.t
 cd "$OUT_DIR"
 tar czf "$ARCHIVE" "$DIST_NAME"
 
+# Checksum generated in the SAME step as the archive — the operator cannot
+# forget it.  update.sh verifies it automatically when present next to the
+# archive (see dist/RUNBOOK.md §Integrity).
+sha256sum "$ARCHIVE" > "SHA256SUMS"
+
 echo ""
 echo "Built: $OUT_DIR/$ARCHIVE"
 echo "Size:  $(du -h "$OUT_DIR/$ARCHIVE" | cut -f1)"
+echo "SHA256: $(cut -d' ' -f1 "SHA256SUMS")"
+echo ""
+echo "Copy BOTH files to the host and update with:"
+echo "  bash .council/update.sh $ARCHIVE"
 echo ""
 echo "Install (new project):"
 echo "  tar xzf $ARCHIVE"
