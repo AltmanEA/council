@@ -72,6 +72,23 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
+# Hard precheck: core/ and templates/ must exist (defect fix — closes issue
+# where install printed 'installed successfully' with core/ absent).
+# ---------------------------------------------------------------------------
+if [[ ! -d "$SCRIPT_DIR/core" ]]; then
+  echo "FATAL: core/ directory is missing in the distribution."
+  echo "       The archive is corrupted or incomplete."
+  echo "       Re-extract the archive and try again."
+  exit 1
+fi
+if [[ ! -d "$SCRIPT_DIR/templates" ]]; then
+  echo "FATAL: templates/ directory is missing in the distribution."
+  echo "       The archive is corrupted or incomplete."
+  echo "       Re-extract the archive and try again."
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # Dependency checks
 # ---------------------------------------------------------------------------
 if [[ "$SKIP_DEPS" == "0" ]]; then
@@ -129,34 +146,30 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "Installing core framework files ..."
-if [[ -d "$SCRIPT_DIR/core" ]]; then
-  for item in "$SCRIPT_DIR/core/"* "$SCRIPT_DIR/core/".*; do
-    [[ "$(basename "$item")" == "*" || "$(basename "$item")" == "." || "$(basename "$item")" == ".." ]] && continue
-    base=$(basename "$item")
-    if [[ "$MODE" == "init" || ! -e "$base" ]]; then
-      if [[ -e "$base" ]]; then
-        rm -rf "$base"
-      fi
-      cp -R "$item" .
-      echo "  [core] installed $base"
-    else
-      # overlay: merge into existing directory without deleting existing files
-      if [[ -d "$item" ]]; then
-        cp -R "$item/"* "$base/" 2>/dev/null || true
-        # also copy dotfiles if any
-        for dot in "$item/".*; do
-          [[ "$(basename "$dot")" == "." || "$(basename "$dot")" == ".." || "$(basename "$dot")" == "*" ]] && continue
-          cp -R "$dot" "$base/" 2>/dev/null || true
-        done
-      else
-        cp "$item" "$base"
-      fi
-      echo "  [core] merged $base"
+for item in "$SCRIPT_DIR/core/"* "$SCRIPT_DIR/core/".*; do
+  [[ "$(basename "$item")" == "*" || "$(basename "$item")" == "." || "$(basename "$item")" == ".." ]] && continue
+  base=$(basename "$item")
+  if [[ "$MODE" == "init" || ! -e "$base" ]]; then
+    if [[ -e "$base" ]]; then
+      rm -rf "$base"
     fi
-  done
-else
-  echo "  WARNING: core/ directory not found in distribution."
-fi
+    cp -R "$item" .
+    echo "  [core] installed $base"
+  else
+    # overlay: merge into existing directory without deleting existing files
+    if [[ -d "$item" ]]; then
+      cp -R "$item/"* "$base/" 2>/dev/null || true
+      # also copy dotfiles if any
+      for dot in "$item/".*; do
+        [[ "$(basename "$dot")" == "." || "$(basename "$dot")" == ".." || "$(basename "$dot")" == "*" ]] && continue
+        cp -R "$dot" "$base/" 2>/dev/null || true
+      done
+    else
+      cp "$item" "$base"
+    fi
+    echo "  [core] merged $base"
+  fi
+done
 
 # ---------------------------------------------------------------------------
 # Install TEMPLATES (project-specific scaffolding)
@@ -185,15 +198,11 @@ copy_template_item() {
   fi
 }
 
-if [[ -d "$SCRIPT_DIR/templates" ]]; then
-  for item in "$SCRIPT_DIR/templates/"*; do
-    [[ "$(basename "$item")" == "*" ]] && continue
-    base=$(basename "$item")
-    copy_template_item "$item" "./$base"
-  done
-else
-  echo "  WARNING: templates/ directory not found in distribution."
-fi
+for item in "$SCRIPT_DIR/templates/"*; do
+  [[ "$(basename "$item")" == "*" ]] && continue
+  base=$(basename "$item")
+  copy_template_item "$item" "./$base"
+done
 
 # ---------------------------------------------------------------------------
 # Substitute project name in templates
@@ -221,6 +230,29 @@ while IFS= read -r -d '' f; do
     echo "  Renamed $f → $(basename "$dest")"
   fi
 done < <(find . -maxdepth 4 -type f -name '*.template' -print0 2>/dev/null || true)
+
+# ---------------------------------------------------------------------------
+# Documentation manifest (required by the Documentation Worker, AGENTS.md §1)
+# ---------------------------------------------------------------------------
+# The manifest is generated, never hand-edited (documentation-rules §2.2).
+# A fresh host has no manifest; generate it from the installed docs so audits
+# and manifest-first doc reads work immediately.  An existing host manifest is
+# left untouched (overlay-safe).
+echo ""
+echo "Ensuring documentation manifest ..."
+if [[ -f "docs-manifest.yaml" ]]; then
+  echo "  [manifest] docs-manifest.yaml already exists — kept host version"
+elif python3 -c "import yaml" 2>/dev/null; then
+  if python3 tools/gen_manifest.py --write >/dev/null 2>&1; then
+    echo "  [manifest] generated docs-manifest.yaml"
+  else
+    echo "  WARNING: manifest generation failed (see error above)"
+    echo "           To regenerate manually:"
+    echo "             python3 tools/gen_manifest.py --write"
+  fi
+else
+  echo "  [manifest] skipped — PyYAML not available (run pip install pyyaml)"
+fi
 
 # ---------------------------------------------------------------------------
 # Council metadata (for future updates)
@@ -349,6 +381,32 @@ echo ""
 echo "  Data stays on the host. No daemon, no network, no git hooks."
 
 # ---------------------------------------------------------------------------
+# Success verification: verify key files exist before printing success banner
+# ---------------------------------------------------------------------------
+echo ""
+echo "Verifying installation ..."
+MISSING=()
+for f in tools/check_all.py .council/update.sh AGENTS.md fallback/index.md docs/en/documentation-rules/index.md; do
+  if [[ ! -f "$f" ]]; then
+    MISSING+=("$f")
+  fi
+done
+# docs-manifest.yaml only if the generate branch ran (i.e. PyYAML was present)
+if [[ -f "docs-manifest.yaml" ]] && [[ ${#MISSING[@]} -eq 0 ]]; then
+  :  # manifest exists, not missing
+elif [[ -f "docs-manifest.yaml" ]]; then
+  :  # manifest exists
+fi
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  echo "FATAL: Installation incomplete — missing required files:"
+  for m in "${MISSING[@]}"; do
+    echo "  - $m"
+  done
+  echo "       Refusing to mark installation as successful."
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 echo ""
@@ -362,6 +420,9 @@ echo "  1. Review and customize docs/en/project-concept/index.md"
 echo "  2. Review AGENTS.md and adjust for your project context"
 echo "  3. Run: python3 tools/check_all.py --help"
 echo "  4. Start a fallback session per fallback/index.md §Operational Flow"
+echo "     (Koda CLI profile: fallback/koda-execution-mode.md)"
+echo "  5. OpenCode discovers .agents/skills/ automatically; the selector agent is"
+echo "     registered at .opencode/agents/selector.md"
 echo ""
 echo "To update the framework later:"
 echo "  bash .council/update.sh /path/to/council-dist-X.Y.Z.tar.gz"

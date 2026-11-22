@@ -46,8 +46,17 @@ Expected output checks:
 - `Locked version: <VERSION>` — this is the pinned version;
 - `Core manifest: N files`;
 - `Updater copied to .council/update.sh`;
+- `generated docs-manifest.yaml` (or `already exists — kept host version` on
+  overlay) — without it the Documentation Worker and `check_all.py` cannot run;
+- `.opencode/agents/selector.md` — OpenCode registers the selector subagent;
+  host model/provider settings are left untouched;
 - PyYAML missing → WARNING with the list of broken tools; install it
   (`pip install pyyaml`) before running any `tools/*.py`.
+
+Council sessions may be run with Koda CLI instead of OpenCode named subagents:
+use the execution profile in `fallback/koda-execution-mode.md` (verified on
+koda 1.3.5). The Koda IDE plugins from kodacode.ru are not part of this
+framework — the integration point is the `koda` CLI.
 
 If `install.sh` itself goes wrong (init mode wrote files): the host is a git
 repo — commit early and recover with `git checkout` / `git revert`. There is no
@@ -122,7 +131,8 @@ Procedure (documented deviation from pinned mode):
 ## 7. Translation (EN→RU)
 
 The translation engine is shipped in `vendor/techdoc-translator/` and IS used
-on hosts. Enable it:
+on hosts. A `.env` is never included in the distribution — always create it
+from `.env.example` on the host with your own endpoint and model. Enable it:
 
 ```bash
 cd vendor/techdoc-translator

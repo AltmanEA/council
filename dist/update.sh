@@ -11,7 +11,9 @@ set -euo pipefail
 #   - Reads .council/core-manifest.txt to know which paths are "core".
 #   - Reads .council/version.lock to know the current version.
 #   - Backs up every core file to .council/backup-<timestamp>/ before overwriting.
-#   - Only overwrites files listed in the old core-manifest.
+#   - Iterates over the UNION of old and new manifests:
+#     * Entry in old but not in new → rm -rf from host (orphan removal, MF-3)
+#     * Entry in new → copy from archive to host
 #   - Never touches project-specific templates (docs/en/project-concept, etc.).
 
 ARCHIVE="${1:-}"
@@ -114,11 +116,22 @@ if [[ "$CURRENT_VERSION" == "$NEW_VERSION" && "$FORCE" == "0" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Backup current core files
+# Backup current core files (union of old + new manifest entries)
 # ---------------------------------------------------------------------------
 BACKUP_DIR=".council/backup-$(date +%s)"
 mkdir -p "$BACKUP_DIR"
 echo "Backing up current core files to $BACKUP_DIR ..."
+
+# Collect UNION of old manifest and new manifest entries
+OLD_MANIFEST=".council/core-manifest.txt"
+NEW_MANIFEST="$NEW_DIR/core-manifest.txt"
+UNION_FILE=$(mktemp)
+{
+  cat "$OLD_MANIFEST" 2>/dev/null || true
+  if [[ -f "$NEW_MANIFEST" ]]; then
+    cat "$NEW_MANIFEST"
+  fi
+} | sort -u > "$UNION_FILE"
 
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
@@ -126,19 +139,13 @@ while IFS= read -r f; do
     mkdir -p "$BACKUP_DIR/$(dirname "$f")"
     cp -R "$f" "$BACKUP_DIR/$f" 2>/dev/null || true
   fi
-done < .council/core-manifest.txt
+done < "$UNION_FILE"
 
 # ---------------------------------------------------------------------------
-# Apply update
+# Apply update — iterate UNION so that files present in old manifest but
+# absent from the new one are also removed (MF-3 orphan removal).
 # ---------------------------------------------------------------------------
 echo "Applying update ..."
-
-# Read the new core manifest (if present) or fall back to old one
-NEW_MANIFEST="$NEW_DIR/core-manifest.txt"
-MANIFEST=".council/core-manifest.txt"
-if [[ -f "$NEW_MANIFEST" ]]; then
-  MANIFEST="$NEW_MANIFEST"
-fi
 
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
@@ -149,7 +156,7 @@ while IFS= read -r f; do
     cp -R "$src" "$dst"
     echo "  [updated] $f"
   else
-    # The file is core in the OLD manifest but absent from the new release:
+    # The file is core in the old manifest but absent from the new release:
     # it will be removed.  Loud warning + restore path (backup already made
     # above).  Per operator decision core files are not hand-edited on hosts;
     # if that ever changes, keep a .council/customizations.txt checklist.
@@ -161,7 +168,8 @@ while IFS= read -r f; do
     fi
     rm -rf "$dst"
   fi
-done < "$MANIFEST"
+done < "$UNION_FILE"
+rm -f "$UNION_FILE"
 
 # ---------------------------------------------------------------------------
 # Update metadata
