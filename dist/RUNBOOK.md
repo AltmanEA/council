@@ -13,7 +13,9 @@ Isolated layout (consensus `sess-dist-isolated-install-2026-11-22`): the entire
 framework lives under the host's `.council/` directory. The host root contains
 only mandated wiring — `AGENTS.md`, the `opencode.jsonc` skills entry,
 `.opencode/agents/selector.md`, the host `docs-manifest.yaml`, and a managed
-`.gitignore` block. No symlinks are used anywhere.
+`.gitignore` block (`sessions/`).  Framework-internal ignores (backups,
+bytecode, telemetry, translator `.env`) live in `.council/.gitignore`.
+No symlinks are used anywhere.
 
 ---
 

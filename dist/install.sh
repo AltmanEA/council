@@ -407,6 +407,8 @@ fi
 
 # ---------------------------------------------------------------------------
 # AC-7: Host .gitignore — append managed block (idempotent)
+# The host block covers host-root Council paths only (session workspaces).
+# Everything internal to the framework lives in .council/.gitignore below.
 # ---------------------------------------------------------------------------
 echo ""
 echo "Ensuring .gitignore ..."
@@ -415,11 +417,30 @@ if [[ ! -f "$GITIGNORE" ]]; then
   touch "$GITIGNORE"
 fi
 if ! grep -q "# Council framework (managed block)" "$GITIGNORE"; then
-  printf '\n# Council framework (managed block)\n.council/backup-*/\n.council/**/__pycache__/\n.council/telemetry/**/*.jsonl\n**/techdoc-translator/.env\n' >> "$GITIGNORE"
-  echo "  [gitignore] appended Council-managed block"
+  printf '\n# Council framework (managed block)\nsessions/\n' >> "$GITIGNORE"
+  echo "  [gitignore] appended Council-managed block (sessions/)"
 else
-  echo "  [gitignore] Council-managed block already present (idempotent)"
+  # Self-heal hosts installed with an older block that lacked sessions/.
+  if ! grep -qx "sessions/" "$GITIGNORE"; then
+    printf 'sessions/\n' >> "$GITIGNORE"
+    echo "  [gitignore] added missing sessions/ to existing managed block"
+  else
+    echo "  [gitignore] Council-managed block already present (idempotent)"
+  fi
 fi
+
+# .council/.gitignore — owns ignores for framework-internal runtime artifacts.
+# Paths are relative to .council/, so the framework carries its own ignore rules
+# and the host's managed block stays minimal.
+cat > "$TARGET_ABS/.council/.gitignore" <<'GITEOF'
+# Council framework internals — runtime artifacts, never versioned.
+backup-*/
+**/__pycache__/
+*.pyc
+telemetry/**/*.jsonl
+vendor/techdoc-translator/.env
+GITEOF
+echo "  [gitignore] wrote .council/.gitignore"
 
 # ---------------------------------------------------------------------------
 # Git hooks — use installer from host's location after install

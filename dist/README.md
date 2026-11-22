@@ -165,9 +165,11 @@ root, and they are the mandated wiring.
 Host-root wiring beyond the templates above: the installer creates or merges
 `opencode.jsonc` with `"skills": ["./.council/skills"]` (a host config without a
 `skills` key is never rewritten — the installer warns instead) and appends an
-idempotent managed block to `.gitignore` (`.council/backup-*/`,
-`.council/**/__pycache__/`, `.council/telemetry/**/*.jsonl`,
-`**/techdoc-translator/.env`).  Git hooks are installed automatically:
+idempotent managed block to `.gitignore` (`sessions/` — session workspaces are
+local-only, per `docs/en/documentation-rules`).  Framework-internal ignores
+(`backup-*/`, `**/__pycache__/`, `telemetry/**/*.jsonl`,
+`vendor/techdoc-translator/.env`) live in `.council/.gitignore`, written by the
+installer relative to `.council/`.  Git hooks are installed automatically:
 `core.hooksPath` points at `.council/tools/hooks`, and that hook resolves
 `check_all.py` relative to itself.
 
