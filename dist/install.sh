@@ -60,6 +60,11 @@ echo "========================================"
 echo "  Target directory : $TARGET"
 echo "  Mode             : $MODE"
 echo "  Project name     : $PROJECT_NAME"
+if [[ "$MODE" == "overlay" ]]; then
+  echo ""
+  echo "  NOTE: OVERLAY mode — existing files will NOT be overwritten."
+  echo "        Files already present in the target are kept as-is."
+fi
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -82,7 +87,8 @@ if [[ "$SKIP_DEPS" == "0" ]]; then
   fi
 
   if ! python3 -c "import yaml" 2>/dev/null; then
-    echo "WARNING: PyYAML not installed. Council tools require it."
+    echo "WARNING: PyYAML not installed. These Council tools will NOT work until it is installed:"
+    echo "         tools/check_all.py, tools/gen_manifest.py, tools/docmeta.py"
     echo "         Run: pip install pyyaml"
   else
     echo "  PyYAML: installed ✓"
@@ -198,11 +204,18 @@ while IFS= read -r -d '' f; do
   fi
 done < <(find . -maxdepth 4 -type f \( -name '*.md' -o -name '*.md.template' \) -print0 2>/dev/null || true)
 
-# Rename .template files to their real names
+# Rename .template files to their real names.
+# Overlay-safe: never clobber an existing host file (e.g. a hand-written
+# AGENTS.md vs. AGENTS.md.template).
 while IFS= read -r -d '' f; do
   dest="${f%.template}"
-  mv "$f" "$dest"
-  echo "  Renamed $f → $(basename "$dest")"
+  if [[ -e "$dest" ]]; then
+    echo "  SKIP (exists): $dest — kept host file, removed $(basename "$f")"
+    rm -f "$f"
+  else
+    mv "$f" "$dest"
+    echo "  Renamed $f → $(basename "$dest")"
+  fi
 done < <(find . -maxdepth 4 -type f -name '*.template' -print0 2>/dev/null || true)
 
 # ---------------------------------------------------------------------------
