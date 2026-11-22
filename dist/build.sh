@@ -183,8 +183,20 @@ copy_template() {
   fi
 }
 
-# Variant-B: only docs/en/project-concept/
-copy_template "docs/en/project-concept"
+# Variant-B: only docs/en/project-concept/.
+# Since sess-dist-isolated-install-2026-11-22 follow-up the shipped project
+# concept is a NEUTRAL stub from dist/stubs/, not council's own concept doc:
+# the host project belongs to the operator, and the stub carries
+# {{PROJECT_NAME}} placeholders + TODO markers the installer personalizes.
+if [[ -f "$SCRIPT_DIR/stubs/docs/en/project-concept/index.md" ]]; then
+  mkdir -p "$OUT_DIR/$DIST_NAME/templates/docs/en/project-concept"
+  cp "$SCRIPT_DIR/stubs/docs/en/project-concept/index.md" \
+    "$OUT_DIR/$DIST_NAME/templates/docs/en/project-concept/"
+  echo "  [template] docs/en/project-concept (neutral stub from dist/stubs)"
+else
+  copy_template "docs/en/project-concept"
+  echo "  [template] WARN: stub missing, shipped council's own concept (defect)"
+fi
 
 # Templates for v0.x docs are REMOVED per Variant-B
 echo "  [template] excluded docs/en/execution-runtime (Variant-B)"
@@ -197,11 +209,12 @@ echo "  [template] excluded docs/en/service-contract (Variant-B)"
 echo "  [template] excluded docs/en/archive (Variant-B: archive is core only)"
 echo "  [template] excluded CHANGELOGS/ bulk (Variant-B: only project-concept.changes.md)"
 
-# Only CHANGELOGS/project-concept.changes.md ships
+# Only CHANGELOGS/project-concept.changes.md ships — the seed stub from
+# dist/stubs/ (a single "initial stub" entry), not council's own history.
 mkdir -p "$OUT_DIR/$DIST_NAME/templates/CHANGELOGS"
-if [[ -f "$ROOT_DIR/CHANGELOGS/project-concept.changes.md" ]]; then
-  cp "$ROOT_DIR/CHANGELOGS/project-concept.changes.md" "$OUT_DIR/$DIST_NAME/templates/CHANGELOGS/"
-  echo "  [template] CHANGELOGS/project-concept.changes.md"
+if [[ -f "$SCRIPT_DIR/stubs/CHANGELOGS/project-concept.changes.md" ]]; then
+  cp "$SCRIPT_DIR/stubs/CHANGELOGS/project-concept.changes.md" "$OUT_DIR/$DIST_NAME/templates/CHANGELOGS/"
+  echo "  [template] CHANGELOGS/project-concept.changes.md (seed stub)"
 else
   echo "  [template] SKIP (not found): CHANGELOGS/project-concept.changes.md"
 fi

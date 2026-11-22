@@ -359,6 +359,36 @@ class TestContentSetTemplates(BuildHelper):
                 "AGENTS.md.template must exist",
             )
 
+            # Template project-concept must be a NEUTRAL stub (consensus
+            # sess-dist-isolated-install-2026-11-22 follow-up): the host is the
+            # operator's project, not Council. It must carry the project-name
+            # placeholder and TODO markers, and must NOT carry Council's own
+            # concept text or council CHANGELOG history.
+            with open(
+                os.path.join(tpl, "docs", "en", "project-concept", "index.md")
+            ) as f:
+                stub = f.read()
+            self.assertIn(
+                "{{PROJECT_NAME}}", stub,
+                "template project-concept must carry {{PROJECT_NAME}} placeholder",
+            )
+            self.assertIn(
+                "TODO", stub,
+                "template project-concept must carry TODO markers for the operator",
+            )
+            self.assertNotIn(
+                "collaborative decision-making", stub,
+                "template project-concept must NOT ship Council's own concept text",
+            )
+            with open(
+                os.path.join(tpl, "CHANGELOGS", "project-concept.changes.md")
+            ) as f:
+                seed_cl = f.read()
+            self.assertNotIn(
+                "CHANGES v0.3", seed_cl,
+                "seed changelog must NOT carry council's project-concept history",
+            )
+
             # Must NOT have: v0.x docs that are purged
             for purge_path in [
                 "docs/en/execution-runtime",
