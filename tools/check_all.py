@@ -46,6 +46,14 @@ ONLY the deterministic side:
                                           these to blocking for clean pre-merge
                                           runs
 
+  core-root resolution (--core-root C): when a docs/en reference token fails to
+                                          resolve within the audited host corpus,
+                                          the tool falls back to <C>/docs/en/
+                                          as a second, read-only resolution space.
+                                          Core files are never merged into the
+                                          host corpus (no parity/orphan checks
+                                          on them).
+
 NON-CLAIM (normative): rules 3 (glossary terms) and 5 (abstraction
 consistency) are skill/AI-reserved and NOT implemented here. This tool NEVER
 advertises coverage of "rules 1-6".
@@ -68,7 +76,7 @@ signal worth keeping); numeric §Names (§7.3, §2.2.3) are
 implementation-style and never exceed LOW.
 
 CLI:
-  python3 tools/check_all.py [--root DIR] [--json] [--severity low|medium|high|warning]
+  python3 tools/check_all.py [--root DIR] [--core-root DIR] [--json] [--severity low|medium|high|warning]
                              [--rule ID ...] [--strict] [--strict-links]
 
 Exit codes:
@@ -222,27 +230,33 @@ def _registered_doc_paths(root: str) -> set:
     return registered
 
 
-def _link_doc_findings(root: str, rel: str, text: str, registered) -> list:
+def _link_doc_findings(root: str, rel: str, text: str, registered,
+                       core_texts: dict = None) -> list:
     """link-integrity docs-side findings for one markdown document body.
 
     A `docs/en/...md` or `docs/ru/...md` token is unresolved when the file
     does not exist under root OR it exists but is not registered in the
     manifest (rule-6 covers EN orphans; this closes the gap for RU files and
-    frontmatter-registered paths). Fence-aware; HTML comments stripped via
+    frontmatter-registered paths). When *core_texts* is provided (core-root
+    mode), a token missing from the host but present there passes instead of
+    producing a finding (AC-1). Fence-aware; HTML comments stripped via
     _visible_lines. High severity: docs→manifest is a hard-fail contract
     (O-3; ADR-003 precedent)."""
     findings = []
     for idx, line in _visible_lines(text.splitlines()):
         for m in _LINK_DOC_PATH_RE.finditer(line):
             token = m.group(1)
-            exists = os.path.isfile(os.path.join(root, *token.split("/")))
+            exists_host = os.path.isfile(os.path.join(root, *token.split("/")))
             registered_ok = registered is not None and token in registered
-            if exists and registered_ok:
+            if exists_host and registered_ok:
+                continue
+            # Core-root fallback: file missing from host but available there passes (AC-1)
+            if core_texts is not None and token in core_texts:
                 continue
             findings.append(_finding(
                 "docs-manifest-link", "high", rel,
                 f"link-integrity docs→manifest: {token!r} on line {idx + 1} is "
-                f"{'not a file under root' if not exists else 'not registered in docs-manifest.yaml'}"
+                f"{'not a file under root' if not exists_host else 'not registered in docs-manifest.yaml'}"
                 f" — hard fail (O-3, ADR-003 precedent)"))
     return findings
 
@@ -318,7 +332,8 @@ def check_link_integrity(corpus: "_Corpus", strict_links: bool = False) -> list:
     else:
         for rel in corpus.docs:
             findings.extend(
-                _link_doc_findings(corpus.root, rel, corpus.texts[rel], registered))
+                _link_doc_findings(corpus.root, rel, corpus.texts[rel], registered,
+                                   core_texts=corpus._core_texts))
         # RU mirrors are outside _Corpus (which walks docs/en only): walk them here.
         ru_base = os.path.join(corpus.root, "docs", "ru")
         if os.path.isdir(ru_base):
@@ -334,7 +349,8 @@ def check_link_integrity(corpus: "_Corpus", strict_links: bool = False) -> list:
                     with open(abs_path, encoding="utf-8") as fh:  # OSError -> exit 2
                         text = fh.read()
                     findings.extend(
-                        _link_doc_findings(corpus.root, rel, text, registered))
+                        _link_doc_findings(corpus.root, rel, text, registered,
+                                           core_texts=corpus._core_texts))
 
     # -- code side ---------------------------------------------------------
     # Unbuildable manifest → registration is unknown; skip instead of
@@ -388,16 +404,43 @@ def _finding(rule: str, severity: str, file: str, description: str) -> dict:
     return {"rule": rule, "severity": severity, "file": file, "description": description}
 
 
+def _core_root_resolve(core_root: str, token: str) -> str:
+    """Resolve a docs/en reference *token* against core_root/docs/en/.
+
+    Returns the relative path (e.g. ``docs/en/foo/index.md``) if the file
+    exists there, else ``None``.  Core lookups use only a direct relative path
+    under ``docs/en/`` — no markdown-relative resolution, because core is
+    read-only context (AC-3).
+    """
+    # If the token already starts with docs/en/, use it as-is.
+    cand = token if token.startswith("docs/en/") else "docs/en/" + token
+    cand = cand.strip("/").removeprefix("./")
+    abs_path = os.path.join(core_root, *cand.split("/"))
+    if os.path.isfile(abs_path):
+        return cand
+    # Try index.md collapse: dir/index.md for a directory-style token
+    if not cand.endswith("/index.md"):
+        alt = cand + "/index.md"
+        alt_path = os.path.join(core_root, *alt.split("/"))
+        if os.path.isfile(alt_path):
+            return alt
+    return None
+
+
 class _Corpus:
     """Whole-corpus scan context: files, parsed headers, heading indexes."""
 
-    def __init__(self, root: str):
+    def __init__(self, root: str, core_root: str = None):
         self.root = root
-        self.docs = []          # relative paths, sorted, e.g. docs/en/x/index.md
-        self.texts = {}         # rel -> text
-        self.lines = {}         # rel -> splitlines
-        self.headers = {}       # rel -> HeaderData (absent when parse failed)
-        self.parse_errors = {}  # rel -> DocMetaError reason
+        self.core_root = core_root     # Optional second read-only resolution space
+        self.docs = []                 # relative paths, sorted, e.g. docs/en/x/index.md
+        self.texts = {}                # rel -> text  (host ONLY)
+        self.lines = {}                # rel -> splitlines  (host ONLY)
+        self.headers = {}              # rel -> HeaderData (absent when parse failed, host only)
+        self.parse_errors = {}         # rel -> DocMetaError reason  (host only)
+        # Core resolution cache: rel -> text  (read-only, consult on miss from host)
+        self._core_texts = {}          # rel -> text  (core docs/en files)
+        self._core_headers = {}        # rel -> HeaderData  (core documents)
         self._slug_index = {}
         self._heading_index = {}    # rel -> [heading texts] (ATX only)
         self._hbold_index = {}      # rel -> [headings + bold pseudo-headings]
@@ -408,6 +451,7 @@ class _Corpus:
         self._basename_unique = None  # basename -> {rel}; lazy corpus-wide index
         self._title_unique = None    # normalized -> {rel}; lazy H1 title index
         self._docs_roots = None      # first-segment directory names under docs/en
+        self._core_doc_ids = None     # lazy-cached set of core frontmatter ids
 
         base = os.path.join(root, "docs", "en")
         if not os.path.isdir(base):
@@ -435,6 +479,29 @@ class _Corpus:
             except DocMetaError as exc:
                 # Corpus condition, not a validator bug: reported as finding.
                 self.parse_errors[rel] = exc.reason
+
+        # -- core root: read-only resolution space (not merged into self.docs)
+        if core_root:
+            core_base = os.path.join(core_root, "docs", "en")
+            if not os.path.isdir(core_base):
+                raise FileNotFoundError(
+                    f"{core_base}: no docs/en directory under --core-root {core_root!r}")
+            for dirpath, dirnames, filenames in os.walk(core_base):
+                dirnames.sort()
+                for name in sorted(filenames):
+                    if name.endswith(".md"):
+                        abs_path_c = os.path.join(dirpath, name)
+                        rel_c = os.path.relpath(abs_path_c, core_root).replace("\\", "/")
+                        if is_archived(rel_c):
+                            continue
+                        with open(abs_path_c, encoding="utf-8") as fh:  # OSError -> exit 2
+                            ct = fh.read()
+                        self._core_texts[rel_c] = ct
+                        try:
+                            self._core_headers[rel_c] = docmeta.parse_header(
+                                ct, filename=rel_c)
+                        except DocMetaError:
+                            pass  # core parse errors ignored
 
     # -- heading/anchor indexes ------------------------------------------------
 
@@ -601,12 +668,20 @@ class _Corpus:
         `docs/en/...`; a path relative to docs/en (canonical identifier style,
         e.g. `documenter-service/x.md`); a corpus-unique bare basename.
         Returns relative path if the file exists on disk, else None.
+
+        When --core-root was provided and the host lookup fails, falls back
+        to the core root's <core_root>/docs/en/ as a read-only resolution space.
         """
         token = token.strip().strip("/").removeprefix("./")
         for cand in self._docs_candidates(token, source_rel):
             abs_path = os.path.join(self.root, *cand.split("/"))
             if os.path.isfile(abs_path):
                 return cand
+        # Core fallback: try the token as a direct docs/en path under core_root
+        if self.core_root:
+            resolved_core = _core_root_resolve(self.core_root, token)
+            if resolved_core:
+                return resolved_core
         return None
 
     def exists_anywhere(self, token: str, source_rel: str) -> bool:
@@ -628,6 +703,28 @@ class _Corpus:
         if errors:
             return set()
         return {e["id"] for e in entries}
+
+    def core_doc_ids(self) -> set:
+        """ids from the core corpus (read-only resolution space), derived from
+        front-matter ``id`` fields of every document under <core_root>/docs/en.
+
+        Cached on first call so repeated queries are O(1). Returns an empty
+        set when ``core_root`` was not provided."""
+        if self._core_doc_ids is not None:
+            return self._core_doc_ids
+        if self.core_root is None:
+            self._core_doc_ids = set()
+            return self._core_doc_ids
+        ids = set()
+        for hdr in self._core_headers.values():
+            try:
+                iid = hdr.fields["id"]
+            except KeyError:
+                continue
+            if isinstance(iid, str) and iid:
+                ids.add(iid)
+        self._core_doc_ids = ids
+        return self._core_doc_ids
 
     # -- §Name resolution --------------------------------------------------------
 
@@ -1000,11 +1097,15 @@ def _refs_from_line(corpus: _Corpus, rel: str, idx: int, line: str) -> list:
                         "missing-reference", "high", rel,
                         f"rule-4 cross-ref-anchors: canonical identifier {token!r} "
                         f"on line {idx + 1} does not resolve to a file under docs/en"))
+        # Bullet-list cross-reference identifier check (restored per audit contract):
+        # bare kebab-id like `- \`foo\`` must be a known doc id — host manifest
+        # first; when --core-root is set, core frontmatter ids are accepted too.
         stripped = line.strip()
         m = re.match(r"^\s*[-*]\s+`([\w][\w-]*)`\s*$", stripped)
         if m:
             ident = m.group(1)
-            if ident not in corpus.manifest_ids():
+            known_ids = corpus.manifest_ids() | corpus.core_doc_ids()
+            if ident not in known_ids:
                 out.append(_finding(
                     "missing-reference", "high", rel,
                     f"rule-4 cross-ref-anchors: cross-reference identifier "
@@ -1130,13 +1231,16 @@ RULE_DISPATCH = [
 ]
 
 
-def scan(root: str, rules=None, strict_links: bool = False) -> list:
+def scan(root: str, rules=None, strict_links: bool = False, core_root: str = None) -> list:
     """Run enabled rule groups over the whole corpus; return findings (dicts).
 
     `rules` is an iterable of --rule group tokens or None for all. Unreadable
     files and missing docs/en raise OSError (mapped to exit 2 by main()).
     `strict_links` promotes link-integrity code→docs warnings to blocking
     (consensus sess-operator-surface-split O-3, clean pre-merge mode).
+    `core_root` is an optional second read-only resolution space; when set,
+    reference tokens that fail within the host corpus fall back to
+    ``<core_root>/docs/en/`` (dual-root cross-resolution).
     """
     if rules is None:
         enabled = {name for name, _ in RULE_DISPATCH}
@@ -1151,7 +1255,7 @@ def scan(root: str, rules=None, strict_links: bool = False) -> list:
             else:
                 raise ValueError(f"unknown --rule {r!r}; valid: "
                                  + ", ".join(sorted(RULE_GROUPS)) + ", all")
-    corpus = _Corpus(root)
+    corpus = _Corpus(root, core_root=core_root)
     findings = []
     for name, fn in RULE_DISPATCH:
         if name in enabled:
@@ -1227,12 +1331,26 @@ def main(argv=None) -> int:
                         help="promote link-integrity code→docs warnings to "
                              "blocking (clean pre-merge runs); docs→manifest "
                              "findings are always blocking")
+    parser.add_argument("--core-root", default=None, metavar="DIR",
+                        help="second read-only resolution space: a reference token "
+                             "that fails within the host corpus falls back to "
+                             "<DIR>/docs/en/ (dual-root cross-resolution)")
     args = parser.parse_args(argv)
 
     root = args.root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+    # Validate core_root early — must contain docs/en directory (AC-5).
+    core_root = args.core_root
+    if core_root is not None:
+        core_base = os.path.join(core_root, "docs", "en")
+        if not os.path.isdir(core_base):
+            print(f"ERROR: {core_base}: no docs/en directory under --core-root "
+                  f"{core_root!r}", file=sys.stderr)
+            return 2
+
     try:
-        findings = scan(root, rules=args.rules, strict_links=args.strict_links)
+        findings = scan(root, rules=args.rules, strict_links=args.strict_links,
+                        core_root=core_root)
     except ValueError as exc:  # bad --rule token: usage error
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
