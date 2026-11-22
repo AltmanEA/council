@@ -10,13 +10,13 @@ files, outside Documenter scope per `AGENTS.md` §1.6). Current phase: Stage A
 | --- | --- | --- | --- |
 | `docmeta.py` | Parse and validate document frontmatter headers (required fields, versions, changelog refs). Library used by the tools below. | operational (Stage A) | `docs/en/translation-project/index.md` (header schema) |
 | `gen_manifest.py` | Generate `docs-manifest.yaml` from document frontmatter (`--write` / `--check`, byte-exact, atomic). Sole writer of the manifest. | operational (Stage A) | `tools/gen_manifest.py` (CLI contract) |
-| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Includes the **link-integrity** step: docs→manifest references are hard-fail (high); there is no code→docs scan any more (the `documenter_service/` / `operator_ingress/` packages were deleted in the 2026-11-19 reconstruction; `LINK_INTEGRITY_CODE_DIRS` is empty). Exit codes are informational, never gating: `0` clean (silent when clean), `1` findings reported with none high, `2` at least one high reported (critical) — or internal error / bad `--rule` token (distinguished on output: `check_all: INTERNAL ERROR` / `ERROR:`, never the `🚨` marker). `--severity` sets the minimum **reported** severity (default `low`; `--strict` ≡ `--severity warning`). Human rendering: clean = silent; otherwise `⚠ findings: N` / `🚨 critical: N` header(s) plus severity-sorted hint lines obeying the token contract. The agent runs it as the mandatory advisory pre-commit audit (silent when clean); the operator runs it post-commit on demand (OP-3). | operational (frozen contract, Phase 0) | `tools/check_all.py` (CLI contract) |
+| `check_all.py` | Deterministic compliance validator CLI (see rule coverage below). Optional `--core-root DIR`: a second, read-only resolution space — when a docs/en reference token fails to resolve in the audited corpus it is looked up under `<DIR>/docs/en/` (host installs audit with `--root . --core-root .council`; the core corpus is never merged into the host corpus — no parity/orphan exposure; host root wins on same-path collisions; missing `<DIR>/docs/en` → exit 2). Includes the **link-integrity** step: docs→manifest references are hard-fail (high); there is no code→docs scan any more (the `documenter_service/` / `operator_ingress/` packages were deleted in the 2026-11-19 reconstruction; `LINK_INTEGRITY_CODE_DIRS` is empty). Exit codes are informational, never gating: `0` clean (silent when clean), `1` findings reported with none high, `2` at least one high reported (critical) — or internal error / bad `--rule` token (distinguished on output: `check_all: INTERNAL ERROR` / `ERROR:`, never the `🚨` marker). `--severity` sets the minimum **reported** severity (default `low`; `--strict` ≡ `--severity warning`). Human rendering: clean = silent; otherwise `⚠ findings: N` / `🚨 critical: N` header(s) plus severity-sorted hint lines obeying the token contract. The agent runs it as the mandatory advisory pre-commit audit (silent when clean); the operator runs it post-commit on demand (OP-3). | operational (frozen contract, Phase 0) | `tools/check_all.py` (CLI contract) |
 | `bump_version.py` | Deterministic version writer: frontmatter `Version:` → changelog entry (prepend) → manifest (regenerated last); atomic writes with rollback. Dispatched only by the Documentation Worker skill after operator Approve (documentation-rules §5.1). Exit codes: 0 success or `--dry-run`, 2 refusal/rolled back. | operational (Stage D) | `tools/bump_version.py` (CLI contract) |
 | `classify_bump.py` | Read-only diff→bump classifier ("AI proposes — algorithm records"): proposes `patch`/`minor`/`major` for a full candidate document; never writes documents, changelogs, or the manifest — only its JSONL decision log `tools/state/classify_log.jsonl`. Reuses the `check_all.py` §-reference resolver and `gen_manifest.build_entries` path resolution; ambiguous → minor with a §7.5 warning; escalations printed in documentation-rules §6 format; `--report` gate: escalation rate > 20% → `classifier requires redesign`, exit 3. Exit codes: 0 classification/identical/report-within-gate, 2 usage/refusal, 3 gate exceeded. | operational (Stage C) | `tools/classify_bump.py` (CLI contract) |
-| `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only by default (best-effort advisory gate, never a hard block under OP-3; bypassable). | operational, warn-only | `tools/hooks/pre-commit` |
+| `hooks/pre-commit` | Versioned pre-commit hook running `check_all.py`; warn-only by default (best-effort advisory gate, never a hard block under OP-3; bypassable). Resolves `check_all.py` location-relative from the hook file itself (`../check_all.py`), falling back to `<repo-root>/tools/check_all.py` — so the same hook works both in the source repo (`tools/hooks`) and on hosts (`.council/tools/hooks`). | operational, warn-only | `tools/hooks/pre-commit` |
 | `translation_status.py` | Deterministic rebuild of translation provenance: per-document sidecar + `STATUS.md` status index from stored run reports under `documenter/artifacts/translation/runs/` (ADR-014). Idempotent; exit 0 ok, 2 nothing to do. | operational | `tools/translation_status.py` (CLI contract) |
 | `check_drift.py` | Deterministic EN↔RU structural comparison — the sole Council-side structural judge; translation itself is external (ADR-014). Drift mode: structural rules (headings, tables, fences, etc.). `--phase4` mode: four translation write-gates (`phase4-fail`, `phase4-parity`, `phase4-identity`, `phase4-glossary`). | operational | `tools/check_drift.py` (CLI + phase4 gates), `.agents/skills/documentation/SKILL.md` (phase4 contract) |
-| `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath tools/hooks` and self-checks. | operational (Stage B) | `tools/install-hooks.sh` |
+| `install-hooks.sh` | One-time setup per clone: sets `core.hooksPath <hooks-dir>` and self-checks. Optional first argument sets the hooks dir (default `tools/hooks`; hosts pass `.council/tools/hooks`). | operational (Stage B) | `tools/install-hooks.sh` |
 | `tests_helpers.py` | Shared slugify / line-accounting rules used by `check_all.py` and its tests. | operational | `tools/tests_helpers.py` |
 | `tests/` | (empty after ADR-014; the translation test suite moved to the external project) | removed | — |
 | `collect_telemetry.sh` | Local opt-in diagnostics collector: reads JSONL from stdin, redacts sensitive data, bundles to gzip-tar. Manual, no network, no daemon. | operational | `dist/RUNBOOK.md` §Telemetry |
@@ -67,6 +67,22 @@ bash tools/install-hooks.sh
 
 This sets `git config core.hooksPath tools/hooks` (repository-local) so the
 versioned hook runs on commit; nothing is copied into `.git/hooks`.
+
+## On hosts (installed via `dist/`)
+
+On a host project the entire framework lives under `.council/` (isolated
+layout, consensus `sess-dist-isolated-install-2026-11-22`): these tools run
+from `.council/tools/`, e.g.
+
+```bash
+python3 .council/tools/check_all.py --root . --core-root .council
+```
+
+where `--root .` audits the host corpus and `--core-root .council` resolves
+references into the core docs without merging the two corpora. Hosts generate
+two manifests: `.council/docs-manifest.yaml` (core) and `docs-manifest.yaml`
+(host root). Hooks on hosts use `core.hooksPath=.council/tools/hooks`; the
+block-mode flag lives at `.council/tools/hooks/block-mode.flag`.
 
 ## Soak → block flip
 

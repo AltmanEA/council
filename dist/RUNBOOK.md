@@ -9,6 +9,12 @@ develops tools **edit-in-place**; a host project receives a **pinned snapshot**
 of a tagged release via `dist/`. The host never edits Council (core) files in
 place — improvements go through the source repo and arrive with the next update.
 
+Isolated layout (consensus `sess-dist-isolated-install-2026-11-22`): the entire
+framework lives under the host's `.council/` directory. The host root contains
+only mandated wiring — `AGENTS.md`, the `opencode.jsonc` skills entry,
+`.opencode/agents/selector.md`, the host `docs-manifest.yaml`, and a managed
+`.gitignore` block. No symlinks are used anywhere.
+
 ---
 
 ## 1. Before installing: choose the mode
@@ -35,26 +41,39 @@ cd council-dist
 bash install.sh --target /path/to/host --mode <init|overlay> --project-name <name>
 ```
 
-Then, if git is available (advisory pre-commit audit):
+Git hooks are installed automatically by `install.sh` when git is available
+(`core.hooksPath` → `.council/tools/hooks`).  To (re)install manually:
 
 ```bash
 cd /path/to/host
-bash tools/install-hooks.sh
+bash .council/tools/install-hooks.sh .council/tools/hooks
 ```
 
 Expected output checks:
 - `Locked version: <VERSION>` — this is the pinned version;
-- `Core manifest: N files`;
+- `Core manifest: N files` (entries carry the `.council/` prefix);
 - `Updater copied to .council/update.sh`;
-- `generated docs-manifest.yaml` (or `already exists — kept host version` on
-  overlay) — without it the Documentation Worker and `check_all.py` cannot run;
+- `generated .council/docs-manifest.yaml (core)` and `generated host
+  docs-manifest.yaml` (or `already exists — kept host version` on overlay) —
+  without them the Documentation Worker and `check_all.py` cannot run;
+- `[opencode] created opencode.jsonc` (or `merged skills into …`) — registers
+  `.council/skills` with OpenCode; a host config **without** a `skills` key is
+  left untouched with a WARNING asking you to add `"./.council/skills"`
+  manually — never silently rewritten;
 - `.opencode/agents/selector.md` — OpenCode registers the selector subagent;
   host model/provider settings are left untouched;
+- the **Where is Council?** box — docs, tools, skills and updater locations;
 - PyYAML missing → WARNING with the list of broken tools; install it
-  (`pip install pyyaml`) before running any `tools/*.py`.
+  (`pip install pyyaml`) before running any `.council/tools/*.py`.
+
+Run the host audit with both roots:
+
+```bash
+python3 .council/tools/check_all.py --root . --core-root .council
+```
 
 Council sessions may be run with Koda CLI instead of OpenCode named subagents:
-use the execution profile in `fallback/koda-execution-mode.md` (verified on
+use the execution profile in `.council/fallback/koda-execution-mode.md` (verified on
 koda 1.3.5). The Koda IDE plugins from kodacode.ru are not part of this
 framework — the integration point is the `koda` CLI.
 
@@ -102,9 +121,13 @@ Behaviour:
   before being overwritten.
 - **Removals:** files that were core in the old release but are absent from
   the new one are deleted — each deletion prints the preserved backup path.
-  Read the `[removed]` lines; they are not silent.
-- Templates (`docs/en/project-concept`, `CHANGELOGS`, host `AGENTS.md`, …) are
-  never touched.
+  Read the `[removed]` lines; they are not silent.  Manifest entries carry the
+  `.council/` prefix; backups store them with the prefix stripped (so the
+  backup tree looks like `.council/backup-<timestamp>/tools/...`).
+- Templates (`docs/en/project-concept`, host `CHANGELOGS`, host `AGENTS.md`,
+  host `docs-manifest.yaml`, …) are never touched.  After every update the
+  installer-side skills mapping is refreshed (`.council/.agents/skills` →
+  `.council/skills`) so the OpenCode-registered skills copy never goes stale.
 
 ## 5. Rollback
 
@@ -112,8 +135,11 @@ After a bad **update** — restore the backup taken by `update.sh` (printed at
 the end of its run):
 
 ```bash
-cp -R .council/backup-<timestamp>/* .
+cp -R .council/backup-<timestamp>/* .council/
 ```
+
+The same command is stored in `restore-instructions.txt` inside the backup
+directory and printed by `update.sh` at completion.
 
 Then commit the restoration in the host repo.
 
@@ -130,12 +156,12 @@ Procedure (documented deviation from pinned mode):
 
 ## 7. Translation (EN→RU)
 
-The translation engine is shipped in `vendor/techdoc-translator/` and IS used
-on hosts. A `.env` is never included in the distribution — always create it
-from `.env.example` on the host with your own endpoint and model. Enable it:
+The translation engine is shipped in `.council/vendor/techdoc-translator/` and
+IS used on hosts. A `.env` is never included in the distribution — always create
+it from `.env.example` on the host with your own endpoint and model. Enable it:
 
 ```bash
-cd vendor/techdoc-translator
+cd .council/vendor/techdoc-translator
 cp .env.example .env
 # edit .env: API endpoint / key (OpenAI-compatible or local Ollama)
 ```
@@ -146,7 +172,7 @@ EN→RU translation is unavailable.
 ## 8. Telemetry (opt-in)
 
 The Council framework includes a local, opt-in diagnostics collector
-(`tools/collect_telemetry.sh`). No data is collected or transmitted by
+(`.council/tools/collect_telemetry.sh`). No data is collected or transmitted by
 default.
 
 ### Enable
@@ -181,10 +207,10 @@ touch .council/opt-out-telemetry
 ### Commands
 
 ```bash
-bash tools/collect_telemetry.sh --collect        # read JSONL from stdin, write to diagnostics/
-bash tools/collect_telemetry.sh --inspect         # print summary only
-bash tools/collect_telemetry.sh --bundle          # write gzip-tar bundle to stdout
-bash tools/collect_telemetry.sh --read <bundle>   # list files from a bundle
+bash .council/tools/collect_telemetry.sh --collect   # read JSONL from stdin, write to diagnostics/
+bash .council/tools/collect_telemetry.sh --inspect   # print summary only
+bash .council/tools/collect_telemetry.sh --bundle    # write gzip-tar bundle to stdout
+bash .council/tools/collect_telemetry.sh --read <bundle>  # list files from a bundle
 ```
 
 ### Update survival
