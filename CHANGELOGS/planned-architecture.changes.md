@@ -1,3 +1,4 @@
+<!-- CHANGES v0.17.0: retarget ADR-019/020 references to archive/documenter-service and resolve numeric §3/§4 (low audit cleanup) -->
 <!-- CHANGES v0.16.0: Registered ADR-020 runtime activation overlay (external YAML, read-time merge, 4 scope presets, --verify-activation CLI, fail-closed). RU mirror synchronized in same changeset. -->
 <!-- CHANGES v0.15.0: Registered ADR-019 code-level identifier cleanup (sentinel path, OPERATOR_INGRESS_SENTINEL, operator_ingress_ready); ADR-018 row corrected -->
 <!-- CHANGES v0.2.5: Layer 2 tools parenthetical renamed to Operator Ingress (ADR-018) -->

@@ -1,7 +1,7 @@
 # Error Management & Policy
 
 id: service-contract-error-management
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/error-management-RU.md
@@ -63,7 +63,7 @@ Validation follows a strict three-phase pipeline. Each phase operates on the ori
 
 ### Golden Fixtures
 
-Golden fixtures live in `tests/fixtures/contracts/golden_test_cases.yaml`. Each fixture defines a concrete payload for validation against the canonical schemas (§Artifact Schemas) and error codes (§Error Code Registry). Before Layer 0 is coded, populate the `input_payload` field with concrete JSON/YAML matching the artifact schema, and set `validation_codes` per the table below.
+Golden fixtures live in `tests/fixtures/contracts/golden_test_cases.yaml`. Each fixture defines a concrete payload for validation against the canonical schemas (`service-contract/index.md` §Artifact Schemas) and error codes (§Error Code Registry). Before Layer 0 is coded, populate the `input_payload` field with concrete JSON/YAML matching the artifact schema, and set `validation_codes` per the table below.
 
 #### Fixture Test Matrix
 

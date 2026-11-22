@@ -1,7 +1,7 @@
 # Точка входа оператора & Эскалация
 
 id: operator-ingress
-Version: 1.1.1
+Version: 1.2.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/operator-ingress/index-RU.md
@@ -59,10 +59,10 @@ MVP поставляется с одним транспортом: MCP чере�
 | `council.get_artifacts` | deferred (roadmap KD-1; CONFIG.001 envelope to every caller class) | deferred | deferred | `operator-surface` |
 | `council.resolve_escalation` | allow | deny | deny | `operator-surface` |
 | `council.override_precheck` | allow + reason | deny | deny | `operator-surface` |
-| `documenter.audit` | allow | allow (read-only) | allow (read-only) | mvp-contract.md §4 — Реализовано, не активировано (ADR-013) |
-| `documenter.delegate` | allow (Tier 0–1 preview) | deny | deny | mvp-contract.md §4 — Реализовано, не активировано (ADR-013) |
-| `documenter.approve` | allow (Tier 2+, implemented; policy-gated) | deny | deny | mvp-contract.md §4 — Реализовано, не активировано (ADR-013) |
-| `documenter.override_gate` | allow + reason | deny | deny | mvp-contract.md §4 — Реализовано, не активировано (ADR-013) |
+| `documenter.audit` | allow | allow (read-only) | allow (read-only) | `archive/documenter-service/mvp-contract.md` §4 — Реализовано, не активировано (ADR-013) |
+| `documenter.delegate` | allow (Tier 0–1 preview) | deny | deny | `archive/documenter-service/mvp-contract.md` §4 — Реализовано, не активировано (ADR-013) |
+| `documenter.approve` | allow (Tier 2+, implemented; policy-gated) | deny | deny | `archive/documenter-service/mvp-contract.md` §4 — Реализовано, не активировано (ADR-013) |
+| `documenter.override_gate` | allow + reason | deny | deny | `archive/documenter-service/mvp-contract.md` §4 — Реализовано, не активировано (ADR-013) |
 
 Эта таблица является единственным реестром разрешений транспортного уровня, принадлежащим данному документу. Семантика контракта для глаголов `documenter.*` определяется их владельцем (`archive/documenter-service/mvp-contract.md` §4), а не здесь.
 

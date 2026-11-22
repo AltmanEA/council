@@ -1,3 +1,4 @@
+<!-- CHANGES v0.3.1: bind ambiguous §Artifact Schemas reference to service-contract/index.md (low audit cleanup) -->
 <!-- CHANGES v0.3.0: Reduce Content Precedence to schema-level scope; documentation precedence moved to documentation-rules §2.7 (archive guards left as accepted risk) -->
 <!-- CHANGES v0.3.2: Fix stale error-management/index.md path to error-management.md in prose and cross-references -->
 <!-- CHANGES v0.2.4: cross-reference paths retargeted to archive/documenter-service after legacy migration (sess-archive-design-2026-11-19) -->

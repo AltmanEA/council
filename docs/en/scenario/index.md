@@ -1,7 +1,7 @@
 # Scenarios
 
 id: scenario
-Version: 0.1.3
+Version: 0.2.0
 Status: draft
 Abstraction: protocol
 has_translation: docs/ru/scenario/index-RU.md
@@ -104,6 +104,6 @@ These scenarios are proposed as illustrative examples. They are NOT part of the 
 
 ## Compliance Notes
 
-- This document complies with §7 line limit (≤200 lines excluding metadata and changelog entries).
-- Russian translation (`index-RU.md`) alignment follows §3.3 translation workflow.
-- Version bumps follow §7 conventions: patch for typos/formatting, minor (X.**Y**.Z) for structural additions, major (**X**.Y.Z) for foundational changes.
+- This document complies with `documentation-rules/index.md` §7 line limit (≤200 lines excluding metadata and changelog entries).
+- Russian translation (`index-RU.md`) alignment follows `documentation-rules/index.md` §3.3 translation workflow.
+- Version bumps follow `documentation-rules/index.md` §7 conventions: patch for typos/formatting, minor (X.**Y**.Z) for structural additions, major (**X**.Y.Z) for foundational changes.

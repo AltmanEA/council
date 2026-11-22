@@ -1,3 +1,4 @@
+<!-- CHANGES v1.2.0: retarget 4 verb-table §4 references to archive/documenter-service/mvp-contract.md after legacy migration (low audit cleanup) -->
 <!-- CHANGES v1.1.1: cross-reference paths retargeted to archive/documenter-service after legacy migration (sess-archive-design-2026-11-19) -->
 <!-- CHANGES v1.1.0: Added activation overlay context to sentinel description (overlay provides policy readiness, sentinel is second interlock condition; base policy stays Tier 1); added activation notice events (`notice.activation_active` for state `active`, `notice.activation_invalid` for state `invalid`, fail-closed) to Notices section event mapping table. RU mirror synchronized in same changeset. -->
 <!-- CHANGES v1.0.1: ADR-019 sentinel-path citation synchronized (documenter/.operator_ingress_ready); provenance note clarified (ADR-018/019) -->

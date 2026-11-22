@@ -1,7 +1,7 @@
 # Управление ошибками и политика
 
 id: service-contract-error-management
-Version: 0.3.0
+Version: 0.3.1
 Status: draft
 Abstraction: format
 has_translation: docs/ru/service-contract/error-management-RU.md
@@ -63,7 +63,7 @@ changelog-path: CHANGELOGS/service-contract.changes.md
 
 ### Золотые матчи
 
-Золотые тестовые данные находятся в файле `tests/fixtures/contracts/golden_test_cases.yaml`. Каждый тестовый набор определяет конкретный полезный груз для проверки на соответствие каноническим схемам (§Схемы Артефактов) и кодам ошибок (§Реестр кодов ошибок). Перед написанием кода для уровня 0 заполните поле `input_payload` конкретными данными в формате JSON/YAML, соответствующими схеме Артефакта, и установите `validation_codes` согласно таблице ниже.
+Золотые тестовые данные находятся в файле `tests/fixtures/contracts/golden_test_cases.yaml`. Каждый тестовый набор определяет конкретный полезный груз для проверки на соответствие каноническим схемам (`service-contract/index.md` §Схемы Артефактов) и кодам ошибок (§Реестр кодов ошибок). Перед написанием кода для уровня 0 заполните поле `input_payload` конкретными данными в формате JSON/YAML, соответствующими схеме Артефакта, и установите `validation_codes` согласно таблице ниже.
 
 #### Матрица тестирования оборудования
 

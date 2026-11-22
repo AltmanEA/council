@@ -1,3 +1,4 @@
+<!-- CHANGES v0.2.0: bind bare §7/§3.3 references to documentation-rules/index.md (low audit cleanup) -->
 # Changelog: Scenarios
 <!-- CHANGES v0.1.3 (index.md): Metadata header migrated to canonical frontmatter (sess-doc-reliability-algo Stage A): id added, Last Modified removed, has_translation/references/allow_non_index_paths migrated from manifest. -->
 <!-- CHANGES v0.1.2: Metadata version aligned to manifest (parity fix, post-2cd292f review). Content unchanged. -->
