@@ -13,6 +13,39 @@ projects.
   never overwritten silently.
 - **Overlay-friendly.**  Existing repositories can adopt Council without
   disrupting their own file tree.
+- **Pinned releases.**  A host runs a tagged snapshot of the framework; it
+  updates only when the operator copies a new archive and runs `update.sh`.
+  Core files are not hand-edited on hosts — fixes go through the source repo.
+- **Verified channel.**  Every build emits `SHA256SUMS` next to the archive
+  (same step — it cannot be forgotten); `update.sh` verifies it automatically.
+
+**Host operators: read [RUNBOOK.md](RUNBOOK.md) before the first install.**
+It covers mode choice, install, update, rollback, emergency restore,
+translation `.env`, and version checks.
+
+## Releasing (source repo side)
+
+The pinned channel is anchored to git tags.  The first release is tagged
+`v0.1.0`; every host-bound build must come from a tag:
+
+```bash
+git tag v0.1.0
+bash dist/build.sh                 # VERSION taken from the tag
+```
+
+Without a tag, `build.sh` prints a warning and uses a `dev-<hash>` version.
+Dev builds are for local testing only — never ship them to a host
+(`update.sh` and the host will visibly show the `dev-` prefix).
+
+Before shipping an archive after any change to `dist/*.sh`, run the smoke
+test once:
+
+```bash
+bash dist/test-dry-run.sh          # exit 0 = install → update → restore → overlay OK
+```
+
+Copy BOTH `council-dist-<VERSION>.tar.gz` and `SHA256SUMS` to the host, then
+on the host: `bash .council/update.sh council-dist-<VERSION>.tar.gz`.
 
 ## Build
 
@@ -22,12 +55,15 @@ From the Council repository root:
 bash dist/build.sh [VERSION]
 ```
 
+Builds also emit `SHA256SUMS` next to the archive in `dist/out/`.
+
 Produces `dist/out/council-dist-<VERSION>.tar.gz` containing:
 
 ```
 council-dist/
 ├── install.sh          # one-shot installer (init or overlay)
 ├── update.sh           # core-only updater (copied into .council/ of host)
+├── RUNBOOK.md          # host-operator procedure (install/update/rollback/emergency)
 ├── version.txt         # release identifier
 ├── core-manifest.txt   # list of paths considered "core"
 ├── core/               # framework files (read-only reference)
