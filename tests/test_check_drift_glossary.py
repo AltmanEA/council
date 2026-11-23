@@ -150,5 +150,77 @@ class TestGlossaryExplicitContract(unittest.TestCase):
                       "Provenance in stderr must contain status")
 
 
+class TestGlossaryListFormat(unittest.TestCase):
+    """Regression: bulleted host glossaries parsed as 0 terms.
+
+    Host glossaries commonly write entries as markdown list items
+    ('- **Term** (рус.)'); the gate parser anchored on '^\\*\\*' and
+    loaded 0 terms, making gate 4 vacuous-by-error (exit 2 under the
+    D-1 0-term guard) and the status 'verified | gates 3/4'.
+    Same contract as the engine's load_glossary (vendor/techdoc-translator).
+    """
+
+    def test_g_bulleted_glossary_checked_not_vacuous(self):
+        """--glossary bullet-glossary.md (same 3 terms as mini, bulleted) → status=checked, terms=3, exit 0."""
+        rc, out, err = _run_cli(
+            "--phase4",
+            os.path.join(FIXTURES_DIR, "en.md"),
+            os.path.join(FIXTURES_DIR, "ru_good.md"),
+            "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", os.path.join(FIXTURES_DIR, "bullet-glossary.md"),
+        )
+        self.assertIn("status=checked", out + err,
+                      "Bulleted glossary must be parsed (status=checked), not vacuous or exit 2")
+        self.assertIn("terms=3", out + err,
+                      "All 3 bulleted terms must be parsed")
+        self.assertEqual(rc, 0,
+                    f"Expected exit 0 with bulleted glossary and good fixtures, got rc={rc}, out={out}")
+
+    def test_h_bulleted_zero_terms_still_exit_2(self):
+        """Bulleted entries WITHOUT (рус.) parentheses → 0 terms → exit 2 (D-1 guard intact)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "bullets-no-ru.md")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("# Glossary\n\n- **Term one** no parens here\n"
+                         "- **Term two** definition without parens\n")
+            rc, _, err = _run_cli(
+                "--phase4",
+                os.path.join(FIXTURES_DIR, "en.md"),
+                os.path.join(FIXTURES_DIR, "ru_good.md"),
+                "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+                "--glossary", path,
+            )
+        self.assertEqual(rc, 2,
+                         f"Expected exit 2 for bulleted glossary with 0 parenthesized terms, got {rc}")
+
+    def test_i_glossary_gloss_annotation_not_stem_checked(self):
+        """';' annotations and «quoted variants» in the RU equivalent are metadata,
+        not translation words: only the first ';' segment must be stem-checked.
+
+        Regression (host ai_tutor): entries like
+        '- **Professor** (Профессор; human)' made the gate demand stems for
+        'human'/'agent' and for the guillemet-attached '«уточнения»', producing
+        false 'untranslated' findings on a correct RU candidate.
+        """
+        import tempfile
+        gl = os.path.join(tempfile.mkdtemp(), "gloss.md")
+        with open(gl, "w", encoding="utf-8") as fh:
+            fh.write("# G\n\n- **Governance** (Управление; governance)\n"
+                     "- **Translation** (перевод; связь «перевода»)\n"
+                     "- **Documentation** (Документация)\n")
+        rc, out, err = _run_cli(
+            "--phase4",
+            os.path.join(FIXTURES_DIR, "en.md"),
+            os.path.join(FIXTURES_DIR, "ru_good.md"),
+            "--report", os.path.join(FIXTURES_DIR, "report_fail0.json"),
+            "--glossary", gl,
+        )
+        self.assertEqual(rc, 0,
+                    f"Gloss annotations must not be stem-checked; got rc={rc}, out={out}")
+        self.assertNotIn("rule=phase4-glossary", out)
+        self.assertIn("status=checked", out + err)
+
+
 if __name__ == "__main__":
     unittest.main()

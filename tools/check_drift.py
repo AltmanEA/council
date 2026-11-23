@@ -35,6 +35,28 @@ DETERMINISTIC_RULES = {
     "en-leakage": ("medium", "Cyrillic absence in RU body text"),
 }
 
+# Glossary entry lines may be bare (``**Term** (рус.)``) or markdown list
+# items (``- **Term** (рус.)``); an optional list marker (+/*/-) is accepted.
+# Host glossaries commonly use bulleted lists; the old '^\\*\\*' anchor
+# parsed 0 terms from them, making gate 4 vacuous-by-error.  Same contract
+# as the engine's load_glossary (vendor/techdoc-translator, list-format fix).
+GLOSSARY_ENTRY_RE = re.compile(r'^(?:[-*+]\s+)?\*\*([^*]+)\*\*\s*\(([^)]+)\)')
+
+
+def parse_glossary_terms(glossary_path):
+    """Parse ``**term** (рус. эквивалент)`` entries from a glossary file.
+
+    Entries may be bare lines or markdown list items ('- ', '* ', '+ ').
+    Returns dict {term: ru_equivalent}.  Caller validates file existence.
+    """
+    terms = {}
+    with open(glossary_path, "r", encoding="utf-8") as f:
+        for line in f:
+            m = GLOSSARY_ENTRY_RE.match(line.strip())
+            if m:
+                terms[m.group(1).strip()] = m.group(2).strip()
+    return terms
+
 
 def _add(finding_list, rule, file, description):
     finding_list.append({
@@ -418,6 +440,23 @@ def _check_phase4_identity(en_lines, ru_lines, known_keys, ru_file):
     return findings
 
 
+def _ru_equiv_stems(ru_equiv):
+    """Stems to require in the RU body for a glossary entry's equivalent.
+
+    Only the translation segment is checked: a '; ...' tail is a gloss
+    (category / link-name / note such as '; human', '; AI agent',
+    '; связь «опора»'), not a word the translation must contain.  Tokens
+    are reduced to their letters (guillemets, parentheses, punctuation
+    stripped) before stemming, so an attached '«' does not poison the stem.
+    """
+    translation = ru_equiv.split(';')[0]
+    stems = []
+    for tok in re.findall(r'\w+', translation, re.UNICODE):
+        stem = tok.lower()[:min(4, max(1, len(tok) - 1))]
+        stems.append(stem)
+    return stems
+
+
 def _check_phase4_glossary(en_lines, ru_lines, known_keys,
                            glossary_path, ru_file):
     """Gate: phase4-glossary — EN-body terms must have RU equivalents (stem-prefix).
@@ -427,12 +466,7 @@ def _check_phase4_glossary(en_lines, ru_lines, known_keys,
     """
     findings = []
 
-    glossary_re = re.compile(r'^\*\*([^*]+)\*\*\s*\(([^)]+)\)')
-    terms = {}
-    with open(glossary_path, "r", encoding="utf-8") as f:
-        for line in f:
-            m = glossary_re.match(line.strip())
-            if m: terms[m.group(1).strip()] = m.group(2).strip()
+    terms = parse_glossary_terms(glossary_path)
 
     en_body_idx = _collect_body_lines(en_lines, known_keys)
     ru_body_idx = _collect_body_lines(ru_lines, known_keys)
@@ -446,8 +480,7 @@ def _check_phase4_glossary(en_lines, ru_lines, known_keys,
         if not word_re.search(en_body_text):
             continue
         all_match = True
-        for ru_word in ru_equiv.split():
-            stem = ru_word.lower()[:min(4, len(ru_word) - 1)]
+        for stem in _ru_equiv_stems(ru_equiv):
             if not re.search(r'\b' + re.escape(stem), ru_body_text):
                 all_match = False
                 break
@@ -607,14 +640,8 @@ def _run_phase4(en_path, ru_path, report_path, glossary_path, json_output):
         en_body_idx = _collect_body_lines(en_lines, KNOWN_KEYS)
         en_body_text = " ".join(_ic(en_lines[i].strip()) for i in en_body_idx).lower()
 
-        # Parse glossary terms (same regex as _check_phase4_glossary)
-        glossary_re = re.compile(r'^\*\*([^*]+)\*\*\s*\(([^)]+)\)')
-        terms = {}
-        with open(glossary_path, "r", encoding="utf-8") as f:
-            for line in f:
-                m = glossary_re.match(line.strip())
-                if m:
-                    terms[m.group(1).strip()] = m.group(2).strip()
+        # Parse glossary terms (shared parser, list-format tolerant)
+        terms = parse_glossary_terms(glossary_path)
         provenance_path = os.path.realpath(glossary_path)
         provenance_terms = len(terms)
         for term in terms:
@@ -691,14 +718,8 @@ def main():
                 print(f"ERROR: glossary file not found: {glossary_path}", file=sys.stderr)
                 sys.exit(2)
             try:
-                # Validate readable + parse terms
-                glossary_re = re.compile(r'^\*\*([^*]+)\*\*\s*\(([^)]+)\)')
-                terms = {}
-                with open(glossary_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        m = glossary_re.match(line.strip())
-                        if m:
-                            terms[m.group(1).strip()] = m.group(2).strip()
+                # Validate readable + parse terms (shared parser)
+                terms = parse_glossary_terms(glossary_path)
 
             except OSError:
                 print(f"ERROR: cannot read glossary file: {glossary_path}", file=sys.stderr)
