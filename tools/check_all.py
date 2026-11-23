@@ -142,6 +142,8 @@ RULE_GROUPS = {
     "manifest-parity": {"manifest-drift", "orphan", "parity-skipped"},
     "naming": {"naming"},
     "link-integrity": {"docs-manifest-link", "code-docs-link"},
+    "vendor-integrity": {"vendor-lock-mismatch", "vendor-patch-undocumented",
+                         "vendor-patch-missing", "vendor-patch-drift"},
     "schema": {
         "frontmatter", "required-field", "version-format",
         "last-modified-deprecated", "unknown-key", "references-non-index",
@@ -1220,6 +1222,161 @@ def check_schema(corpus: _Corpus) -> list:
     return findings
 
 
+def check_vendor_integrity(corpus: _Corpus) -> list:
+    """vendor-integrity: vendored engine tree matches lock + recorded patches.
+
+    The vendored distribution (defaults/translation.lock -> local_path) must
+    equal a pinned upstream release (ADR-014).  Local deviations are tolerated
+    only when documented: a patch artifact under
+    documenter/artifacts/translation/patches/ whose diff matches the working
+    tree, plus a '# patched:' annotation in the lock file (OP-1: findings are
+    informational, never gating — severity medium).  Clean vendor -> silent.
+    """
+    findings = []
+    lock_path = os.path.join(corpus.root, "defaults", "translation.lock")
+    if not os.path.isfile(lock_path):
+        return findings  # no lock (e.g. host repo without vendored engine): N/A
+    try:
+        with open(lock_path, "r", encoding="utf-8") as fh:
+            lock_text = fh.read()
+    except OSError as exc:
+        return [_finding("vendor-lock-mismatch", "medium",
+                         os.path.relpath(lock_path, corpus.root),
+                         f"vendor-integrity: lock file unreadable: {exc}")]
+
+    local_rel = None
+    for line in lock_text.splitlines():
+        if line.startswith("local_path:"):
+            local_rel = line.split(":", 1)[1].strip()
+            break
+    if not local_rel:
+        return findings  # legacy/absent pin layout; nothing to check
+    vendor = os.path.join(corpus.root, local_rel)
+    sums = os.path.join(vendor, "SHA256SUMS")
+    if not os.path.isfile(sums):
+        return findings  # not a checksummed vendored layout; nothing to check
+
+    import hashlib
+    # Primary deviation signal: uncommitted working-tree diff under vendor/.
+    # (A patch that also rewrites SHA256SUMS is self-consistent, so checksums
+    # alone cannot detect it; HEAD carries the pinned release.)  The sums
+    # self-check additionally catches committed-but-broken checksums.
+    vendor_prefix = local_rel.rstrip("/") + "/"
+    actual = _vendor_worktree_diff(corpus.root, vendor_prefix)
+
+    checksum_broken = []
+    with open(sums, "r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            want, _, rel = line.partition("  ")
+            target = os.path.join(vendor, rel)
+            if not os.path.isfile(target):
+                checksum_broken.append(rel)
+                continue
+            digest = hashlib.sha256(open(target, "rb").read()).hexdigest()
+            if digest != want:
+                checksum_broken.append(rel)
+
+    if actual is None and not checksum_broken:
+        return findings  # git unavailable and checksums clean: nothing to say
+    if actual is None:
+        findings.append(_finding(
+            "vendor-patch-drift", "medium", local_rel,
+            "vendor-integrity: git diff unavailable and "
+            f"{len(checksum_broken)} file(s) break SHA256SUMS "
+            f"({', '.join(sorted(checksum_broken)[:4])}) — verify vendor "
+            "state manually against the pinned release"))
+        return findings
+
+    dirty = _diff_touched_files(actual, vendor_prefix)
+    if not dirty and not checksum_broken:
+        return findings  # vendor matches HEAD and its own checksums: clean
+
+    # Vendor deviates from HEAD/release -> require recorded patch.
+    patched_ann = "# patched:" in lock_text
+    patch_dir = os.path.join(corpus.root, "documenter", "artifacts",
+                             "translation", "patches")
+    if not os.path.isdir(patch_dir):
+        findings.append(_finding(
+            "vendor-patch-undocumented", "medium", local_rel,
+            f"vendor-integrity: vendor tree deviates from HEAD in "
+            f"{len(dirty) or len(checksum_broken)} file(s) "
+            f"({', '.join(sorted(dirty or checksum_broken)[:4])}) and no "
+            "patch artifacts are recorded — run tools/record_vendor_patch.py "
+            "or re-sync (tools/sync_translator.sh)"))
+        return findings
+
+    # Compare the working-tree diff of vendor/ against recorded patch files.
+    matched = False
+    for name in sorted(os.listdir(patch_dir)):
+        if not name.endswith(".patch"):
+            continue
+        with open(os.path.join(patch_dir, name), "r", encoding="utf-8") as fh:
+            recorded = fh.read()
+        if _patch_body(recorded, vendor_prefix) == _patch_body(actual,
+                                                               vendor_prefix):
+            matched = True
+            break
+    if not matched:
+        findings.append(_finding(
+            "vendor-patch-missing", "medium", local_rel,
+            f"vendor-integrity: vendor tree deviates from HEAD in "
+            f"{len(dirty) or len(checksum_broken)} file(s) "
+            f"({', '.join(sorted(dirty or checksum_broken)[:4])}) and the "
+            "working-tree diff matches no recorded patch — re-record with "
+            "tools/record_vendor_patch.py"))
+    if matched and not patched_ann:
+        findings.append(_finding(
+            "vendor-patch-undocumented", "medium",
+            os.path.relpath(lock_path, corpus.root),
+            "vendor-integrity: patch artifact matches the vendor tree but the "
+            "lock file lacks the '# patched:' annotation"))
+    return findings
+
+
+def _diff_touched_files(diff_text: str, vendor_prefix: str):
+    """Files touched by a git diff, relative to vendor root."""
+    files = set()
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            path = line.split(" b/")[-1]
+            if path.startswith(vendor_prefix):
+                files.add(path[len(vendor_prefix):])
+    return files
+
+
+def _vendor_worktree_diff(root: str, vendor_prefix: str):
+    """git diff (working tree vs HEAD) restricted to vendor paths; None if git
+    is unavailable.  Untracked vendor files are not captured (accepted: the
+    engine distribution is fully tracked)."""
+    import subprocess
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--", vendor_prefix],
+            cwd=root, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def _patch_body(text: str, vendor_prefix: str):
+    """Normalized diff body: hunk content lines, vendor prefix stripped from
+    paths, blanks excluded — tolerant to index-line hashes and header noise."""
+    body = []
+    for line in text.splitlines():
+        if line.startswith(("diff --git ", "--- ", "+++ ")):
+            body.append(line.replace(vendor_prefix, ""))
+        elif line.startswith(("index ", "@@")):
+            continue  # hashes and hunk positions are volatile
+        elif line.strip():
+            body.append(line)
+    return "\n".join(body)
+
+
 RULE_DISPATCH = [
     ("line-count", check_rule1_line_count),
     ("changelog", check_rule2_changelog),
@@ -1228,6 +1385,7 @@ RULE_DISPATCH = [
     ("naming", check_naming),
     ("schema", check_schema),
     ("link-integrity", check_link_integrity),
+    ("vendor-integrity", check_vendor_integrity),
 ]
 
 
