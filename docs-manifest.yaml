@@ -31,7 +31,7 @@ documents:
   - id: documentation-rules
     path: docs/en/documentation-rules/index.md
     title: Documentation Rules
-    version: 0.6.0
+    version: 0.7.0
     status: active
     abstraction: protocol
     has_translation: docs/ru/documentation-rules/index-RU.md
@@ -319,7 +319,7 @@ documents:
   - id: translation-project-contract
     path: docs/en/translation-project/contract.md
     title: Translation Project — CLI Contract Specification
-    version: 0.2.0
+    version: 0.3.0
     status: draft
     abstraction: format
     changelog-path: CHANGELOGS/translation-project.changes.md

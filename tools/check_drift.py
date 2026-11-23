@@ -33,6 +33,7 @@ DETERMINISTIC_RULES = {
     "hr-pos": ("high", "hr position mismatch"),
     "metadata-fingerprint": ("high", "metadata line mismatch"),
     "en-leakage": ("medium", "Cyrillic absence in RU body text"),
+    "glossary-format": ("medium", "glossary entry violates contract grammar"),
 }
 
 # T-1: Latin content in RU body lines that is NOT untranslated English.
@@ -517,6 +518,75 @@ def _check_phase4_glossary(en_lines, ru_lines, known_keys,
     return findings
 
 
+# ── Glossary format validation (documentation-rules §4.1) ─────────────────
+# Contract grammar (translation-project contract.md §Glossary Input Format):
+#   **English term** (Russian equivalent) — description
+# The parenthesized group is the Russian equivalent ONLY: the engine's
+# enforce_glossary substitutes its full contents verbatim into RU output, so
+# ';'-annotations, '—' glosses, '/' synonyms or «guillemets» INSIDE the
+# parentheses leak raw into translations.  Entries without a parenthesized
+# equivalent parse ru=None and are silently skipped by the engine.
+
+_ANNOTATION_HINT_RE = re.compile(r'[;—/]')
+_GLOSS_PAREN_RE = re.compile(
+    r'^(?:[-*+]\s+)?\*\*([^*]+)\*\*\s*(?:(\([^)]*\))|([^\s(][^\n]*))?')
+
+
+def validate_glossary(glossary_path):
+    """Deterministic glossary format check. Returns (findings, provenance).
+
+    findings: list of finding dicts (rule=glossary-format), malformed entries.
+    provenance: dict with path/terms/malformed/skipped counts.
+
+    A bolded line counts as an entry when followed by a parenthesized group
+    or by a capitalized/annotated remainder; lowercase remainder is prose
+    (e.g. intro sentences like '**Term** are protocol concepts…').
+    """
+    findings = []
+    terms = 0
+    malformed = 0
+    skipped = 0
+    with open(glossary_path, "r", encoding="utf-8") as fh:
+        for lineno, line in enumerate(fh, 1):
+            s = line.strip()
+            m = _GLOSS_PAREN_RE.match(s)
+            if not m:
+                continue
+            en_term = m.group(1).strip()
+            paren = m.group(2)
+            tail = m.group(3)
+            if paren is None and tail is not None:
+                rest = tail.strip()
+                if rest and rest[0].islower():
+                    continue  # prose sentence with a bolded lead-in
+            terms += 1
+            if paren is not None:
+                content = paren[1:-1].strip()
+                problems = []
+                if not content:
+                    problems.append("empty Russian equivalent")
+                else:
+                    if _ANNOTATION_HINT_RE.search(content):
+                        problems.append(
+                            "annotation inside parentheses (engine force-"
+                            "apply substitutes it verbatim)")
+                    if not re.search(r'[\u0400-\u04FF\u0500-\u052F]',
+                                     content.split(';')[0]):
+                        problems.append("Russian equivalent has no Cyrillic")
+                if problems:
+                    malformed += 1
+                    _add(findings, "glossary-format", glossary_path,
+                         f"line {lineno}: entry '{en_term}': "
+                         + "; ".join(problems))
+            else:
+                # entry without (...) equivalent: engine parses ru=None
+                # and skips it silently — provenance-only signal.
+                skipped += 1
+    provenance = {"path": os.path.realpath(glossary_path),
+                  "terms": terms, "malformed": malformed, "skipped": skipped}
+    return findings, provenance
+
+
 def check_drift(en_path, ru_path, known_keys, json_output=False):
     """Run all drift checks. Returns (findings_list, coverage_dict)."""
     try:
@@ -697,6 +767,37 @@ def _print_provenance(path, terms, matched, status, json_output):
 
 def main():
     args = sys.argv[1:]
+
+    if args and args[0] == "--validate-glossary":
+        # Glossary format validation mode
+        args = args[1:]
+        vg_json = "--json" in args
+        if vg_json:
+            args.remove("--json")
+        if len(args) != 1:
+            print("Usage: check_drift.py --validate-glossary <glossary.md> "
+                  "[--json]", file=sys.stderr)
+            sys.exit(2)
+        path = args[0]
+        if not os.path.isfile(path):
+            print(f"ERROR: glossary file not found: {path}", file=sys.stderr)
+            sys.exit(2)
+        findings, prov = validate_glossary(path)
+        if vg_json:
+            for f in findings:
+                print(json.dumps(f, ensure_ascii=False))
+            print(json.dumps({"rule": "glossary-format-provenance",
+                              "severity": "low", "file": prov["path"],
+                              "description": "terms={terms}, malformed={malformed}, "
+                                             "skipped={skipped}".format(**prov)},
+                             ensure_ascii=False), file=sys.stderr)
+        else:
+            for f in findings:
+                print(f"rule={f['rule']} severity={f['severity']} "
+                      f"file={f['file']} {f['description']}")
+            print(f"glossary: path={prov['path']} | terms={prov['terms']} | "
+                  f"malformed={prov['malformed']} | skipped={prov['skipped']}")
+        sys.exit(1 if findings else 0)
 
     if args and args[0] == "--phase4":
         # Phase 4 mode

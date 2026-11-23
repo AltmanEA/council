@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "2.6.0"
+  version: "2.7.0"
 ---
 
 # Documentation Worker
@@ -237,6 +237,8 @@ When the delegation context includes `use_project_translation: true` (alias `use
 Council-specific frontmatter keys the engine does not skip by default are passed as `--skip-pattern` data (the set above is the current Council key list; keep it in sync with `documentation-rules` §7.2). Generic keys (`id`, `Version`, …) are skipped by the engine itself. Backend/model configuration lives in the engine's own `.env` at the pinned checkout — the skill NEVER reads, logs, or copies that file.
 
 **Host glossary (single source of truth, D-1).** `--glossary` takes the **host** project's glossary, never the framework glossary. When `use_project_translation: true`, the delegation context MUST carry `host_glossary: <path to the host project's glossary>`; that same path is passed to BOTH the engine `--glossary` flag and the Phase-4 `--glossary` gate flag (one source of truth for generation and verification). **Fail-closed:** if `host_glossary` is absent from the delegation context, STOP and escalate to the operator — do NOT substitute the framework glossary (`docs/en/glossary/index.md`) as a default; that substitution was the root cause of the "pass, matched=3 with dead terminology" failure. The literal `none` is permitted only on the operator's explicit decision for a host with no glossary; the run then records `verified | gates 3/4 | unchecked: glossary` (see §Phase 4 write-gates). The skill MUST surface the gate-4 provenance line (`glossary: path=<resolved|none> | terms=<N> | matched=<M> | status=checked|vacuous`) verbatim in the operator's summary card, so the operator always sees which glossary was used to judge the run.
+
+**Glossary format pre-flight (mandatory).** Before dispatching the engine, the skill validates `host_glossary` with `python3 tools/check_drift.py --validate-glossary <host_glossary>` (contract grammar: `documentation-rules` §4.1; only the Russian equivalent may sit inside the parentheses — annotations, category tags and synonyms after the closing parenthesis, because the engine's `enforce_glossary` substitutes parenthesis contents verbatim). Exit `0` → proceed; exit `1` → STOP, present the findings to the operator: a malformed glossary must be fixed in the host project before any run (the gate-4 stem check tolerates `;` tails and will NOT catch this class; only this pre-flight does). Exit `2` → escalate. The provenance line (`terms=/malformed=/skipped=`) goes into the summary card.
 
 **Cloud policy (ADR-012 privacy gate).** `--allow-cloud` is passed only after the operator's per-run explicit consent. Backend unavailable (exit 3): STOP and escalate to the operator; do not retry silently.
 

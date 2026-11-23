@@ -598,5 +598,53 @@ class TestEnLeakageIdentifierTails(unittest.TestCase):
         self.assertNotIn("rule=en-leakage", out)
 
 
+class TestValidateGlossary(unittest.TestCase):
+    """Glossary format pre-flight (documentation-rules §4.1 grammar)."""
+
+    def _run(self, text):
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "g.md")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            return _run_cli("--validate-glossary", path)
+
+    def test_clean_bulleted_glossary_exit_0(self):
+        rc, out, _ = self._run(
+            "# Г\n\n- **sense** (смысл) — Информация.\n"
+            "- **Professor** (Профессор) — человек.\n")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("terms=2", out)
+
+    def test_annotation_in_parens_flagged(self):
+        rc, out, _ = self._run(
+            "- **Professor** (Профессор; человек) — Задаёт.\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("annotation inside parentheses", out)
+        self.assertIn("malformed=1", out)
+
+    def test_non_cyrillic_equivalent_flagged(self):
+        rc, out, _ = self._run("- **Council** (Council) — framework.\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("no Cyrillic", out)
+
+    def test_empty_paren_flagged(self):
+        rc, out, _ = self._run("- **Empty** () — x\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("empty Russian equivalent", out)
+
+    def test_prose_bold_lead_in_not_counted(self):
+        rc, out, _ = self._run(
+            "**Operator-facing terms** are protocol concepts used daily.\n\n"
+            "- **term** (термин) — x\n")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("terms=1", out)
+
+    def test_missing_file_exit_2(self):
+        rc, _, err = _run_cli("--validate-glossary",
+                              "/nonexistent/path/g.md")
+        self.assertEqual(rc, 2)
+        self.assertIn("not found", err)
+
+
 if __name__ == "__main__":
     unittest.main()

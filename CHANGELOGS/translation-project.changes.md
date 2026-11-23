@@ -2,6 +2,10 @@
 
 <!-- CHANGES v0.1.0: Initial introduction of the translation-project consumer contract documents (index.md + contract.md) following ADR-014 / sess-translation-extraction. -->
 
+## 0.3.0
+
+- §Glossary Input Format: grammar made binding — the round-bracket group is the Russian equivalent only (engine `enforce_glossary` substitutes its contents verbatim); annotations must follow the closing parenthesis; no-equivalent entries parse `ru=None` and are silently skipped. Deterministic consumer-side pre-flight documented: `tools/check_drift.py --validate-glossary` (operator-approved 2026-11-23, glossary-format root-cause work).
+
 ## 0.2.0
 
 - Sidecar schema: added `ai_review` field (`passed` / `failed` / `not_run`) — gate-5 AI quality review verdict (G-2, operator-approved 2026-11-23). `verified` status requires `ai_review: passed`; `not_run`/absent caps at `unverified`. Implemented in `tools/translation_status.py::compute_status` (historical reports without the field evaluate as `not_run`).

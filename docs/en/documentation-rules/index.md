@@ -1,6 +1,6 @@
 # Documentation Rules
 id: documentation-rules
-Version: 0.6.0
+Version: 0.7.0
 Status: active
 Abstraction: protocol
 has_translation: docs/ru/documentation-rules/index-RU.md
@@ -84,6 +84,14 @@ Translation does not apply to code, configuration, or non-document artifacts.
 ### 4.1 Structure
 
 The glossary lives in `docs/en/glossary/index.md`. Each term entry includes: term name (canonical form), definition (English), Russian equivalent (if applicable), and optional category tag (e.g., `[roles]`, `[protocol]`).
+
+**Entry grammar (normative for machine-consumed glossaries).** The format in `translation-project/contract.md` §Glossary Input Format is binding for any glossary passed to the translation engine or to the Phase-4 glossary gate — including host-project glossaries:
+
+```
+**English term** (Russian equivalent) — description; category; synonyms
+```
+
+The round-bracket group holds **only** the Russian equivalent: the engine's `enforce_glossary` substitutes its full contents verbatim into RU output. Nothing but the translation may appear inside the parentheses — no `;` annotations, category tags, alternate synonyms, or «guillemet» glosses; those belong after the closing parenthesis. `- **Professor** (Профессор; человек) — …` is malformed (force-apply emits the literal `Профессор; человек`); the compliant form is `- **Professor** (Профессор) — человек, …`. Entries without a Russian equivalent (`**Term** — definition`) parse with `ru=None` and are silently skipped by the engine — they are acceptable only in human-reference glossaries, never in engine input. Format violations are detectable deterministically: `python3 tools/check_drift.py --validate-glossary <path>` (exit 1 = findings; run it before any engine invocation — mandatory pre-flight in the Documentation Worker skill's host-glossary contract).
 
 ### 4.2 Agent Responsibilities
 
