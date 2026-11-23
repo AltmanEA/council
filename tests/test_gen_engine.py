@@ -251,5 +251,114 @@ class TestGenEngineVersionNaming(unittest.TestCase):
             )
 
 
+class TestGenEngineAnnotatedTag(unittest.TestCase):
+    """AC-7: annotated tag peels to the COMMIT sha (not the tag-object sha)."""
+
+    def _keys(self, ds_path):
+        keys = {}
+        with open(ds_path) as f:
+            for line in f.read().strip().split("\n"):
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    keys[k.strip()] = v.strip()
+        return keys
+
+    def test_annotated_tag_commit_is_commit_sha(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            _run(["git", "tag", "-a", "v1.0.2", "-m", "release"], cwd=repo)
+            commit_sha = _run(["git", "rev-parse", "v1.0.2^{commit}"], cwd=repo).stdout.strip()
+            tag_obj_sha = _run(["git", "rev-parse", "v1.0.2"], cwd=repo).stdout.strip()
+
+            result = _run(["bash", GEN_ENGINE, "v1.0.2"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            engine_dir = os.path.join(repo, ".engine", "v1.0.2")
+            keys = self._keys(os.path.join(engine_dir, "DIST-SOURCE"))
+            self.assertEqual(
+                keys["commit"], commit_sha,
+                "commit= must be the peels-to-commit sha for annotated tags",
+            )
+            self.assertNotEqual(keys["commit"], "", "commit= non-empty")
+            if tag_obj_sha != commit_sha:
+                self.assertNotEqual(
+                    keys["commit"], tag_obj_sha,
+                    "commit= must NOT be the tag-object sha",
+                )
+
+    def test_annotated_tag_tree_is_sha(self):
+        """AC-8: tree= is a 40-hex sha equal to rev-parse <ref>^{tree} (annotated)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            _run(["git", "tag", "-a", "v1.0.2", "-m", "release"], cwd=repo)
+            tree_sha = _run(["git", "rev-parse", "v1.0.2^{tree}"], cwd=repo).stdout.strip()
+
+            result = _run(["bash", GEN_ENGINE, "v1.0.2"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            engine_dir = os.path.join(repo, ".engine", "v1.0.2")
+            keys = self._keys(os.path.join(engine_dir, "DIST-SOURCE"))
+            self.assertRegex(
+                keys["tree"], r"^[0-9a-f]{40}$",
+                f"tree= must be a 40-hex sha, got {keys['tree']!r}",
+            )
+            self.assertEqual(keys["tree"], tree_sha, "tree= must equal <ref>^{tree}")
+
+    def test_lightweight_tag_tree_is_sha(self):
+        """AC-8 (lightweight tags keep working)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            _run(["git", "tag", "v0.6.1"], cwd=repo)
+            tree_sha = _run(["git", "rev-parse", "v0.6.1^{tree}"], cwd=repo).stdout.strip()
+
+            result = _run(["bash", GEN_ENGINE, "v0.6.1"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            keys = self._keys(os.path.join(repo, ".engine", "v0.6.1", "DIST-SOURCE"))
+            self.assertEqual(keys["tree"], tree_sha)
+
+
+class TestGenEngineAliasDirNaming(unittest.TestCase):
+    """AC-9: moving/anchor aliases must not appear in the default engine path
+    (operator decision 4: semver or short sha in the path; aliases only in pin)."""
+
+    def test_alias_tag_names_dir_by_short_sha(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            # annotated semver tag FIRST, then alias tag — alias wins describe (iter-3 repro)
+            _run(["git", "tag", "-a", "v1.0.2", "-m", "release"], cwd=repo)
+            _run(["git", "tag", "-a", "v1-latest", "-m", "alias"], cwd=repo)
+            short_sha = _run(["git", "rev-parse", "--short=7", "v1-latest^{commit}"], cwd=repo).stdout.strip()
+
+            result = _run(["bash", GEN_ENGINE, "v1-latest"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            self.assertFalse(
+                os.path.isdir(os.path.join(repo, ".engine", "v1-latest")),
+                "alias v1-latest must NOT be the engine dir name (decision 4)",
+            )
+            self.assertFalse(
+                os.path.isdir(os.path.join(repo, ".engine", "v1-stable")),
+                "alias dir must not exist",
+            )
+            self.assertTrue(
+                os.path.isdir(os.path.join(repo, ".engine", short_sha)),
+                f"alias must name the dir by short commit sha {short_sha}, got {os.listdir(os.path.join(repo, '.engine'))}",
+            )
+            # DIST-SOURCE still records the requested alias ref
+            with open(os.path.join(repo, ".engine", short_sha, "DIST-SOURCE")) as f:
+                ds = f.read()
+            self.assertIn("tag=v1-latest", ds)
+
+    def test_semver_tag_names_dir_by_tag(self):
+        """Exact semver-shaped tag (no alias) → .engine/<tag>/ still works."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            _run(["git", "tag", "-a", "v1.0.3", "-m", "release"], cwd=repo)
+
+            result = _run(["bash", GEN_ENGINE, "v1.0.3"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(os.path.isdir(os.path.join(repo, ".engine", "v1.0.3")))
+
+
 if __name__ == "__main__":
     unittest.main()

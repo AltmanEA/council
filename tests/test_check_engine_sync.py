@@ -253,5 +253,59 @@ class TestCheckEngineSyncOutputFormat(unittest.TestCase):
             )
 
 
+class TestCheckEngineSyncGenEngineIntegration(unittest.TestCase):
+    """Integration: engine produced by gen_engine.sh (annotated tag) must be
+    reported OK by check_engine_sync.py (iter-3 defect: DIST-SOURCE commit= was
+    the tag-object sha, producing false MISMATCH for annotated tags)."""
+
+    def test_generated_engine_matches_annotated_tag(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            _run(["git", "tag", "-a", "v1.0.2", "-m", "release"], cwd=repo)
+
+            gen = os.path.join(WORKTREE, "tools", "gen_engine.sh")
+            result = _run(["bash", gen, "v1.0.2"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            engine_dir = os.path.join(repo, ".engine", "v1.0.2")
+            result = _run([
+                "python3", CHECK_ENGINE,
+                "--engine-dir", engine_dir, "--ref", "v1.0.2", "--root", repo,
+            ])
+            self.assertEqual(result.returncode, 0)
+            self.assertIn(
+                "engine-sync: OK",
+                result.stdout,
+                f"legit engine on annotated tag must be OK, got: {result.stdout.strip()}",
+            )
+
+    def test_generated_engine_alias_pin_resolves_ok(self):
+        """Alias ref (v1-latest-style): gen_engine names dir by short sha,
+        check_engine_sync with --ref <alias> still says OK."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = _setup_repo(tmpdir, "index.md")
+            _run(["git", "tag", "-a", "v1.0.2", "-m", "release"], cwd=repo)
+            _run(["git", "tag", "-a", "v1-latest", "-m", "alias"], cwd=repo)
+
+            gen = os.path.join(WORKTREE, "tools", "gen_engine.sh")
+            result = _run(["bash", gen, "v1-latest"], cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            short_sha = _run(
+                ["git", "rev-parse", "--short=7", "v1-latest^{commit}"], cwd=repo
+            ).stdout.strip()
+            engine_dir = os.path.join(repo, ".engine", short_sha)
+            result = _run([
+                "python3", CHECK_ENGINE,
+                "--engine-dir", engine_dir, "--ref", "v1-latest", "--root", repo,
+            ])
+            self.assertEqual(result.returncode, 0)
+            self.assertIn(
+                "engine-sync: OK",
+                result.stdout,
+                f"alias-pinned engine must be OK, got: {result.stdout.strip()}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
