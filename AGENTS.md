@@ -79,6 +79,7 @@ This workspace (`council-dev/`, branch `v2-dev`, anchors `v1-stable` / `v2-pre-d
 | `.engine/<version>/` | **чем обсуждаем** — engine, generated from a v1 tag | read-only, never edit; regenerate with `bash tools/gen_engine.sh <tag>` (see §1.7) |
 | `draft/` | **что обсуждаем** — v2 draft, object of review | never conduct a session *by* it; edit only in approved change commits |
 | `sessions/` | артефакты сессий этого workspace | local; only `consensus-doc.md`/`task-brief.md` tracked; never read `../council/sessions/` as relevant |
+| `arbiter-gate-rules.md` | критерии приёмки dogfood gate перед go-live | читается арбитром (сессия на движке v1, двухпиновый контракт) перед вердиктом; единственный владелец текста — этот файл |
 
 - **Never** read or modify `../council/fallback/` by absolute path; the operational regulation does not exist under this workspace (`fallback/` is intentionally absent here — it is `draft/` instead).
 - Every dev session must start with: `bash tools/gen_engine.sh v1-latest` (materialize engine; operator-executed) and `python3 tools/check_engine_sync.py` (advisory pin check); the task-brief must carry `worktree-path: /home/ea/council-dev`, `mode: dev-engine` (or `dev-dogfood`), and `engine: <pin>`; the same header is copied into `consensus-doc.md`.
