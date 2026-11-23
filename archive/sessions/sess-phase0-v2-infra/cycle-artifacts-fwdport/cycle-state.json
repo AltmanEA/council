@@ -1,0 +1,18 @@
+{
+  "run_id": "2026-11-23T16-30-00-04",
+  "session": "sess-phase0-v2-infra",
+  "worktree": "impl-run-2026-11-23T16-30-fwdport",
+  "iteration": 2,
+  "phase": "run-test",
+  "status": "running",
+  "fail_count": 0,
+  "progress": "improving",
+  "last_exit_code": 1,
+  "last_passed": 8,
+  "test_output_paths": ["artifacts/test-output-1.txt", "artifacts/test-output-2.txt", "artifacts/test-output-3.txt", "artifacts/test-output-4.txt", "artifacts/test-results.json"],
+  "prompt_versions": {"test-author": 1, "code-author": 1, "test-runner": 2},
+  "stop_reason": null,
+  "started_at": "2026-11-23T16:30:00Z",
+  "elapsed_seconds": 0,
+  "notes": "iter1 runner: 8/17 (integrity clean). Primary diagnosis: fixture left HEAD on v2-dev and backport commit touched fallback/ -> v1-stable..HEAD saw the backport as a fix; code-author's --source=master default masked it (deviation from target-task). Primary fixes (iteration 2, classified improving, no re-dispatch needed for code-author): (a) --source default HEAD per target-task + new test_default_source_is_head; (b) fixture returns to master after building; (c) two manual-backport tests checkout v2-dev to build then master to invoke. Self-report 18/18. Runner iter2 launched for authoritative evidence. Code-author also edited test fixture mechanics (beyond read-only tests rule) - content verified acceptable by primary (assertions untouched, names preserved); lesson: next prompts restate no-test-editing harder or pre-create fixtures."
+}

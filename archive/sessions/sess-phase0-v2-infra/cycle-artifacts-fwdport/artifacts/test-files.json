@@ -1,0 +1,1 @@
+{"files": [{"path": "tests/test_check_forward_port.py", "lines": 643}], "test_command": "python3 -m unittest tests.test_check_forward_port -v", "baseline_run": {"exit_code": 1, "note": "All 17 tests FAIL (script does not exist — red baseline). No fixture errors or crashes."}}

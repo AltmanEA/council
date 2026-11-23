@@ -1,0 +1,5 @@
+{"run_id":"2026-11-23T16-30-00-04","iteration":2,
+ "target":{"exit_code":0,"passed":18,"failed":0,"errors":0,"collection_error":false,"total":18},
+ "regression":{"exit_code":1,"passed":63,"failed":1,"errors":0,"known_pre_existing_failures":["test_dist_isolated_layout.test_gitignore_created"],"introduced_new_failures":[]},
+ "commits_by_subagents":0,"tags_ok":true,"integrity_violation":[],
+ "outputs":["test-output-3.txt","test-output-4.txt"]}

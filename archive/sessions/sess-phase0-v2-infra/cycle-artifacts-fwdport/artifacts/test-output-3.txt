@@ -1,0 +1,38 @@
+test_default_against_equals_path (tests.test_check_forward_port.TestForwardPortAgainstDuality.test_default_against_equals_path)
+Without explicit --against, content is searched under fallback/ (path). ... ok
+test_explicit_against_duality (tests.test_check_forward_port.TestForwardPortAgainstDuality.test_explicit_against_duality)
+Explicit --against draft/ correctly maps content search to branch dir. ... ok
+test_bad_premise_shift_value (tests.test_check_forward_port.TestForwardPortBadPremiseShift.test_bad_premise_shift_value)
+Malformed premise-shift value (not 'none' or 'affects=<non-empty>'). ... ok
+test_missing_premise_shift_trailer (tests.test_check_forward_port.TestForwardPortBadPremiseShift.test_missing_premise_shift_trailer)
+Backport commit lacks premise-shift trailer entirely. ... ok
+test_clean_forward_port_passes (tests.test_check_forward_port.TestForwardPortCleanState.test_clean_forward_port_passes) ... ok
+test_empty_repo (tests.test_check_forward_port.TestForwardPortErrors.test_empty_repo)
+Empty git repo (no commits) → ERROR line, exit 0. ... ok
+test_unresolvable_ref (tests.test_check_forward_port.TestForwardPortErrors.test_unresolvable_ref)
+Bad --base ref that cannot be resolved → ERROR line, exit 0. ... ok
+test_markdown_only_lines_skipped (tests.test_check_forward_port.TestForwardPortMarkdownLinesSkipped.test_markdown_only_lines_skipped)
+Fix commit adds only markdown syntax lines → no MISSING-CONTENT. ... ok
+test_short_lines_exempted (tests.test_check_forward_port.TestForwardPortMinLenExemption.test_short_lines_exempted) ... ok
+test_missing_content_reported (tests.test_check_forward_port.TestForwardPortMissingContent.test_missing_content_reported) ... ok
+test_missing_content_with_count (tests.test_check_forward_port.TestForwardPortMissingContent.test_missing_content_with_count)
+Verify the missing line count in MISSING-CONTENT output. ... ok
+test_missing_trailer_reported (tests.test_check_forward_port.TestForwardPortMissingTrailer.test_missing_trailer_reported) ... ok
+test_per_commit_violation_lines_newest_first (tests.test_check_forward_port.TestForwardPortMultipleFixCommits.test_per_commit_violation_lines_newest_first)
+Two fix commits on master: first clean, second MISSING-CONTENT. ... ok
+test_sha_prefix_accepted (tests.test_check_forward_port.TestForwardPortShaPrefixTrailer.test_sha_prefix_accepted)
+Backport commit uses 7-char hex prefix in backport-of instead of full SHA. ... ok
+test_bad_min_len (tests.test_check_forward_port.TestForwardPortUsageErrors.test_bad_min_len)
+--min-len with non-integer value → exit 2. ... ok
+test_default_source_is_head (tests.test_check_forward_port.TestForwardPortUsageErrors.test_default_source_is_head)
+--source omitted → fix commits enumerated from HEAD (AC: CLI contract). ... ok
+test_missing_required_flag (tests.test_check_forward_port.TestForwardPortUsageErrors.test_missing_required_flag)
+Missing --base (required flag) → exit 2, check_forward_port: on stderr. ... ok
+test_unknown_flag (tests.test_check_forward_port.TestForwardPortUsageErrors.test_unknown_flag)
+Unknown flag → exit 2, check_forward_port: on stderr. ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 1.210s
+
+OK
+EXIT:0

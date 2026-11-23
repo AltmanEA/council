@@ -1,0 +1,117 @@
+test_default_against_equals_path (tests.test_check_forward_port.TestForwardPortAgainstDuality.test_default_against_equals_path)
+Without explicit --against, content is searched under fallback/ (path). ... FAIL
+test_explicit_against_duality (tests.test_check_forward_port.TestForwardPortAgainstDuality.test_explicit_against_duality)
+Explicit --against draft/ correctly maps content search to branch dir. ... FAIL
+test_bad_premise_shift_value (tests.test_check_forward_port.TestForwardPortBadPremiseShift.test_bad_premise_shift_value)
+Malformed premise-shift value (not 'none' or 'affects=<non-empty>'). ... FAIL
+test_missing_premise_shift_trailer (tests.test_check_forward_port.TestForwardPortBadPremiseShift.test_missing_premise_shift_trailer)
+Backport commit lacks premise-shift trailer entirely. ... FAIL
+test_clean_forward_port_passes (tests.test_check_forward_port.TestForwardPortCleanState.test_clean_forward_port_passes) ... FAIL
+test_empty_repo (tests.test_check_forward_port.TestForwardPortErrors.test_empty_repo)
+Empty git repo (no commits) → ERROR line, exit 0. ... ok
+test_unresolvable_ref (tests.test_check_forward_port.TestForwardPortErrors.test_unresolvable_ref)
+Bad --base ref that cannot be resolved → ERROR line, exit 0. ... ok
+test_markdown_only_lines_skipped (tests.test_check_forward_port.TestForwardPortMarkdownLinesSkipped.test_markdown_only_lines_skipped)
+Fix commit adds only markdown syntax lines → no MISSING-CONTENT. ... ok
+test_short_lines_exempted (tests.test_check_forward_port.TestForwardPortMinLenExemption.test_short_lines_exempted) ... ok
+test_missing_content_reported (tests.test_check_forward_port.TestForwardPortMissingContent.test_missing_content_reported) ... FAIL
+test_missing_content_with_count (tests.test_check_forward_port.TestForwardPortMissingContent.test_missing_content_with_count)
+Verify the missing line count in MISSING-CONTENT output. ... FAIL
+test_missing_trailer_reported (tests.test_check_forward_port.TestForwardPortMissingTrailer.test_missing_trailer_reported) ... FAIL
+test_per_commit_violation_lines_newest_first (tests.test_check_forward_port.TestForwardPortMultipleFixCommits.test_per_commit_violation_lines_newest_first)
+Two fix commits on master: first clean, second MISSING-CONTENT. ... FAIL
+test_sha_prefix_accepted (tests.test_check_forward_port.TestForwardPortShaPrefixTrailer.test_sha_prefix_accepted)
+Backport commit uses 7-char hex prefix in backport-of instead of full SHA. ... ok
+test_bad_min_len (tests.test_check_forward_port.TestForwardPortUsageErrors.test_bad_min_len)
+--min-len with non-integer value → exit 2. ... ok
+test_missing_required_flag (tests.test_check_forward_port.TestForwardPortUsageErrors.test_missing_required_flag)
+Missing --base (required flag) → exit 2, check_forward_port: on stderr. ... ok
+test_unknown_flag (tests.test_check_forward_port.TestForwardPortUsageErrors.test_unknown_flag)
+Unknown flag → exit 2, check_forward_port: on stderr. ... ok
+
+======================================================================
+FAIL: test_default_against_equals_path (tests.test_check_forward_port.TestForwardPortAgainstDuality.test_default_against_equals_path)
+Without explicit --against, content is searched under fallback/ (path).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 315, in test_default_against_equals_path
+    self.assertIn("MISSING-CONTENT", result.stdout,
+AssertionError: 'MISSING-CONTENT' not found in '' : Default --against should fall back to path (fallback/)
+
+======================================================================
+FAIL: test_explicit_against_duality (tests.test_check_forward_port.TestForwardPortAgainstDuality.test_explicit_against_duality)
+Explicit --against draft/ correctly maps content search to branch dir.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 334, in test_explicit_against_duality
+    self.assertEqual(result.stdout.strip(), "",
+AssertionError: 'MISSING-TRAILER 5da47e2d fix index' != ''
+- MISSING-TRAILER 5da47e2d fix index
+ : With correct --against, must be clean, got: 'MISSING-TRAILER 5da47e2d fix index\n'
+
+======================================================================
+FAIL: test_bad_premise_shift_value (tests.test_check_forward_port.TestForwardPortBadPremiseShift.test_bad_premise_shift_value)
+Malformed premise-shift value (not 'none' or 'affects=<non-empty>').
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 208, in test_bad_premise_shift_value
+    self.assertIn("BAD-PREMISE-SHIFT", result.stdout,
+AssertionError: 'BAD-PREMISE-SHIFT' not found in 'MISSING-TRAILER a46e7c5c fix index\n' : Must report BAD-PREMISE-SHIFT for invalid value
+
+======================================================================
+FAIL: test_missing_premise_shift_trailer (tests.test_check_forward_port.TestForwardPortBadPremiseShift.test_missing_premise_shift_trailer)
+Backport commit lacks premise-shift trailer entirely.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 236, in test_missing_premise_shift_trailer
+    self.assertIn("BAD-PREMISE-SHIFT", result.stdout,
+AssertionError: 'BAD-PREMISE-SHIFT' not found in '' : Missing premise-shift trailer is a violation
+
+======================================================================
+FAIL: test_clean_forward_port_passes (tests.test_check_forward_port.TestForwardPortCleanState.test_clean_forward_port_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 160, in test_clean_forward_port_passes
+    self.assertEqual(result.stdout.strip(), "",
+AssertionError: 'MISSING-TRAILER 7646dc66 fix index' != ''
+- MISSING-TRAILER 7646dc66 fix index
+ : Clean audit must produce empty stdout, got: 'MISSING-TRAILER 7646dc66 fix index\n'
+
+======================================================================
+FAIL: test_missing_content_reported (tests.test_check_forward_port.TestForwardPortMissingContent.test_missing_content_reported)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 261, in test_missing_content_reported
+    self.assertIn("MISSING-CONTENT", result.stdout,
+AssertionError: 'MISSING-CONTENT' not found in '' : Must report MISSING-CONTENT for absent fix text
+
+======================================================================
+FAIL: test_missing_content_with_count (tests.test_check_forward_port.TestForwardPortMissingContent.test_missing_content_with_count)
+Verify the missing line count in MISSING-CONTENT output.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 280, in test_missing_content_with_count
+    self.assertIn("MISSING-CONTENT %s" % sha8, result.stdout,
+AssertionError: 'MISSING-CONTENT 40190b3f' not found in '' : MISSING-CONTENT line must contain fix sha8
+
+======================================================================
+FAIL: test_missing_trailer_reported (tests.test_check_forward_port.TestForwardPortMissingTrailer.test_missing_trailer_reported)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 180, in test_missing_trailer_reported
+    self.assertIn("MISSING-TRAILER", result.stdout,
+AssertionError: 'MISSING-TRAILER' not found in '' : Must report MISSING-TRAILER for unbackported fix
+
+======================================================================
+FAIL: test_per_commit_violation_lines_newest_first (tests.test_check_forward_port.TestForwardPortMultipleFixCommits.test_per_commit_violation_lines_newest_first)
+Two fix commits on master: first clean, second MISSING-CONTENT.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T16-30-fwdport/tests/test_check_forward_port.py", line 509, in test_per_commit_violation_lines_newest_first
+    self.assertEqual(len(lines), 2, "Must have exactly 2 violation lines")
+AssertionError: 0 != 2 : Must have exactly 2 violation lines
+
+----------------------------------------------------------------------
+Ran 17 tests in 1.068s
+
+FAILED (failures=9)

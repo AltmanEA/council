@@ -1,0 +1,61 @@
+{
+  "files": [
+    {
+      "path": "tools/check_forward_port.py",
+      "signatures": [
+        "forward-port / premise-shift audit",
+        "check_forward_port: error:",
+        "git log --format=%H",
+        "git cat-file -p",
+        "git show",
+        "git ls-tree -r --name-only",
+        "backport-of: ",
+        "premise-shift: ",
+        "MISSING-TRAILER",
+        "BAD-PREMISE-SHIFT",
+        "MISSING-CONTENT",
+        "MISSING-CONTENT %s %s missing lines",
+        "check_premise_shift",
+        "_MARKDOWN_SYNTAX",
+        "add_lines",
+        "_is_valid_commit_ref",
+        "unresolvable"
+      ]
+    },
+    {
+      "path": "tests/test_check_forward_port.py",
+      "signatures": [
+        "test_check_forward_port.py",
+        "ForwardPortCleanState",
+        "ForwardPortMissingTrailer",
+        "ForwardPortBadPremiseShift",
+        "ForwardPortMissingContent",
+        "ForwardPortAgainstDuality",
+        "ForwardPortMarkdownLinesSkipped",
+        "ForwardPortMinLenExemption",
+        "ForwardPortMultipleFixCommits",
+        "ForwardPortShaPrefixTrailer",
+        "ForwardPortErrors",
+        "ForwardPortUsageErrors",
+        "_setup_fixture",
+        "TestForwardPortCleanState",
+        "TestForwardPortMissingTrailer",
+        "MISSING-TRAILER",
+        "BAD-PREMISE-SHIFT",
+        "MISSING-CONTENT"
+      ]
+    },
+    {
+      "path": "tools/README.md",
+      "signatures": [
+        "check_forward_port.py",
+        "backport-of:",
+        "premise-shift:",
+        "MISSING-CONTENT",
+        "MISSING-TRAILER",
+        "BAD-PREMISE-SHIFT"
+      ]
+    }
+  ],
+  "notes": "Target tests: 17/17 passed (1 clean state, 2 trailer check, 2 premise-shift, 4 content check, 2 duality, 1 markdown skip, 1 min-len, 2 usage errors, 1 error cases, 1 sha-prefix, 1 multiple commits). Debugging: fixture had two issues — (1) draft/index.md was written AFTER the base commit, making it untracked and causing git commit -- draft/ to silently fail, (2) extra_draft_lines=[] and extra_draft_lines=None were treated identically (both wrote fix content to both draft/ and fallback/). Fixed by: writing draft/index.md in base commit, differentiating None (both trees) from [] (draft only) in fixture auto-content logic. Also fixed test_default_against_equals_path to pass extra_draft_lines=[] and restructured test_per_commit_violation_lines_newest_first inline fixture."
+}
