@@ -80,11 +80,14 @@ python3 techdoc_translator.py --input-en src.md --output-ru out.md \
 
 ## Glossary format
 
-Two accepted formats in a markdown file:
+Accepted formats in a markdown file. Each entry is a bolded English term
+followed by its Russian equivalent in parentheses; entries may be bare
+lines or markdown list items (`- `, `* `, `+ `):
 
 ```
 **English term** (Русский перевод) — optional definition
 **Another term** (Другой термин)
+- **Bulleted term** (Третий перевод) — optional definition
 ```
 
 ## Report JSON schema

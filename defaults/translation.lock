@@ -15,4 +15,8 @@ tag: v0.1.0
 commit: 0b48ad9
 contract_version: 1.0.0
 mode: external
+# patched: glossary-list-parser (local deviation beyond v0.1.0, pending
+# upstream; diff preserved at documenter/artifacts/translation/patches/
+# glossary-list-parser.patch; verified by tools/check_vendor.py). Remove this
+# annotation when re-synced to an upstream release containing the fix.
 updated_by: operator 2026-11-16 (vendored distribution)

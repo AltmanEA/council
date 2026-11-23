@@ -103,12 +103,25 @@ _TOCANONICAL_MAP = {}
 _TERM_RES = {}   # key -> compiled regex matching EN term anywhere in source text
 
 
+# Glossary entry lines may be bare (``**Term** (рус.)``) or markdown list items
+# (``- **Term** (рус.)``); an optional list marker (+/*/-) is stripped before
+# matching.  Host glossaries commonly use bulleted lists; without this the
+# parser loaded 0 terms silently and every run produced glossary_applied: 0.
+_LIST_MARKER_RE = re.compile(r'^\s*(?:[-*+]\s+)?')
+
+
+def _strip_list_marker(line):
+    """Strip an optional leading markdown list marker ('- ', '* ', '+ ')."""
+    return _LIST_MARKER_RE.sub('', line, count=1)
+
+
 def load_glossary(path):
     """Load glossary from a markdown file.
 
-    Supported formats (both accepted):
+    Supported formats (all accepted, with or without a list marker):
       - ``**English term** (Russian эквивалент)``
       - ``**English term** — русский перевод``
+      - ``- **English term** (Russian эквивалент)`` (bulleted list items)
 
     The glossary is cached globally: if already loaded, returns the existing
     terms without re-reading the file.
@@ -120,7 +133,7 @@ def load_glossary(path):
     try:
         with open(path, "r", encoding="utf-8") as fh:
             for raw_line in fh:
-                ls = raw_line.rstrip()
+                ls = _strip_list_marker(raw_line.rstrip())
                 m = re.match(r'^\*\*(.+?)\*\*\s*\(([^)]+)\)\s*(.*)', ls)
                 if m:
                     en_name = m.group(1).strip()

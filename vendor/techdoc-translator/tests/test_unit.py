@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import unittest
 
 # Add the project root to sys.path so we can import techdoc_translator.
@@ -171,6 +172,67 @@ class TestSpanRestore(unittest.TestCase):
         out = __import__('techdoc_translator', fromlist=['restore_code_spans']).restore_code_spans(
             "смотри `a` и `b`", src)
         self.assertEqual(out, "смотри `a` и `b`")
+
+
+class TestLoadGlossaryListFormat(unittest.TestCase):
+    """load_glossary: entries may be bare or markdown list items.
+
+    Regression: host glossaries written as bulleted lists
+    ('- **term** (рус.) — definition') parsed as 0 terms because the
+    entry regex anchored on '**' without an optional list marker.
+    """
+
+    def setUp(self):
+        _GLOSSARY_CACHE.clear()
+        import techdoc_translator as tt
+        tt._TERM_RES.clear()
+        self._tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+        _GLOSSARY_CACHE.clear()
+        import techdoc_translator as tt
+        tt._TERM_RES.clear()
+
+    def _write(self, text):
+        path = os.path.join(self._tmp.name, "glossary.md")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        return path
+
+    def test_bare_format_still_works(self):
+        path = self._write("# Glossary\n\n**sense** (смысл) Definition text.\n"
+                           "**atom** (атом) Another definition.\n")
+        keys = load_glossary(path)
+        self.assertEqual(sorted(keys), ["atom", "sense"])
+        self.assertEqual(_GLOSSARY_CACHE["sense"]["ru"], "смысл")
+
+    def test_bullet_list_format_parsed(self):
+        path = self._write("# Glossary\n\n## 1. Knowledge\n\n"
+                           "- **sense** (смысл) — Information containing elements.\n"
+                           "- **atom** (атом) — The minimal unit.\n")
+        keys = load_glossary(path)
+        self.assertEqual(sorted(keys), ["atom", "sense"])
+        self.assertEqual(_GLOSSARY_CACHE["atom"]["ru"], "атом")
+
+    def test_star_and_plus_markers_parsed(self):
+        path = self._write("* **term** (термин) — A word.\n"
+                           "+ **name** (имя) — An identifier.\n")
+        keys = load_glossary(path)
+        self.assertEqual(sorted(keys), ["name", "term"])
+
+    def test_dash_line_not_mistaken_for_hr(self):
+        # A bare '---' rule and a '- ' list item without bold must not load.
+        path = self._write("---\n- plain bullet, no bold\n"
+                           "- **topic** (тема) — A section.\n")
+        keys = load_glossary(path)
+        self.assertEqual(keys, ["topic"])
+
+    def test_dashless_en_dash_definition_kept(self):
+        path = self._write("- **lecture** (лекция) — A file of learning material.\n")
+        load_glossary(path)
+        self.assertEqual(_GLOSSARY_CACHE["lecture"]["ru"], "лекция")
+        self.assertIn("file of learning material", _GLOSSARY_CACHE["lecture"]["defn"])
 
 
 class TestLiteralTokens(unittest.TestCase):

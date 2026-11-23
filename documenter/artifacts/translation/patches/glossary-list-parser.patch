@@ -1,0 +1,157 @@
+diff --git a/vendor/techdoc-translator/README.md b/vendor/techdoc-translator/README.md
+index 4cdcd67..6cd1232 100644
+--- a/vendor/techdoc-translator/README.md
++++ b/vendor/techdoc-translator/README.md
+@@ -80,11 +80,14 @@ python3 techdoc_translator.py --input-en src.md --output-ru out.md \
+ 
+ ## Glossary format
+ 
+-Two accepted formats in a markdown file:
++Accepted formats in a markdown file. Each entry is a bolded English term
++followed by its Russian equivalent in parentheses; entries may be bare
++lines or markdown list items (`- `, `* `, `+ `):
+ 
+ ```
+ **English term** (Русский перевод) — optional definition
+ **Another term** (Другой термин)
++- **Bulleted term** (Третий перевод) — optional definition
+ ```
+ 
+ ## Report JSON schema
+diff --git a/vendor/techdoc-translator/SHA256SUMS b/vendor/techdoc-translator/SHA256SUMS
+index dfc11b7..a4eeda9 100644
+--- a/vendor/techdoc-translator/SHA256SUMS
++++ b/vendor/techdoc-translator/SHA256SUMS
+@@ -1,9 +1,9 @@
+-c7bfc4139c49abee3546e038ee6f97d14235ae4f733db02cd34dce51d31ce1cb  techdoc_translator.py
++0feff427394d7f0a50082d21ef7a944a5c44038d331dfe391b8f803be917291c  techdoc_translator.py
+ 2c75ddad923f1ecb308cc2af2bd35c44efa0713a18b635c34981d4cd7f384996  translate.sh
+ 89e5fb2865cdf7814ad020effc2f7004ff0b909ada63a973a5dd2f74582f459a  .env.example
+-344cf948b0d3b75e5d2e7f29dc25c00829cc9397c97bc791a682910102f09d10  README.md
++fd6ca4229e5258a360a92580ea857e103d1d75c7e66af85dc85747d8d3e6efd8  README.md
+ e340ef0b271c9eb78109c4de3ce00336b1960e69b3274242360990b0051fce08  LICENSE
+ b801e4d531c91a99db42cef8b032402bbcbbdc033bad3d79cb79a036dbfe5830  docs/INTEGRATION.md
+ c865e1fd12ed3398b01c4b711cacc042610079fd8de87a002d0e2fbe5793e1fe  tests/smoke.sh
+-23ee9423ad5f0e3abaab494dabdefb7fcf533a8da76a98edce0df0743d879856  tests/test_unit.py
++23f4e51a34b0cf64e360afd1a9e613f80b73c747acc67b42394fb219006b2683  tests/test_unit.py
+ 4f77ea38eedaaabee06ddf0a7c133bef7f3091604712c14c9b5cab71821769db  MANIFEST.txt
+diff --git a/vendor/techdoc-translator/techdoc_translator.py b/vendor/techdoc-translator/techdoc_translator.py
+index a3dcf6c..57e0a07 100644
+--- a/vendor/techdoc-translator/techdoc_translator.py
++++ b/vendor/techdoc-translator/techdoc_translator.py
+@@ -103,12 +103,25 @@ _TOCANONICAL_MAP = {}
+ _TERM_RES = {}   # key -> compiled regex matching EN term anywhere in source text
+ 
+ 
++# Glossary entry lines may be bare (``**Term** (рус.)``) or markdown list items
++# (``- **Term** (рус.)``); an optional list marker (+/*/-) is stripped before
++# matching.  Host glossaries commonly use bulleted lists; without this the
++# parser loaded 0 terms silently and every run produced glossary_applied: 0.
++_LIST_MARKER_RE = re.compile(r'^\s*(?:[-*+]\s+)?')
++
++
++def _strip_list_marker(line):
++    """Strip an optional leading markdown list marker ('- ', '* ', '+ ')."""
++    return _LIST_MARKER_RE.sub('', line, count=1)
++
++
+ def load_glossary(path):
+     """Load glossary from a markdown file.
+ 
+-    Supported formats (both accepted):
++    Supported formats (all accepted, with or without a list marker):
+       - ``**English term** (Russian эквивалент)``
+       - ``**English term** — русский перевод``
++      - ``- **English term** (Russian эквивалент)`` (bulleted list items)
+ 
+     The glossary is cached globally: if already loaded, returns the existing
+     terms without re-reading the file.
+@@ -120,7 +133,7 @@ def load_glossary(path):
+     try:
+         with open(path, "r", encoding="utf-8") as fh:
+             for raw_line in fh:
+-                ls = raw_line.rstrip()
++                ls = _strip_list_marker(raw_line.rstrip())
+                 m = re.match(r'^\*\*(.+?)\*\*\s*\(([^)]+)\)\s*(.*)', ls)
+                 if m:
+                     en_name = m.group(1).strip()
+diff --git a/vendor/techdoc-translator/tests/test_unit.py b/vendor/techdoc-translator/tests/test_unit.py
+index c7889f6..b97527b 100644
+--- a/vendor/techdoc-translator/tests/test_unit.py
++++ b/vendor/techdoc-translator/tests/test_unit.py
+@@ -9,6 +9,7 @@ from __future__ import annotations
+ 
+ import os
+ import sys
++import tempfile
+ import unittest
+ 
+ # Add the project root to sys.path so we can import techdoc_translator.
+@@ -173,6 +174,67 @@ class TestSpanRestore(unittest.TestCase):
+         self.assertEqual(out, "смотри `a` и `b`")
+ 
+ 
++class TestLoadGlossaryListFormat(unittest.TestCase):
++    """load_glossary: entries may be bare or markdown list items.
++
++    Regression: host glossaries written as bulleted lists
++    ('- **term** (рус.) — definition') parsed as 0 terms because the
++    entry regex anchored on '**' without an optional list marker.
++    """
++
++    def setUp(self):
++        _GLOSSARY_CACHE.clear()
++        import techdoc_translator as tt
++        tt._TERM_RES.clear()
++        self._tmp = tempfile.TemporaryDirectory()
++
++    def tearDown(self):
++        self._tmp.cleanup()
++        _GLOSSARY_CACHE.clear()
++        import techdoc_translator as tt
++        tt._TERM_RES.clear()
++
++    def _write(self, text):
++        path = os.path.join(self._tmp.name, "glossary.md")
++        with open(path, "w", encoding="utf-8") as fh:
++            fh.write(text)
++        return path
++
++    def test_bare_format_still_works(self):
++        path = self._write("# Glossary\n\n**sense** (смысл) Definition text.\n"
++                           "**atom** (атом) Another definition.\n")
++        keys = load_glossary(path)
++        self.assertEqual(sorted(keys), ["atom", "sense"])
++        self.assertEqual(_GLOSSARY_CACHE["sense"]["ru"], "смысл")
++
++    def test_bullet_list_format_parsed(self):
++        path = self._write("# Glossary\n\n## 1. Knowledge\n\n"
++                           "- **sense** (смысл) — Information containing elements.\n"
++                           "- **atom** (атом) — The minimal unit.\n")
++        keys = load_glossary(path)
++        self.assertEqual(sorted(keys), ["atom", "sense"])
++        self.assertEqual(_GLOSSARY_CACHE["atom"]["ru"], "атом")
++
++    def test_star_and_plus_markers_parsed(self):
++        path = self._write("* **term** (термин) — A word.\n"
++                           "+ **name** (имя) — An identifier.\n")
++        keys = load_glossary(path)
++        self.assertEqual(sorted(keys), ["name", "term"])
++
++    def test_dash_line_not_mistaken_for_hr(self):
++        # A bare '---' rule and a '- ' list item without bold must not load.
++        path = self._write("---\n- plain bullet, no bold\n"
++                           "- **topic** (тема) — A section.\n")
++        keys = load_glossary(path)
++        self.assertEqual(keys, ["topic"])
++
++    def test_dashless_en_dash_definition_kept(self):
++        path = self._write("- **lecture** (лекция) — A file of learning material.\n")
++        load_glossary(path)
++        self.assertEqual(_GLOSSARY_CACHE["lecture"]["ru"], "лекция")
++        self.assertIn("file of learning material", _GLOSSARY_CACHE["lecture"]["defn"])
++
++
+ class TestLiteralTokens(unittest.TestCase):
+     def test_permission_table_not_translatable(self):
+         lt = __import__('techdoc_translator', fromlist=['_is_translatable_content'])
