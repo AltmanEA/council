@@ -2,7 +2,7 @@
 name: documentation
 description: When editing, creating, or deleting project documentation files (.md files within the docs/ directory).
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
 ---
 
 # Documentation Worker
@@ -209,9 +209,10 @@ After writing the file, perform a verification pass:
 1. **Fail count zero:** the wrapper summary reports `fail == 0` (`--summary-json`; wrapper exit code 4 means blocked).
 2. **Line parity:** every non-metadata content line maps 1:1 to its EN counterpart (per §Phase 3 line-number parity).
 3. **EN-identity scan:** the candidate RU file is not byte-identical (nor line-for-line identical outside metadata/skip blocks) to the EN source — silent copy-through is rejected.
-4. **Glossary compliance:** all domain terms present in RU match `docs/en/glossary/index.md` equivalents (rule 3 remains skill/AI-reserved).
+4. **Glossary compliance:** all domain terms present in RU match the host project glossary (`host_glossary`, see §Host glossary) equivalents (rule 3 remains skill/AI-reserved).
+5. **AI quality review (mandatory):** the skill performs an AI review pass over the candidate against the EN source before writing — see §AI quality review. `ai_review: passed` is required; `failed` or `not_run` blocks the write.
 
-Include in the report: backend/model used, `prompt_version`, ok/skip/fail counts, and the `[gloss-apply]` summary.
+Include in the report: backend/model used, `prompt_version`, ok/skip/fail counts, the `[gloss-apply]` summary, and the gate-5 verdict with its findings list.
 
 For each failed check: if the failure is mechanically correctable (line shift due to missing separator, stray English word, minor whitespace), fix it immediately. For structural deviations (reordered sections, missing content, wrong section count) or semantic concerns, do NOT auto-fix — present them in the report so the primary agent can decide corrective action. Log the final verification result alongside the translation action.
 
@@ -245,9 +246,18 @@ Council-specific frontmatter keys the engine does not skip by default are passed
 
 **Deterministic drift check.** In drift-audit mode (c) the skill invokes `python3 tools/check_drift.py <en> <ru>` as the sole Council-side structural judge (headings, tables, fences, list markers, inline-code set, separators, metadata fingerprint, Cyrillic-ratio EN-leakage); line-parity and glossary/abstraction checks are excluded there (Phase 4 / AI-reserved per `documentation-rules` §8) — no-rule-fork is preserved. The engine is a black box to this check.
 
-**Phase 4 write-gates are deterministic code, not prose.** The four write-gates are evaluated by `python3 tools/check_drift.py --phase4 <en> <ru_candidate> --report <run_report.json> --glossary <path|none>` as rule IDs `phase4-fail` (report `fail == 0`), `phase4-parity` (1:1 line parity, structural iff), `phase4-identity` (EN-copy rejection), `phase4-glossary` (glossary RU-equivalent stem match). The `--glossary` flag is **mandatory** in the wrapper contract: the skill passes the **host** project glossary path (the same `host_glossary` value passed to the engine — see §Host glossary), or the literal `none` to declare an intentional vacuous gate when the project has no glossary yet. The tool NEVER resolves a glossary implicitly (no default from tool location or CWD); missing flag or unreadable/missing explicit path → exit 2. The skill dispatches the tool and reads its exit code, finding lines, and the provenance line (`glossary: path=<resolved|none> | terms=<N> | matched=<M> | status=checked|vacuous`); it MUST NOT re-derive gate outcomes by reading prose or comparing files by hand (gate outcomes are evaluated in code, impl-guide §Deterministic core). Exit `0` with `status=checked` = all gates pass (write permitted); `0` with `status=vacuous` = gates 1–3 passed, gate 4 not evaluated — write is permitted but the run records `verified | gates 3/4 | unchecked: glossary`; `1` = a gate finding (write blocked, candidate to operator); `2` = internal error (fail-closed, escalate). The `phase4-glossary` deterministic match is an approximation that supplements — never replaces — the skill's rule-3 glossary judgment.
+**Phase 4 write-gates are deterministic code, not prose.** The four write-gates are evaluated by `python3 tools/check_drift.py --phase4 <en> <ru_candidate> --report <run_report.json> --glossary <path|none>` as rule IDs `phase4-fail` (report `fail == 0`), `phase4-parity` (1:1 line parity, structural iff), `phase4-identity` (EN-copy rejection), `phase4-glossary` (glossary RU-equivalent stem match). The `--glossary` flag is **mandatory** in the wrapper contract: the skill passes the **host** project glossary path (the same `host_glossary` value passed to the engine — see §Host glossary), or the literal `none` to declare an intentional vacuous gate when the project has no glossary yet. The tool NEVER resolves a glossary implicitly (no default from tool location or CWD); missing flag or unreadable/missing explicit path → exit 2. The skill dispatches the tool and reads its exit code, finding lines, and the provenance line (`glossary: path=<resolved|none> | terms=<N> | matched=<M> | status=checked|vacuous`); it MUST NOT re-derive gate outcomes by reading prose or comparing files by hand (gate outcomes are evaluated in code, impl-guide §Deterministic core). Exit `0` with `status=checked` = all four deterministic gates pass (write still requires gate 5 below); `0` with `status=vacuous` = gates 1–3 passed, gate 4 not evaluated — write requires gate 5 and the run records `verified | gates 3/4 | unchecked: glossary`; `1` = a gate finding (write blocked, candidate to operator); `2` = internal error (fail-closed, escalate). The `phase4-glossary` deterministic match is an approximation that supplements — never replaces — the skill's rule-3 glossary judgment.
 
-**Provenance.** After a successful write, store the run report at `documenter/artifacts/translation/runs/<id>-<timestamp>.json`, refresh `documenter/artifacts/translation/<id>.json`, and regenerate the `STATUS.md` status index via `python3 tools/translation_status.py` (see §Deterministic Delegation). Statuses: `verified` only when all write-gates passed (with the glossary gate vacuous, annotate `verified | gates 3/4 | unchecked: glossary` — derived from the recorded gate-summary, never from the exit code alone); otherwise `unverified` / `drift` / `error-<code>`. These artifacts are operational (git-tracked, never in the manifest).
+**Gate 5 — AI quality review (mandatory; deterministic gates cannot catch quality damage).** The engine's `fail == 0` means "every line got a translation", not "the text is usable" (host audit 2026-11-23: `exit 0 / fail 0` runs still required manual repair of dozens of lines). After the deterministic gates pass and BEFORE any write, the skill reviews the candidate against the EN source along a fixed checklist and records findings with line numbers:
+
+1. **Lexical corruption / fuzz-substitution:** words silently replaced by near-but-wrong Russian (e.g. «задания»→«замечания», «порция»→«позиция»); compare suspicious RU words against EN meaning.
+2. **Grammar integrity of long blocks:** broken syntax, sentence fragments, mood errors (imperatives where indicatives are required).
+3. **Inline-markup fidelity:** RU must not gain bold/italic that is absent in the EN counterpart (injected markup), nor lose markup present in EN.
+4. **Terminology consistency within the run:** one EN term maps to one RU equivalent throughout the document (internal contradiction — e.g. the same term rendered two ways in one run — is a finding even if both renderings exist in the glossary).
+
+Verdict: `pass` (no findings) or `fail` (any finding, with the findings list preserved in the report). `fail` blocks the write; the candidate and the findings go to the operator. This gate is an LLM judgment — it supplements, and is supplemented by, the deterministic gates; neither replaces the other. The engine report field `glossary_applied` is diagnostic only (known engine defect: reports 0 even when terms were applied); the term-count truth for provenance is the gate-4 provenance line (`terms`/`matched`).
+
+**Provenance.** After a successful write, store the run report at `documenter/artifacts/translation/runs/<id>-<timestamp>.json`, refresh `documenter/artifacts/translation/<id>.json` (including the `ai_review` field: `passed | failed | not_run`, from the gate-5 verdict), and regenerate the `STATUS.md` status index via `tools/translation_status.py` (see §Deterministic Delegation). Statuses: `verified` only when all write-gates passed **and `ai_review: passed`** (with the glossary gate vacuous, annotate `verified | gates 3/4 | unchecked: glossary` — derived from the recorded gate-summary, never from the exit code alone; `ai_review: not_run` caps the status at `unverified`); otherwise `unverified` / `drift` / `error-<code>`. These artifacts are operational (git-tracked, never in the manifest).
 
 ### Audit Compliance
 
@@ -337,7 +347,7 @@ Two parts: deterministic checks are obtained from `tools/`, the rest are AI/skil
 - [ ] Changelog `--note` reason string is operator-supplied or quoted verbatim from the approved plan
 - [ ] `classification` (`mechanical` | `semantic`) is advisory work-classification, aligned with shipped `tools/` behavior and OP-1 non-gating (§Change Classification, `AGENTS.md` §1.7); no write occurred without step-(5) `approve`
 - [ ] Russian synchronization per `documentation-rules` §3.3 (ADR-012): drift audit report-only unless post-Approve `auto_sync` is in effect and no `no_auto_translation` opt-out exists
-  - [ ] For explicit or `auto_sync` writes: line number parity verified; all four Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance)
+  - [ ] For explicit or `auto_sync` writes: line number parity verified; all five Phase 4 write-gates passed (fail==0, line parity, EN-identity scan, glossary compliance, AI quality review `ai_review: passed`)
   - [ ] External engine used per ADR-014 contract (lock file read, `--contract-version` passed, exit code 0, report stored); provenance sidecar + `STATUS.md` regenerated after write
 
 Fix failures mechanically where a `tools/` script owns the fix; escalate if unfixable or if the fix requires semantic judgment.

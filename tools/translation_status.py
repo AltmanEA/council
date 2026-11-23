@@ -16,9 +16,11 @@ Inputs:
 Status rules (Status Index glossary term):
   verified    latest report exit_code == 0 AND its output_sha256 matches the
               on-disk RU file AND the current EN sha256 matches the report's
-              source_sha256
+              source_sha256 AND the report's ai_review == "passed"
+              (G-2 gate 5; reports predating the field are treated as not_run)
   drift       EN on disk changed since the report was made
-  unverified  latest report exit_code == 0 but RU bytes do not match output_sha256
+  unverified  latest report exit_code == 0 but RU bytes do not match output_sha256,
+              or ai_review is "not_run"/absent (historical reports)
   error-<c>   latest report exit_code == c (c != 0)
   missing     no run report for a manifest-declared translation
 
@@ -127,6 +129,9 @@ def compute_status(tid, en_path, ru_path, report):
         return "unverified", {"note": "RU file absent"}
     if norm_sha(ru_now) != norm_sha(report.get("output_sha256")):
         return "unverified", {"note": "RU bytes differ from run output"}
+    ai_review = report.get("ai_review", "not_run")
+    if ai_review != "passed":
+        return "unverified", {"note": f"ai_review={ai_review}"}
     return "verified", {}
 
 

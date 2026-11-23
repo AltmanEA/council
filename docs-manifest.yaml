@@ -319,7 +319,7 @@ documents:
   - id: translation-project-contract
     path: docs/en/translation-project/contract.md
     title: Translation Project — CLI Contract Specification
-    version: 0.1.0
+    version: 0.2.0
     status: draft
     abstraction: format
     changelog-path: CHANGELOGS/translation-project.changes.md
