@@ -548,5 +548,55 @@ class TestLiveCorpus(unittest.TestCase):
         self.assertNotIn("rule=phase4-", out)
 
 
+class TestEnLeakageIdentifierTails(unittest.TestCase):
+    """T-1 regression: identifier tails and short markers are not EN leakage.
+
+    Drift-mode en-leakage flagged body lines without Cyrillic whenever any
+    [A-Za-z]{2,} matched — tracing-ID continuations like 'OQ-6).' produced
+    false findings.  Only alphabetic runs >=3 letters surviving identifier-span
+    removal count as untranslated prose.
+    """
+
+    def _run_drift(self, en_body, ru_body):
+        with tempfile.TemporaryDirectory() as td:
+            en = os.path.join(td, "en.md")
+            ru = os.path.join(td, "ru.md")
+            with open(en, "w", encoding="utf-8") as fh:
+                fh.write("# Title\n\n" + "\n\n".join(en_body) + "\n")
+            with open(ru, "w", encoding="utf-8") as fh:
+                fh.write("# Заголовок\n\n" + "\n\n".join(ru_body) + "\n")
+            rc, out, _ = _run_cli(en, ru)
+        return rc, out
+
+    def test_identifier_tail_not_flagged(self):
+        rc, out = self._run_drift(
+            ["Open question OQ-6).", "More English text here."],
+            ["Открытый вопрос", "OQ-6).", "Больше русского текста."],
+        )
+        # line-count parity differs (3 vs 2 body) only if we miscount; keep counts equal
+        self.assertNotIn("rule=en-leakage", out)
+
+    def test_real_leak_still_flagged(self):
+        rc, out = self._run_drift(
+            ["Open question.", "Second line."],
+            ["Открытый вопрос.", "TODO fix now"],
+        )
+        self.assertIn("rule=en-leakage", out)
+        self.assertEqual(rc, 1)
+
+    def test_marker_and_version_not_flagged(self):
+        rc, out = self._run_drift(
+            ["See ADR-014 and v0.1.0.", "Done."],
+            ["См. ADR-014 и v0.1.0.", "Готово."],
+        )
+        # version/ID spans sit on lines that also have Cyrillic; main check is
+        # a pure marker line:
+        rc, out = self._run_drift(
+            ["OQ-6).", "F-3) ADR-014"],
+            ["Что-то первое.", "OQ-6).\nF-3) ADR-014"],
+        )
+        self.assertNotIn("rule=en-leakage", out)
+
+
 if __name__ == "__main__":
     unittest.main()

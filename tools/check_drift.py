@@ -35,6 +35,30 @@ DETERMINISTIC_RULES = {
     "en-leakage": ("medium", "Cyrillic absence in RU body text"),
 }
 
+# T-1: Latin content in RU body lines that is NOT untranslated English.
+# Identifier tails (tracing-ID line continuations such as 'OQ-6).') and short
+# all-caps markers ('OQ', 'EN', 'RU', 'AI', 'TBD') are references/markers, not
+# prose.  Real leakage words are alphabetic runs of >=3 letters remaining after
+# identifier-shaped spans are removed ('TODO', 'Section', 'Overview').
+_IDENTIFIER_SPAN_RE = re.compile(
+    r'\b(?:[A-Za-z]{1,10}-\d+[.)\]]*'              # ID tails: OQ-6).  ADR-014  F-3)
+    r'|[A-Za-z]+\.\d+[\w.]*'                        # versions: v0.1.0
+    r'|[A-Za-z][\w-]*\.(?:md|py|sh|json|ya?ml|txt|html?)\b'  # file.ext (check_drift.py)
+    r'|\b[A-Z]{1,2}\b'                             # short all-caps markers: OQ EN RU
+    r')'
+)
+
+
+def _latin_is_prose(s):
+    """True if the line's Latin content looks like untranslated English prose.
+
+    Identifier-shaped spans (ID-numbered references, file names, 1-2 letter
+    all-caps markers) are stripped first; a run of >=3 letters that survives is
+    treated as leakage prose (TODO, Section, Overview).
+    """
+    stripped = _IDENTIFIER_SPAN_RE.sub(' ', s)
+    return bool(re.search(r'[A-Za-z]{3,}', stripped))
+
 # Glossary entry lines may be bare (``**Term** (рус.)``) or markdown list
 # items (``- **Term** (рус.)``); an optional list marker (+/*/-) is accepted.
 # Host glossaries commonly use bulleted lists; the old '^\\*\\*' anchor
@@ -327,7 +351,7 @@ def _check_en_leakage(ru_lines, known_keys, findings, ru_file):
         if not has_cyrillic.search(s):
             # Check: line might contain only inline-code, URL, numbers
             # If it has any Latin text that isn't inline-code/URL/number → finding
-            has_text = bool(re.search(r'[A-Za-z]{2,}', s))
+            has_text = bool(re.search(r'[A-Za-z]{2,}', s)) and _latin_is_prose(s)
             has_inline_code = '`' in s
             has_url = bool(re.search(r'https?://', s))
             if has_text and not has_inline_code and not has_url:
