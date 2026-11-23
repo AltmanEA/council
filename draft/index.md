@@ -1,14 +1,15 @@
 # Subagent Fallback Mode
-Version: 0.6.1
+Version: 0.7.0-draft
 Status: draft
 Last Modified: 2026-11-23
 Abstraction: reference
 changelog-path: CHANGELOGS/fallback-mode.changes.md
 
-> **ОПЕРАЦИОННАЯ ВЕРСИЯ v0.6.1 — правки только по подтверждённым дефектам.**
-> Единственный операционный регламент консилиумов. Разработка v2 ведётся в
-> dev-worktree `../council-dev/` (ветка `v2-dev`) и здесь не применяется.
-> `MODE: operational/v0.6.1`
+> **ЧЕРНОВИК v2 — объект обсуждения, НЕ регламент: сессию по нему не проводить.**
+> Операционный регламент — `fallback/index.md` операционного workspace
+> (`../council/`, branch `master`). Сессии v2-разработки проводятся движком
+> `.engine/<version>/` (см. `tools/gen_engine.sh`), а не этим черновиком.
+> `MODE: dev-dogfood/v2@<pin>` (заполняется в task-brief)
 
 ---
 

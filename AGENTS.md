@@ -70,11 +70,19 @@ Prohibition: Do not invoke any `council.*` or equivalent MCP tools while the Mod
 
 ### 1.8 v2 Development Workspace
 
-A second version of the council regulation (`fallback/` successor) is under development in the sibling git worktree `../council-dev/` (branch `v2-dev`, anchors `v1-stable` / `v2-pre-dev`). Routing for agents:
+This workspace (`council-dev/`, branch `v2-dev`, anchors `v1-stable` / `v2-pre-dev`) is the **development** workspace for the second version of the council regulation. The **operational** source is the sibling workspace `../council/` (branch `master`, `fallback/index.md`). Routing for agents:
 
-- **This workspace (`council/`, branch `master`) is the only operational source.** Operational council sessions are conducted here strictly by `fallback/index.md` (operational mode banner, `MODE: operational/...`).
-- **`../council-dev/` is a development workspace, NOT an operational source.** Do not reference its files (`draft/`, `.engine/`) as regulations. Never modify `fallback/` from the dev worktree and never read `fallback/` of this workspace from a dev session by absolute path.
-- **v1 hotfix flow:** a defect fix to `fallback/` lands in `master` (branch here), gets a release tag `v1.0.x` and moves the moving pointer `v1-latest`; each such fix requires a paired commit in `v2-dev` carrying trailers `backport-of: <sha>` and `premise-shift: none|affects=<session-id>` (consensus `sess-branch-version-strategy`, 2026-11-23).
+**Workspace routing table:**
+
+| Name | Role | Rule |
+|---|---|---|
+| `.engine/<version>/` | **чем обсуждаем** — engine, generated from a v1 tag | read-only, never edit; regenerate with `bash tools/gen_engine.sh <tag>` (see §1.7) |
+| `draft/` | **что обсуждаем** — v2 draft, object of review | never conduct a session *by* it; edit only in approved change commits |
+| `sessions/` | артефакты сессий этого workspace | local; only `consensus-doc.md`/`task-brief.md` tracked; never read `../council/sessions/` as relevant |
+
+- **Never** read or modify `../council/fallback/` by absolute path; the operational regulation does not exist under this workspace (`fallback/` is intentionally absent here — it is `draft/` instead).
+- Every dev session must start with: `bash tools/gen_engine.sh v1-latest` (materialize engine; operator-executed) and `python3 tools/check_engine_sync.py` (advisory pin check); the task-brief must carry `worktree-path: /home/ea/council-dev`, `mode: dev-engine` (or `dev-dogfood`), and `engine: <pin>`; the same header is copied into `consensus-doc.md`.
+- **v1 hotfix flow (forward-port):** hotfixes land in `../council/` (master), get tag `v1.0.x`, move `v1-latest`; each requires a paired commit in this branch with trailers `backport-of: <sha>` and `premise-shift: none|affects=<session-id>` (consensus `sess-branch-version-strategy`, 2026-11-23). Before each dev session verify: all `fallback/` commits in master since the last engine pin are reflected in `.engine/` or `draft/`, or marked `backport-deferred`.
 - Switch-over (v2 becomes operational) happens only via the documented 7-step procedure of that consensus; until then `master` equals v1.
 
 ---
