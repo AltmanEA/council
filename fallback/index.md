@@ -1,9 +1,14 @@
 # Subagent Fallback Mode
-Version: 0.6.0
+Version: 0.6.1
 Status: draft
-Last Modified: 2026-11-12
+Last Modified: 2026-11-23
 Abstraction: reference
 changelog-path: CHANGELOGS/fallback-mode.changes.md
+
+> **ОПЕРАЦИОННАЯ ВЕРСИЯ v0.6.1 — правки только по подтверждённым дефектам.**
+> Единственный операционный регламент консилиумов. Разработка v2 ведётся в
+> dev-worktree `../council-dev/` (ветка `v2-dev`) и здесь не применяется.
+> `MODE: operational/v0.6.1`
 
 ---
 

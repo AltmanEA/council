@@ -1,5 +1,7 @@
 # Session Task Brief Template
 
+> `MODE: operational/v0.6.1` — операционный регламент (см. `fallback/index.md`). Разработка v2: dev-worktree `../council-dev/`, здесь не применяется.
+
 ---
 
 ## Purpose
@@ -11,6 +13,11 @@ Copy the template below into a new file (`session-task-brief.md`) and fill every
 ---
 
 ## Task Brief
+
+### Provenance (mandatory, copied to consensus-doc header)
+- **worktree-path:** [actual working directory of the session, e.g. `/home/ea/council`]
+- **mode:** [operational | dev-engine | dev-dogfood]
+- **engine:** [regulation this session is conducted by: `v1.0.<x>@<sha>` for operational/engine sessions; `draft@<sha>` for dogfood sessions (draft frozen Phase 1 → consensus-doc)]
 
 ### Session Goal
 [One sentence: what decision or outcome do we want by the end of this session?]

@@ -1,5 +1,7 @@
 # Koda Execution Profile (Fallback Council)
 
+> `MODE: operational/v0.6.1` — операционный регламент (см. `fallback/index.md`). Разработка v2: dev-worktree `../council-dev/`, здесь не применяется.
+
 Operational helper cross-referenced from `fallback/index.md`. It does **not** change the
 protocol: the five phases, role semantics, output structure and conflict aggregation rules are
 defined in `fallback/index.md` and remain authoritative. This file only binds those phases to the

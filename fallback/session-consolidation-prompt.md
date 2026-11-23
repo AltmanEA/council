@@ -1,5 +1,7 @@
 # Session Consolidation Prompt
 
+> `MODE: operational/v0.6.1` — операционный регламент (см. `fallback/index.md`). Разработка v2: dev-worktree `../council-dev/`, здесь не применяется.
+
 ---
 
 ## Purpose
