@@ -39,9 +39,11 @@ git tag v0.1.0
 bash dist/build.sh                 # VERSION taken from the tag
 ```
 
-Without a tag, `build.sh` prints a warning and uses a `dev-<hash>` version.
-Dev builds are for local testing only — never ship them to a host
-(`update.sh` and the host will visibly show the `dev-` prefix).
+Bare `build.sh` now **requires an exact tag**: on an untagged commit it exits 1
+with a `FATAL: not on a tagged commit` message — dev-labeled release artifacts
+can no longer be produced by accident. For non-release builds (CI, dry-run)
+pass the version explicitly: `bash dist/build.sh dev-custom-version`
+(no tag required, `dev-` names remain allowed there — never ship those).
 
 Before shipping an archive after any change to `dist/*.sh`, run the smoke
 test once:

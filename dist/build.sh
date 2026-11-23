@@ -2,8 +2,10 @@
 set -euo pipefail
 # build.sh — assemble a distributable council-dist archive from the current checkout.
 # Usage: bash dist/build.sh [VERSION]
-#   VERSION defaults to "git describe --tags"; without a tag a "dev-" prefixed
-#   version is used (warning printed) — dev builds must not be shipped to hosts.
+#   Bare invocation requires an exact tag (git describe --tags --exact-match);
+#   on an untagged commit it exits 1 with a FATAL message.  Pass VERSION
+#   explicitly for non-release builds (CI, dry-run) — then no tag is required.
+#   Release builds must never be dev-labeled (consensus sess-branch-version-strategy).
 # Output: dist/out/council-dist-<VERSION>.tar.gz  +  dist/out/SHA256SUMS
 #
 # Variant-B composition: see consensus sess-dist-content-review (2026-11-22).
@@ -16,12 +18,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
-  VERSION=$(git -C "$ROOT_DIR" describe --tags 2>/dev/null || true)
+  VERSION=$(git -C "$ROOT_DIR" describe --tags --exact-match 2>/dev/null || true)
   if [[ -z "$VERSION" ]]; then
-    echo "WARNING: no git tag in source repo — building a DEV build."
-    echo "         Dev builds are for testing only; for a host release create a tag"
-    echo "         (see dist/README.md §Releasing)."
-    VERSION="dev-$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "FATAL: not on a tagged commit; pass VERSION explicitly for non-release builds" >&2
+    exit 1
   fi
 fi
 OUT_DIR="$SCRIPT_DIR/out"

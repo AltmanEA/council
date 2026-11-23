@@ -250,5 +250,13 @@ git tag v0.1.0
 bash dist/build.sh                 # picks VERSION from the tag
 ```
 
-Without a tag, builds get a `dev-<hash>` version and a warning — testing only.
+Bare `build.sh` now **requires an exact tag** on the current commit
+(`git describe --tags --exact-match`); on an untagged commit it exits 1 with
+a `FATAL` message on stderr.  For non-release builds (e.g. CI, dry-run),
+pass `VERSION` explicitly:
+
+```bash
+bash dist/build.sh dev-custom-version   # explicit VERSION — no tag required
+```
+
 See `dist/README.md` §Releasing.
