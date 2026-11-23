@@ -36,12 +36,22 @@ if ! git -C "$ROOT_DIR" rev-parse -q --verify "$REF" >/dev/null 2>&1; then
 fi
 
 # --- resolve commit sha for DIST-SOURCE header and DIST-SOURCE -------------
-COMMIT_SHA=$(git -C "$ROOT_DIR" rev-parse "$REF" 2>/dev/null) || die "cannot resolve commit sha for ref: $REF"
+# Peel annotated tags: rev-parse "$REF" would yield the TAG-OBJECT sha for
+# annotated tags (v1-stable/v1-latest are annotated), which then makes
+# check_engine_sync.py report a false MISMATCH against ^{commit}.
+COMMIT_SHA=$(git -C "$ROOT_DIR" rev-parse "$REF^{commit}" 2>/dev/null) || die "cannot resolve commit sha for ref: $REF"
 SHORT_SHA="${COMMIT_SHA:0:7}"
 
 # --- determine engine version and target dir -------------------------------
-if VERSION=$(git -C "$ROOT_DIR" describe --tags --exact-match "$REF" 2>/dev/null); then
-    : # exact tag — use tag name
+# Operator decision 4 (sess-branch-version-strategy): the engine directory is
+# named by an immutable identifier — an exact semver-shaped tag or the short
+# commit sha.  Moving/anchor aliases (v1-latest, v1-stable, v2-pre-dev) must
+# never appear in the path; they are recorded in DIST-SOURCE tag= only.
+if TAG=$(git -C "$ROOT_DIR" describe --tags --exact-match "$REF" 2>/dev/null); then
+    case "$TAG" in
+        v1-latest|v1-stable|v2-pre-dev) VERSION="$SHORT_SHA" ;;  # alias → short sha
+        *) VERSION="$TAG" ;;
+    esac
 else
     VERSION="$SHORT_SHA"
 fi
@@ -83,7 +93,10 @@ while IFS= read -r filepath; do
 done <<< "$FALLBACK_FILES"
 
 # --- write DIST-SOURCE -----------------------------------------------------
-TREE_SHA=$(git -C "$ROOT_DIR" rev-parse "$REF"^tree 2>/dev/null) || true
+# NOTE: rev-parse requires the BRACED suffix ^{tree}; the bare "^tree" form is
+# invalid syntax and rev-parse just echoes it back (|| true masked the failure
+# and left the literal string in DIST-SOURCE).
+TREE_SHA=$(git -C "$ROOT_DIR" rev-parse "$REF^{tree}" 2>/dev/null) || die "cannot resolve tree sha for ref: $REF"
 cat > "$TARGET_DIR/DIST-SOURCE" <<EOSOURCE
 tag=$REF
 tree=$TREE_SHA
