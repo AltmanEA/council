@@ -1,5 +1,5 @@
 # Documentation Agent Instructions (AGENTS.md)
-Version: 3.0.0
+Version: 3.1.0
 Status: active
 changelog-path: CHANGELOGS/agents.changes.md
 
@@ -67,6 +67,15 @@ This separation is documented in the consensus document from session `sess-docum
 Prohibition: Do not invoke any `council.*` or equivalent MCP tools while the Moderator is under development. There are no `documenter.*` tools any more — the Documenter service was deleted in the 2026-11-19 reconstruction; do not recreate it (OP-2).
 
 **Prose-contract synchronization.** Behavioral contracts for tools (documented in prose, e.g. the Documentation Worker skill's wrapper contract and `tools/README.md`) are binding: whenever a tool's behavior changes, its prose contracts MUST be reviewed and updated in the same changeset. A prose contract diverging from implementation is a documentation defect (root cause: heading-translation contract breach, sess-translate-automation 2026-11-14; norm ratified sess-prevention-measures 2026-11-14).
+
+### 1.8 v2 Development Workspace
+
+A second version of the council regulation (`fallback/` successor) is under development in the sibling git worktree `../council-dev/` (branch `v2-dev`, anchors `v1-stable` / `v2-pre-dev`). Routing for agents:
+
+- **This workspace (`council/`, branch `master`) is the only operational source.** Operational council sessions are conducted here strictly by `fallback/index.md` (operational mode banner, `MODE: operational/...`).
+- **`../council-dev/` is a development workspace, NOT an operational source.** Do not reference its files (`draft/`, `.engine/`) as regulations. Never modify `fallback/` from the dev worktree and never read `fallback/` of this workspace from a dev session by absolute path.
+- **v1 hotfix flow:** a defect fix to `fallback/` lands in `master` (branch here), gets a release tag `v1.0.x` and moves the moving pointer `v1-latest`; each such fix requires a paired commit in `v2-dev` carrying trailers `backport-of: <sha>` and `premise-shift: none|affects=<session-id>` (consensus `sess-branch-version-strategy`, 2026-11-23).
+- Switch-over (v2 becomes operational) happens only via the documented 7-step procedure of that consensus; until then `master` equals v1.
 
 ---
 
