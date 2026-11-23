@@ -1,0 +1,10 @@
+{
+  "files": ["tools/session_status.py"],
+  "signatures": [
+    {
+      "file": "tools/session_status.py",
+      "names": ["main", "_find_runs", "_parse_run", "_print_text", "_print_json"]
+    }
+  ],
+  "notes": ""
+}

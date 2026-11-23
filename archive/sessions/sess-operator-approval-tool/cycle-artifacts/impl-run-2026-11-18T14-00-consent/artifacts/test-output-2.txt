@@ -1,0 +1,137 @@
+test_cli_help_exits_0 (tests.test_consent_terminal.TestConsentTerminal.test_cli_help_exits_0)
+--help exits with code 0. ... ok
+test_cli_request_no_draft_exits_2 (tests.test_consent_terminal.TestConsentTerminal.test_cli_request_no_draft_exits_2)
+request with no draft file → exit 2. ... ok
+test_create_request_happy_path (tests.test_consent_terminal.TestConsentTerminal.test_create_request_happy_path)
+Draft + diff file → pending record, correct fields, exit 0. ... ok
+test_decide_empty_keypress (tests.test_consent_terminal.TestConsentTerminal.test_decide_empty_keypress)
+Empty keypress list → pending. ... ok
+test_decide_expired_skip (tests.test_consent_terminal.TestConsentTerminal.test_decide_expired_skip)
+Expired record → skipped regardless of keypress. ... ok
+test_decide_missing_state_key (tests.test_consent_terminal.TestConsentTerminal.test_decide_missing_state_key)
+Malformed record missing 'state' → skip gracefully. ... ok
+test_decide_missing_tier_key (tests.test_consent_terminal.TestConsentTerminal.test_decide_missing_tier_key)
+Malformed record missing 'tier' → skip gracefully. ... ok
+test_decide_review_n (tests.test_consent_terminal.TestConsentTerminal.test_decide_review_n)
+Review tier: 'n' → denied. ... ok
+test_decide_review_q (tests.test_consent_terminal.TestConsentTerminal.test_decide_review_q)
+Review tier: 'q' → no_decision. ... ok
+test_decide_review_y_then_enter (tests.test_consent_terminal.TestConsentTerminal.test_decide_review_y_then_enter)
+Review tier: 'y' → confirming; Enter '-> approved. ... ok
+test_decide_review_y_then_y_not_enter (tests.test_consent_terminal.TestConsentTerminal.test_decide_review_y_then_y_not_enter)
+Review: 'y' → confirming, 'y' again → still confirming. ... ok
+test_decide_safe_n (tests.test_consent_terminal.TestConsentTerminal.test_decide_safe_n)
+Safe tier: 'n' → denied. ... ok
+test_decide_safe_q (tests.test_consent_terminal.TestConsentTerminal.test_decide_safe_q)
+Safe tier: 'q' → no_decision. ... ok
+test_decide_safe_y_immediate (tests.test_consent_terminal.TestConsentTerminal.test_decide_safe_y_immediate)
+Safe tier: 'y' → approved immediately. ... ok
+test_decide_unknown_key_stays (tests.test_consent_terminal.TestConsentTerminal.test_decide_unknown_key_stays)
+Unknown key → stays pending. ... ok
+test_hmac_state_flip_approved_to_denied (tests.test_consent_terminal.TestConsentTerminal.test_hmac_state_flip_approved_to_denied)
+Flipping state from approved→denied → verify fails. ... ok
+test_hmac_state_flip_denied_to_approved (tests.test_consent_terminal.TestConsentTerminal.test_hmac_state_flip_denied_to_approved)
+Flipping state from denied→approved → verify fails. ... ok
+test_hmac_tamper_diff_hash (tests.test_consent_terminal.TestConsentTerminal.test_hmac_tamper_diff_hash)
+Changing diff_hash → verify fails. ... ok
+test_hmac_tamper_request_id (tests.test_consent_terminal.TestConsentTerminal.test_hmac_tamper_request_id)
+Changing request_id → verify fails. ... ok
+test_hmac_verify_valid (tests.test_consent_terminal.TestConsentTerminal.test_hmac_verify_valid)
+Decision with correct HMAC → verify passes. ... ok
+test_latest_wins_multiple_approvals (tests.test_consent_terminal.TestConsentTerminal.test_latest_wins_multiple_approvals)
+Multiple approvals for same request_id: last one wins. ... ok
+test_latest_wins_pending_approved_consumed (tests.test_consent_terminal.TestConsentTerminal.test_latest_wins_pending_approved_consumed)
+pending → approved → consumed: read_pending returns consumed. ... ok
+test_mark_consumed_non_decided (tests.test_consent_terminal.TestConsentTerminal.test_mark_consumed_non_decided)
+mark_consumed on pure pending (no decision) → False. ... ok
+test_mark_consumed_success (tests.test_consent_terminal.TestConsentTerminal.test_mark_consumed_success)
+pending → approved → mark_consumed → consumed state. ... ok
+test_mark_consumed_unknown_id (tests.test_consent_terminal.TestConsentTerminal.test_mark_consumed_unknown_id)
+mark_consumed on nonexistent request_id → False. ... ok
+test_no_tier2_interlock_references (tests.test_consent_terminal.TestConsentTerminal.test_no_tier2_interlock_references)
+Module must not reference Tier 2+ interlock components. ... ok
+test_prune_expired (tests.test_consent_terminal.TestConsentTerminal.test_prune_expired)
+Record past expiry_deadline → pruned as denied reason=expired. ... ok
+test_prune_integrity_fail (tests.test_consent_terminal.TestConsentTerminal.test_prune_integrity_fail)
+diff_text mismatch → pruned as denied reason=integrity_fail. ... ok
+test_read_pending_fifo_ordering (tests.test_consent_terminal.TestConsentTerminal.test_read_pending_fifo_ordering)
+read_pending returns records by created_at, oldest first. ... ok
+test_reject_diff_file_missing (tests.test_consent_terminal.TestConsentTerminal.test_reject_diff_file_missing)
+Referenced diff file missing → FileNotFoundError. ... ok
+test_reject_diff_too_large (tests.test_consent_terminal.TestConsentTerminal.test_reject_diff_too_large)
+Diff > 64 KB → ValueError (reject). ... ok
+test_reject_malformed_json (tests.test_consent_terminal.TestConsentTerminal.test_reject_malformed_json)
+Invalid JSON → ValueError (fail-closed). ... ok
+test_reject_missing_draft_file (tests.test_consent_terminal.TestConsentTerminal.test_reject_missing_draft_file)
+No draft file → FileNotFoundError (fail-closed). ... ok
+test_reject_missing_required_key (tests.test_consent_terminal.TestConsentTerminal.test_reject_missing_required_key)
+Missing `target_path` key → ValueError. ... ok
+test_reject_quarantine_created (tests.test_consent_terminal.TestConsentTerminal.test_reject_quarantine_created)
+On rejection the draft is quarantined with a timestamped name. ... ok
+test_reject_summary_too_long (tests.test_consent_terminal.TestConsentTerminal.test_reject_summary_too_long)
+Summary > 200 chars → ValueError. ... ok
+test_reject_unknown_tier (tests.test_consent_terminal.TestConsentTerminal.test_reject_unknown_tier)
+tier not in {safe, review} → ValueError. ... ok
+
+----------------------------------------------------------------------
+Ran 37 tests in 0.119s
+
+OK
+
+## sibling: test_check_all
+
+test_clean_corpus_exit_0 (tests.test_check_all.TestCleanCorpus.test_clean_corpus_exit_0) ... ok
+test_fixture_manifest_is_in_parity (tests.test_check_all.TestCleanCorpus.test_fixture_manifest_is_in_parity) ... ok
+test_json_output_is_jsonl_with_required_keys (tests.test_check_all.TestCli.test_json_output_is_jsonl_with_required_keys) ... ok
+test_severity_filter_and_rule_selection (tests.test_check_all.TestCli.test_severity_filter_and_rule_selection) ... ok
+test_unknown_rule_token_exit_2 (tests.test_check_all.TestCli.test_unknown_rule_token_exit_2) ... ok
+test_finding_lines_carry_tokens_and_parse (tests.test_check_all.TestHumanReadableTokenFormat.test_finding_lines_carry_tokens_and_parse) ... ok
+test_high_finding_line_contains_literal_severity_high (tests.test_check_all.TestHumanReadableTokenFormat.test_high_finding_line_contains_literal_severity_high) ... ok
+test_json_mode_unchanged (tests.test_check_all.TestHumanReadableTokenFormat.test_json_mode_unchanged)
+--json still emits exactly {rule, severity, file, description}. ... ok
+test_unreadable_manifest_fails_loud_exit_2 (tests.test_check_all.TestInternalError.test_unreadable_manifest_fails_loud_exit_2)
+docs-manifest.yaml as a directory -> IsADirectoryError inside ... ok
+test_live_corpus_runs_clean_exit_code (tests.test_check_all.TestLiveCorpus.test_live_corpus_runs_clean_exit_code) ... ok
+test_non_kebab_folder_high (tests.test_check_all.TestNaming.test_non_kebab_folder_high) ... ok
+test_line_count_overflow_high (tests.test_check_all.TestRule1LineCount.test_line_count_overflow_high) ... ok
+test_metadata_and_blank_lines_not_counted (tests.test_check_all.TestRule1LineCount.test_metadata_and_blank_lines_not_counted) ... ok
+test_changelog_wrong_location_medium (tests.test_check_all.TestRule2Changelog.test_changelog_wrong_location_medium) ... ok
+test_missing_changelog_high (tests.test_check_all.TestRule2Changelog.test_missing_changelog_high) ... ok
+test_ambiguous_heading_low_not_medium (tests.test_check_all.TestRule4CrossRefs.test_ambiguous_heading_low_not_medium)
+No file named, §Name matches multiple corpus headings -> LOW ... ok
+test_broken_anchor_medium_not_blocking (tests.test_check_all.TestRule4CrossRefs.test_broken_anchor_medium_not_blocking) ... ok
+test_corpus_wide_unique_heading_resolves_passes (tests.test_check_all.TestRule4CrossRefs.test_corpus_wide_unique_heading_resolves_passes)
+No file named on the line: a §Name matching exactly one corpus ... ok
+test_implementation_file_numeric_ref_resolves (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_numeric_ref_resolves)
+Numeric §refs resolve against numbered headings of the named ... ok
+test_implementation_file_ref_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_hit_passes)
+`fallback/index.md` §Name resolves against the real file's ... ok
+test_implementation_file_ref_miss_low_never_medium (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_miss_low_never_medium)
+`AGENTS.md` §Name not found -> LOW broken-anchor; the line must ... ok
+test_missing_reference_docs_en_path_high (tests.test_check_all.TestRule4CrossRefs.test_missing_reference_docs_en_path_high) ... ok
+test_relative_path_reference_broken_high (tests.test_check_all.TestRule4CrossRefs.test_relative_path_reference_broken_high)
+A relative token that resolves nowhere is high missing-reference. ... ok
+test_relative_path_reference_resolves_file_relative_first (tests.test_check_all.TestRule4CrossRefs.test_relative_path_reference_resolves_file_relative_first)
+`../index.md` from a non-index file resolves against the FILE PATH ... ok
+test_same_line_named_file_heading_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_same_line_named_file_heading_hit_passes)
+Line names the target file (backticked, trailing comma) and the ... ok
+test_same_line_named_file_heading_miss_high (tests.test_check_all.TestRule4CrossRefs.test_same_line_named_file_heading_miss_high)
+Line names the target file and the §Name is absent from it -> ... ok
+test_same_line_plain_path_no_backticks_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_same_line_plain_path_no_backticks_hit_passes)
+Without backticks: plain docs/en path + §Name hit passes. ... ok
+test_section_reference_to_real_heading_passes (tests.test_check_all.TestRule4CrossRefs.test_section_reference_to_real_heading_passes) ... ok
+test_unresolved_section_reference_medium (tests.test_check_all.TestRule4CrossRefs.test_unresolved_section_reference_medium) ... ok
+test_zero_matches_stays_medium (tests.test_check_all.TestRule4CrossRefs.test_zero_matches_stays_medium)
+§Name matching no heading corpus-wide stays medium ... ok
+test_manifest_drift_high (tests.test_check_all.TestRule6ManifestParity.test_manifest_drift_high) ... ok
+test_non_index_allowed_by_parent_index_not_orphan (tests.test_check_all.TestRule6ManifestParity.test_non_index_allowed_by_parent_index_not_orphan) ... ok
+test_orphan_high (tests.test_check_all.TestRule6ManifestParity.test_orphan_high)
+A docs/en file that cannot enter the generated entries (frontmatter ... ok
+test_bad_frontmatter_is_finding_not_exit_2 (tests.test_check_all.TestSchema.test_bad_frontmatter_is_finding_not_exit_2)
+DocMetaError corpus condition -> high finding, exit 1 (not 2). ... ok
+test_last_modified_deprecated_warning (tests.test_check_all.TestSchema.test_last_modified_deprecated_warning) ... ok
+
+----------------------------------------------------------------------
+Ran 35 tests in 0.528s
+
+OK

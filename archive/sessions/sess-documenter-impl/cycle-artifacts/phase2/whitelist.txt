@@ -1,0 +1,4 @@
+tests/card_contract.py
+tests/test_card_contract.py
+tests/test_approve_grammar.py
+artifacts/*

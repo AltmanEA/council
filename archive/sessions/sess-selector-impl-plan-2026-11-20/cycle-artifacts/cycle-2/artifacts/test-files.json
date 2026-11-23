@@ -1,0 +1,10 @@
+{
+  "files": [
+    "tests/test_selector_integration.py"
+  ],
+  "test_command": "python3 -m unittest tests.test_selector_integration -v",
+  "baseline_run": {
+    "exit_code": 5,
+    "note": "красные до реализации — модуль selector_runtime.py отсутствует; все 8 test classes ERROR на setUpClass FileNotFoundError. Ожидаемое поведение."
+  }
+}

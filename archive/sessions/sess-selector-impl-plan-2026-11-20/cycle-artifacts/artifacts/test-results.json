@@ -1,0 +1,4 @@
+{ "iteration": 1,
+  "commands": ["python3 -m unittest tests.test_selector_contract tests.test_selector_smoke -v"],
+  "exit_code": 0, "passed": 126, "failed": 0, "errors": 0,
+  "collection_error": false, "failed_tests": [] }

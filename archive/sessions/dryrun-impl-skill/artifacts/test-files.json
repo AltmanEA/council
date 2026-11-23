@@ -1,0 +1,15 @@
+{
+  "files": [
+    "tests/test_session_status.py"
+  ],
+  "test_command": "python3 -m unittest tests.test_session_status -v",
+  "baseline_run": {
+    "exit_code": 1,
+    "note": "красные до реализации — ожидание выполнено (20 тестов: 15 failures, 3 errors — subprocess не может найти tools/session_status.py)",
+    "passed": 2,
+    "failed": 15,
+    "errors": 3,
+    "total": 20
+  },
+  "fix": "iteration 2 — CWD-изоляция default-теста (_run_tool_no_dir перемещён в класс, subprocess вызывается с cwd=tempfile, все 20 тестов изолированы от содержимого реального CWD)"
+}

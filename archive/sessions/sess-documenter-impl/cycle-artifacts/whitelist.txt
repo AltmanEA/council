@@ -1,0 +1,7 @@
+# Whitelist for impl-run-2026-11-19T13-00-01 (Phase 0 check_all rewrite)
+tools/check_all.py
+tools/hooks/pre-commit
+tests/test_check_all.py
+tests/test_check_all_hook_contract.py
+tests/test_link_integrity.py
+.impl/*

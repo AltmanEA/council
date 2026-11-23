@@ -1,0 +1,41 @@
+{
+  "iteration": 3,
+  "commands": [
+    "python3 -m unittest tests.test_check_all -v",
+    "python3 -m unittest tests.test_check_all_hook_contract -v",
+    "python3 -m unittest tests.test_install_hooks -v",
+    "python3 tools/check_all.py",
+    "python3 tools/check_all.py --severity high",
+    "python3 tools/check_all.py --strict --json | head -3"
+  ],
+  "exit_code": 0,
+  "passed": 75,
+  "failed": 0,
+  "errors": 0,
+  "collection_error": false,
+  "failed_tests": [],
+  "regression_tests": {
+    "tests.test_install_hooks": {
+      "command": "python3 -m unittest tests.test_install_hooks -v",
+      "exit_code": 0,
+      "passed": 19,
+      "failed": 0,
+      "errors": 0,
+      "failed_tests": []
+    }
+  },
+  "cli_spot_checks": {
+    "default": {
+      "rc": 1,
+      "first_line": "⚠ findings: 32"
+    },
+    "severity_high": {
+      "rc": 0,
+      "stdout_empty": true
+    },
+    "strict": {
+      "rc": 0,
+      "first_line": "{\"rule\": \"unresolved-reference\", \"severity\": \"low\", \"file\": \"docs/en/documenter-service/legacy/approval-surface.md\", \"description\": \"rule-4 cross-ref-anchors: numeric §4 on line 36 matched no numbered heading in docs/en/documenter-service/legacy/approval-surface.md; numeric section references are implementation-style, reported LOW\"}"
+    }
+  }
+}

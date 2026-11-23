@@ -1,0 +1,73 @@
+{
+  "pass": false,
+  "progress": {
+    "iteration": 1,
+    "current_pass": 49,
+    "current_fail": 9,
+    "current_errors": 0,
+    "regression_pass": 19,
+    "regression_fail": 0,
+    "delta_from_baseline": "Baseline (iter 1 pre-fix): 22/56 PASS, 34 FAIL → Iteration 1: 49/57 PASS, 9 FAIL. Net improvement: +27 pass, -25 fail."
+  },
+  "reasons": [
+    {
+      "group": "A — severity=high filters medium/low in _jsonl (6 tests)",
+      "tests": [
+        "tests.test_check_all.TestRule2Changelog.test_changelog_wrong_location_medium",
+        "tests.test_check_all.TestRule4CrossRefs.test_ambiguous_heading_low_not_medium",
+        "tests.test_check_all.TestRule4CrossRefs.test_broken_anchor_medium_not_blocking",
+        "tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_miss_low_never_medium",
+        "tests.test_check_all.TestRule4CrossRefs.test_unresolved_section_reference_medium",
+        "tests.test_check_all.TestRule4CrossRefs.test_zero_matches_stays_medium"
+      ],
+      "cause": "All 6 tests call _jsonl(root) without explicit --severity, relying on the operator's binding decision that default severity = low. The implementation's default is still high (per target-task.md binding decision §2). At default=high, medium/low findings are filtered from JSON output, so _find(...) returns [] and assertions fail.",
+      "notes": "Per operator decision, default --severity should be 'low', not 'high'. Once the implementation default is changed to 'low', these 6 tests should pass."
+    },
+    {
+      "group": "B — encoding artifact in test assertion (1 test)",
+      "tests": [
+        "tests.test_check_all.TestContractRenderExitCodes.test_low_only_finding_severity_warn_marker_exit_1"
+      ],
+      "cause": "Test asserts self.assertIn('w findings:', lines[0]) but the implementation outputs the emoji character ⚠ (U+26A0), producing line '⚠ findings: 1'. The literal string 'w findings:' is not a substring. The same test has line 133 using the correct emoji via '\\u26a0', confirming this is a test typo — the 'w' on line 132 should be '⚠' (or '\\u26a0').",
+      "notes": "Test authoring defect. Requires fixing the assertion string on line 132 of tests/test_check_all.py."
+    },
+    {
+      "group": "C — _jsonl without _touch_manifest causes manifest-drift high finding (2 tests)",
+      "tests": [
+        "tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_filters_exit_code",
+        "tests.test_check_all.TestSchema.test_last_modified_deprecated_warning"
+      ],
+      "cause": "Both tests modify fixture documents via _write_doc but do not call _touch_manifest(root) to regenerate docs-manifest.yaml. This introduces a manifest-drift high-severity finding (Rule 6). The test's assertions are about specific medium/warning findings but get contaminated by the unexpected high-severity manifest drift:\n\n- test_severity_filters_exit_code: expects rc_default=0 (clean at high) but gets rc=2 because manifest-drift (high) is reported. Also expects rc_low=1 but gets rc=2 for the same reason.\n- test_last_modified_deprecated_warning: expects len(hits)==1 for warning-level 'last-modified-deprecated' at default severity, but gets 0 because warning < high (filtered). The manifest drift also causes rc=2 instead of rc=0."
+    }
+  ],
+  "next_steps": [
+    {
+      "file": "tools/check_all.py",
+      "change": "Change default severity from 'high' to 'low' as per the operator's binding decision in the orchestrator context.",
+      "expected_effect": "Fixes all 6 tests in group A. The implementation default becomes 'low' so _jsonl(root) reports medium/low findings."
+    },
+    {
+      "file": "tests/test_check_all.py",
+      "change": "Line 132: replace 'w findings:' with '\\u26a0 findings:' (or the literal emoji character ⚠).",
+      "expected_effect": "Fixes group B test. Assertion will match the actual output line '⚠ findings: 1'."
+    },
+    {
+      "file": "tests/test_check_all.py",
+      "change": "In test_severity_filters_exit_code (line ~240): add _touch_manifest(root) after the two _write_doc calls. Then update assertions: with default=low (after step 1 change), the medium findings ARE reported, so rc_default should be 1 (not 0). The --severity low case should also be rc=1 (medium findings, no high → exit 1, manifest drift is gone).",
+      "expected_effect": "Fixes group C test. Manifest parity holds, only the intended medium findings are checked."
+    }
+  ],
+  "critical_blocker": false,
+  "hypotheses": [
+    {
+      "description": "The operator's decision (default=low) was communicated but not yet reflected in the implementation code. The test-author (iteration 1) rewrote tests but kept the implementation default at 'high'. The test expectations were written assuming default=low but the code still uses default=high.",
+      "confidence": "high",
+      "verification": "Check tools/check_all.py for the --severity default value; it should be 'low' after the operator's decision."
+    },
+    {
+      "description": "The 2 tests in group C (severity_filters_exit_code, last_modified_deprecated_warning) fail primarily because they modify fixture docs without regenerating the manifest, introducing manifest-drift high findings that contaminate the test's exit-code assertions. This is a test setup defect, not a code defect.",
+      "confidence": "high",
+      "verification": "Add _touch_manifest(root) after _write_doc calls in both tests; verify rc values match expected values for the specific findings under test."
+    }
+  ]
+}

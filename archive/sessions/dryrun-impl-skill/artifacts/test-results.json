@@ -1,0 +1,10 @@
+{
+  "iteration": 1,
+  "commands": ["python3 -m unittest tests.test_session_status -v"],
+  "exit_code": 0,
+  "passed": 20,
+  "failed": 0,
+  "errors": 0,
+  "collection_error": false,
+  "failed_tests": []
+}

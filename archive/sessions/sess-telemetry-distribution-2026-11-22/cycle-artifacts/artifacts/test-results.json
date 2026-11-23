@@ -1,0 +1,1 @@
+{"iteration":1,"commands":["python3 -m unittest tests.test_collect_telemetry -v"],"exit_code":0,"passed":45,"failed":0,"errors":0,"collection_error":false,"failed_tests":[]}

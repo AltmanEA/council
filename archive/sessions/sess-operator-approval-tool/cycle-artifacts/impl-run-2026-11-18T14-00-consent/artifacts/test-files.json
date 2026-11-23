@@ -1,0 +1,1 @@
+{"files": ["tests/test_consent_terminal.py"], "test_command": "python3 -m unittest tests.test_consent_terminal -v", "baseline_run": {"exit_code": 0, "note": "iteration-3: added 6 tests pinning 3 hardening fixes (flock read/append, no-busy-spin, ctrl-c deny); 43/43 OK"}}

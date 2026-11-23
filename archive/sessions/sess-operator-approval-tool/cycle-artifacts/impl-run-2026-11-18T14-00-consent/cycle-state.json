@@ -1,0 +1,14 @@
+{
+  "run_id": "impl-run-2026-11-18T14-00-consent",
+  "session_id": "sess-operator-approval-tool",
+  "worktree": "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-18T14-00-consent",
+  "cycle_ws": "/home/ea/council/sessions/sess-operator-approval-tool/impl-run-2026-11-18T14-00-consent",
+  "status": "running",
+  "iteration": 1,
+  "phase": "analyst",
+  "fail_count": 0,
+  "progress": "improving",
+  "pass_count_prev": 36,
+  "prompt_versions": {"test-author": 2},
+  "started_at": "2026-11-18T14:00:00Z"
+}

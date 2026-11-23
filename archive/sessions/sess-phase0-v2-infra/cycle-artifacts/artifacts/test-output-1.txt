@@ -1,0 +1,47 @@
+test_missing_argument (tests.test_gen_engine.TestGenEngineErrors.test_missing_argument) ... ok
+test_ref_without_fallback (tests.test_gen_engine.TestGenEngineErrors.test_ref_without_fallback)
+A ref that has no fallback/ directory → exit 2. ... ok
+test_unknown_ref (tests.test_gen_engine.TestGenEngineErrors.test_unknown_ref) ... ok
+test_dist_source_created (tests.test_gen_engine.TestGenEngineHappyPath.test_dist_source_created) ... ok
+test_fallback_files_copied_with_header (tests.test_gen_engine.TestGenEngineHappyPath.test_fallback_files_copied_with_header) ... ok
+test_multiple_fallback_files (tests.test_gen_engine.TestGenEngineHappyPath.test_multiple_fallback_files) ... ok
+test_idempotent_except_generated (tests.test_gen_engine.TestGenEngineIdempotency.test_idempotent_except_generated) ... ok
+test_exact_tag_naming (tests.test_gen_engine.TestGenEngineVersionNaming.test_exact_tag_naming) ... ok
+test_non_tag_ref_naming (tests.test_gen_engine.TestGenEngineVersionNaming.test_non_tag_ref_naming) ... ok
+test_mismatch_exits_0 (tests.test_check_engine_sync.TestCheckEngineSyncAlwaysExit0.test_mismatch_exits_0) ... ok
+test_missing_exits_0 (tests.test_check_engine_sync.TestCheckEngineSyncAlwaysExit0.test_missing_exits_0) ... ok
+test_ok_exits_0 (tests.test_check_engine_sync.TestCheckEngineSyncAlwaysExit0.test_ok_exits_0) ... ok
+test_stale_exits_0 (tests.test_check_engine_sync.TestCheckEngineSyncAlwaysExit0.test_stale_exits_0) ... ok
+test_mismatch_when_pin_differs (tests.test_check_engine_sync.TestCheckEngineSyncMISMATCH.test_mismatch_when_pin_differs) ... ok
+test_missing_no_dist_source (tests.test_check_engine_sync.TestCheckEngineSyncMISSING.test_missing_no_dist_source) ... ok
+test_missing_no_engine_dir (tests.test_check_engine_sync.TestCheckEngineSyncMISSING.test_missing_no_engine_dir) ... ok
+test_ok_when_pin_matches (tests.test_check_engine_sync.TestCheckEngineSyncOK.test_ok_when_pin_matches) ... ok
+test_output_starts_with_engine_sync (tests.test_check_engine_sync.TestCheckEngineSyncOutputFormat.test_output_starts_with_engine_sync) ... ok
+test_single_line_output (tests.test_check_engine_sync.TestCheckEngineSyncOutputFormat.test_single_line_output) ... ok
+test_stale_when_old_generated (tests.test_check_engine_sync.TestCheckEngineSyncSTALE.test_stale_when_old_generated) ... ok
+test_bad_flag_exits_2 (tests.test_check_engine_sync.TestCheckEngineSyncUsageError.test_bad_flag_exits_2)
+Unknown flag should trigger usage error. ... ok
+test_explicit_version_succeeds (tests.test_build_exact_match.TestBuildExactMatchExplicitVersion.test_explicit_version_succeeds)
+Explicit VERSION argument bypasses the tag check. ... ok
+test_untagged_exits_1 (tests.test_build_exact_match.TestBuildExactMatchUntagged.test_untagged_exits_1)
+When HEAD has no tag, bare invocation → exit 1. ... ok
+test_untagged_message_content (tests.test_build_exact_match.TestBuildExactMatchUntagged.test_untagged_message_content)
+The FATAL message must mention passing VERSION explicitly. ... ok
+test_tagged_exits_0 (tests.test_build_exact_match.TestBuildExactMatchWithTagged.test_tagged_exits_0)
+When HEAD has an exact tag, bare invocation succeeds. ... FAIL
+
+======================================================================
+FAIL: test_tagged_exits_0 (tests.test_build_exact_match.TestBuildExactMatchWithTagged.test_tagged_exits_0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T14-00-phase0/tests/test_build_exact_match.py", line 140, in test_tagged_exits_0
+    self.assertEqual(
+AssertionError: 1 != 0 : Tagged commit must exit 0, got 1: FATAL: not on a tagged commit; pass VERSION explicitly for non-release builds
+
+
+----------------------------------------------------------------------
+Ran 25 tests in 2.324s
+
+FAILED (failures=1)
+
+Exit code: 1

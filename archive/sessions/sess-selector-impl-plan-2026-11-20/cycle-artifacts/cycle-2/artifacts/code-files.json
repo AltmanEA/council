@@ -1,0 +1,7 @@
+{
+  "files": [".agents/skills/selector/runtime/selector_runtime.py", ".agents/skills/selector/SKILL.md"],
+  "signatures": [
+    {"file": ".agents/skills/selector/runtime/selector_runtime.py", "names": ["CEILING_TOKENS", "CEILING_FILES", "DEFAULT_TOKENS", "DEFAULT_FILES", "INJECTION_PATTERNS", "sha256_file", "load_manifest", "sanitize_metadata", "rank", "run_query", "validate_output", "write_audit"]}
+  ],
+  "notes": "Internal deterministic harness; no external tool type. Existing contract tokens in SKILL.md preserved."
+}

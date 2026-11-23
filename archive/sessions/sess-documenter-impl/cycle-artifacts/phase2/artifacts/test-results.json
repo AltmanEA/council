@@ -1,0 +1,37 @@
+{
+  "iteration": 1,
+  "command": "python3 -m unittest tests.test_card_contract tests.test_approve_grammar -v",
+  "exit_code": 1,
+  "passed": 55,
+  "failed": 12,
+  "errors": 0,
+  "collection_error": false,
+  "failed_test_ids": [
+    "TestAnchorStep5Approve.test_anchor_agent_proposed",
+    "TestAnchorStep5Approve.test_anchor_card_line_limit_ten",
+    "TestAnchorStep5Approve.test_anchor_card_template_audit_label",
+    "TestAnchorStep5Approve.test_anchor_card_template_category_label",
+    "TestAnchorStep5Approve.test_anchor_card_template_classification_label",
+    "TestAnchorStep5Approve.test_anchor_card_template_delta_label",
+    "TestAnchorStep5Approve.test_anchor_card_template_files_label",
+    "TestAnchorStep5Approve.test_anchor_card_template_state_label",
+    "TestAnchorStep5Approve.test_anchor_card_template_translations_label",
+    "TestAnchorStep5Approve.test_anchor_russian_terminology",
+    "TestAnchorStep5Approve.test_anchor_state_final",
+    "TestAnchorStep5Approve.test_anchor_state_intermediate"
+  ],
+  "full_suite": {
+    "tests.test_approve_grammar": 0,
+    "tests.test_bump_version": 0,
+    "tests.test_card_contract": 1,
+    "tests.test_check_all": 0,
+    "tests.test_check_all_hook_contract": 0,
+    "tests.test_check_drift": 0,
+    "tests.test_classify_bump": 0,
+    "tests.test_docmeta": 0,
+    "tests.test_gen_manifest": 0,
+    "tests.test_install_hooks": 0,
+    "tests.test_link_integrity": 0
+  },
+  "full_suite_all_green": false
+}

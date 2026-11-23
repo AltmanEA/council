@@ -1,0 +1,53 @@
+{
+  "files": [
+    {
+      "path": "tools/gen_engine.sh",
+      "signatures": [
+        "set -euo pipefail",
+        "die() { echo \"gen_engine:",
+        "git describe --tags --exact-match",
+        "git ls-tree -r --name-only",
+        "git show",
+        "ENGINE: $VERSION @ $SHORT_SHA",
+        "DIST-SOURCE",
+        "tag=$REF",
+        "generated="
+      ]
+    },
+    {
+      "path": "tools/check_engine_sync.py",
+      "signatures": [
+        "engine-sync: OK",
+        "engine-sync: MISMATCH",
+        "engine-sync: STALE",
+        "engine-sync: MISSING",
+        "resolve_ref_commit",
+        "14 * 24 * 3600",
+        "pin_commit[:8] == current_commit",
+        "pin_tag"
+      ]
+    },
+    {
+      "path": "dist/build.sh",
+      "signatures": [
+        "git describe --tags --exact-match",
+        "FATAL: not on a tagged commit; pass VERSION explicitly for non-release builds"
+      ]
+    },
+    {
+      "path": "tools/README.md",
+      "signatures": [
+        "gen_engine.sh",
+        "check_engine_sync.py"
+      ]
+    },
+    {
+      "path": "dist/RUNBOOK.md",
+      "signatures": [
+        "Bare `build.sh` now **requires an exact tag**",
+        "explicit VERSION"
+      ]
+    }
+  ],
+  "notes": "Target tests: 25/25 passed (9 gen_engine + 10 check_engine_sync + 6 build_exact_match). Regression tests: 31/32 passed (test_dist_composition 13/13, test_dist_isolated_layout 18/19). The single regression failure (test_gitignore_created) is pre-existing — install.sh's host .gitignore managed block only writes 'sessions/' but the test expects entries like '.council/backup-*/', '.council/**/__pycache__/', etc. Not in implementation scope. Deviation: gen_engine.sh resolves ROOT_DIR from cwd (git rev-parse --show-toplevel) instead of SCRIPT_DIR to work in scratch test repos. check_engine_sync.py falls back to pin tag from DIST-SOURCE when v1-latest/v1-stable refs don't exist, matching test expectations."
+}

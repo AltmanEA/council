@@ -1,0 +1,39 @@
+{
+  "files": [
+    "tests/test_check_all.py",
+    "tests/test_check_all_hook_contract.py",
+    "tests/test_link_integrity.py"
+  ],
+  "test_command": "python3 -m unittest tests.test_check_all tests.test_check_all_hook_contract tests.test_install_hooks tests.test_link_integrity -v",
+  "baseline_run": {
+    "hook_contract": {
+      "exit_code": 1,
+      "note": "8 FAIL (all hook contract tests red vs legacy). Legacy case 2 has no branching, no differentiation between 🚨 critical and crash — every test correctly fails."
+    },
+    "main": {
+      "exit_code": 0,
+      "note": "56 PASS, 0 FAIL (all test_check_all tests green). Default=low contract implemented, assertions corrected."
+    },
+    "install_hooks": {
+      "exit_code": 0,
+      "note": "19 PASS, 0 FAIL (test_install_hooks green)."
+    },
+    "link_integrity": {
+      "exit_code": 0,
+      "note": "10 PASS, 0 FAIL (test_link_integrity green). Exit codes updated to new contract: HIGH → rc=2."
+    }
+  },
+  "iteration3_fixes": [
+    "test_live_corpus_runs_clean_exit_code: rc accepted (0,1) instead of (0,2) — default=low reports low findings, exit 1 normal",
+    "test_ambiguous_heading_low_not_medium: rc=1 (low reported at default=low), added assert no medium severity",
+    "test_unresolved_section_reference_medium: rc=1 (medium reported at default=low)",
+    "test_severity_filters_exit_code: restructured to use single medium finding, verified rc_default=1 / rc_high=0"
+  ],
+  "iteration4_fixes": [
+    "test_missing_file_reference_blocks: rc=1 → rc=2 (docs→manifest HIGH)",
+    "test_ru_reference_requires_registration: rc=1 → rc=2 (unregistered RU reference HIGH)",
+    "test_unregistered_existing_file_blocks: rc=1 → rc=2 (unregistered existing file HIGH)",
+    "test_unparsable_manifest_skips_docs_side: rc=0 → rc=1 (parity-skipped medium remains, no docs-manifest-link)",
+    "test_full_scan_baseline_unchanged: rc=0 → assertIn(rc, (0,1)) — live corpus has low findings at default=low"
+  ]
+}

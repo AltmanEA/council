@@ -1,0 +1,20 @@
+{
+  "run_id": "2026-11-20T10-43-05-1",
+  "session": "sess-selector-impl-plan-2026-11-20",
+  "worktree": "removed",
+  "iteration": 2,
+  "phase": "complete",
+  "status": "complete",
+  "fail_count": 0,
+  "progress": "improving",
+  "last_exit_code": 0,
+  "last_passed": 160,
+  "test_output_paths": ["artifacts/test-output-1.txt", "artifacts/test-output-2.txt"],
+  "prompt_versions": { "test-author": 2, "code-author": 2, "test-runner": 2, "analyst": 2 },
+  "stop_reason": null,
+  "started_at": "2026-11-20T10:43:05Z",
+  "elapsed_seconds": 0,
+  "final_commit": "3163d03",
+  "level0_pass": true,
+  "notes": "All 4 files byte-identical between worktree and main tree before merge. Fixture repair recorded in artifacts/fixture-change-note.md. Pre-commit WARN-ONLY (11 existing docs findings), non-blocking."
+}

@@ -1,0 +1,11 @@
+{
+  "files": [
+    "tests/test_archive_skip.py",
+    "tests/test_manifest_archive.py"
+  ],
+  "test_command": "python3 -m unittest discover -s tests -p 'test_*.py'",
+  "baseline_run": {
+    "exit_code": 1,
+    "note": "red before impl — expected; 5 archive-exclusion assertions fail (filter does not exist yet), 2 substring-match guard tests and 3 manifest pass-through tests pass (correct behavior verified)"
+  }
+}

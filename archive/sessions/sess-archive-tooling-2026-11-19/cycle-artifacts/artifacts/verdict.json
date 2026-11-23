@@ -1,0 +1,15 @@
+{
+  "pass": true,
+  "level": 0,
+  "progress": "improving",
+  "reasons": [
+    "target runs exit_code==0 (7/7 + 3/3)",
+    "pass-count grew 256 -> 266 vs baseline (only the 4 known transitional TestLiveCorpus failures remain, identical to baseline)",
+    "signatures _ARCHIVE_PREFIXES/is_archived present in tools/check_all.py (grep verified, lines 120-125)",
+    "diff paths subset of whitelist: tools/check_all.py, tools/README.md (modified), tests/test_archive_skip.py, tests/test_manifest_archive.py (new); deny-list untouched",
+    "ADR-013 Tier 2+ scan: 0 hits",
+    "OP-2 LOC: tools/*.py = 3473 < 3600 (feature cost +14 LOC in check_all.py)"
+  ],
+  "next_steps": ["merge whitelisted paths to main tree", "re-run full unittest suite in main tree (green-in-worktree is not sufficient)"],
+  "critical_blocker": false
+}

@@ -1,0 +1,190 @@
+=== RUN 1: python3 -m unittest tests.test_check_all -v ===
+test_clean_corpus_exit_0_silent (tests.test_check_all.TestCleanCorpus.test_clean_corpus_exit_0_silent)
+Contract §4 (human rendering): clean -> no output, exit 0. ... ok
+test_fixture_manifest_is_in_parity (tests.test_check_all.TestCleanCorpus.test_fixture_manifest_is_in_parity) ... ok
+test_json_output_is_jsonl_with_required_keys (tests.test_check_all.TestCli.test_json_output_is_jsonl_with_required_keys) ... ok
+test_severity_filter_and_rule_selection (tests.test_check_all.TestCli.test_severity_filter_and_rule_selection) ... ok
+test_unknown_rule_token_exit_2 (tests.test_check_all.TestCli.test_unknown_rule_token_exit_2) ... ok
+test_clean_silent_no_ok_line (tests.test_check_all.TestContractRenderExitCodes.test_clean_silent_no_ok_line)
+Clean corpus: stdout empty, exit 0 (no "OK" line). ... ok
+test_clean_silent_under_severity_low (tests.test_check_all.TestContractRenderExitCodes.test_clean_silent_under_severity_low)
+Even with --severity low, a clean corpus produces no output. ... ok
+test_high_and_medium_findings_sorted_by_severity (tests.test_check_all.TestContractRenderExitCodes.test_high_and_medium_findings_sorted_by_severity)
+Findings sorted: high first, then medium, then low. ... ok
+test_high_finding_critical_and_findings_lines_exit_2 (tests.test_check_all.TestContractRenderExitCodes.test_high_finding_critical_and_findings_lines_exit_2)
+One high finding -> "sh critical: 1" + "w findings: N", exit 2. ... ok
+test_low_only_finding_severity_warn_marker_exit_1 (tests.test_check_all.TestContractRenderExitCodes.test_low_only_finding_severity_warn_marker_exit_1)
+Findings at low/medium only, --severity low -> "w findings: N" exit 1. ... FAIL
+test_finding_lines_carry_tokens_and_parse (tests.test_check_all.TestHumanReadableTokenFormat.test_finding_lines_carry_tokens_and_parse) ... ok
+test_high_finding_line_contains_literal_severity_high (tests.test_check_all.TestHumanReadableTokenFormat.test_high_finding_line_contains_literal_severity_high) ... ok
+test_json_mode_unchanged (tests.test_check_all.TestHumanReadableTokenFormat.test_json_mode_unchanged) ... ok
+test_internal_error_distinguishable_from_critical_marker (tests.test_check_all.TestInternalError.test_internal_error_distinguishable_from_critical_marker) ... ok
+test_unreadable_manifest_fails_loud_exit_2 (tests.test_check_all.TestInternalError.test_unreadable_manifest_fails_loud_exit_2) ... ok
+test_live_corpus_runs_clean_exit_code (tests.test_check_all.TestLiveCorpus.test_live_corpus_runs_clean_exit_code) ... ok
+test_non_kebab_folder_high (tests.test_check_all.TestNaming.test_non_kebab_folder_high) ... ok
+test_line_count_overflow_high (tests.test_check_all.TestRule1LineCount.test_line_count_overflow_high) ... ok
+test_metadata_and_blank_lines_not_counted (tests.test_check_all.TestRule1LineCount.test_metadata_and_blank_lines_not_counted) ... ok
+test_changelog_wrong_location_medium (tests.test_check_all.TestRule2Changelog.test_changelog_wrong_location_medium) ... FAIL
+test_missing_changelog_high (tests.test_check_all.TestRule2Changelog.test_missing_changelog_high) ... ok
+test_ambiguous_heading_low_not_medium (tests.test_check_all.TestRule4CrossRefs.test_ambiguous_heading_low_not_medium) ... FAIL
+test_broken_anchor_medium_not_blocking (tests.test_check_all.TestRule4CrossRefs.test_broken_anchor_medium_not_blocking) ... FAIL
+test_corpus_wide_unique_heading_resolves_passes (tests.test_check_all.TestRule4CrossRefs.test_corpus_wide_unique_heading_resolves_passes) ... ok
+test_implementation_file_numeric_ref_resolves (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_numeric_ref_resolves) ... ok
+test_implementation_file_ref_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_hit_passes) ... ok
+test_implementation_file_ref_miss_low_never_medium (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_miss_low_never_medium) ... FAIL
+test_missing_reference_docs_en_path_high (tests.test_check_all.TestRule4CrossRefs.test_missing_reference_docs_en_path_high) ... ok
+test_relative_path_reference_broken_high (tests.test_check_all.TestRule4CrossRefs.test_relative_path_reference_broken_high) ... ok
+test_relative_path_reference_resolves_file_relative_first (tests.test_check_all.TestRule4CrossRefs.test_relative_path_reference_resolves_file_relative_first) ... ok
+test_same_line_named_file_heading_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_same_line_named_file_heading_hit_passes) ... ok
+test_same_line_named_file_heading_miss_high (tests.test_check_all.TestRule4CrossRefs.test_same_line_named_file_heading_miss_high) ... ok
+test_same_line_plain_path_no_backticks_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_same_line_plain_path_no_backticks_hit_passes) ... ok
+test_section_reference_to_real_heading_passes (tests.test_check_all.TestRule4CrossRefs.test_section_reference_to_real_heading_passes) ... ok
+test_unresolved_section_reference_medium (tests.test_check_all.TestRule4CrossRefs.test_unresolved_section_reference_medium) ... FAIL
+test_zero_matches_stays_medium (tests.test_check_all.TestRule4CrossRefs.test_zero_matches_stays_medium) ... FAIL
+test_manifest_drift_high (tests.test_check_all.TestRule6ManifestParity.test_manifest_drift_high) ... ok
+test_non_index_allowed_by_parent_index_not_orphan (tests.test_check_all.TestRule6ManifestParity.test_non_index_allowed_by_parent_index_not_orphan) ... ok
+test_orphan_high (tests.test_check_all.TestRule6ManifestParity.test_orphan_high) ... ok
+test_bad_frontmatter_is_finding_not_exit_2 (tests.test_check_all.TestSchema.test_bad_frontmatter_is_finding_not_exit_2) ... ok
+test_last_modified_deprecated_warning (tests.test_check_all.TestSchema.test_last_modified_deprecated_warning) ... FAIL
+test_severity_filters_exit_code (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_filters_exit_code)
+When severity filter hides all findings, exit code is 0 (clean). ... FAIL
+test_severity_filters_json_output (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_filters_json_output)
+--json mode: severity filter still applies, no marker lines. ... ok
+test_severity_high_hides_medium_not_reported (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_high_hides_medium_not_reported)
+Default (high) severity: medium-only findings are not reported -> exit 0. ... ok
+test_severity_low_hides_only_low (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_low_hides_only_low)
+--severity low: low findings hidden at default (high). ... ok
+test_severity_medium_shows_medium_exit_1 (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_medium_shows_medium_exit_1)
+--severity medium: medium findings are reported -> exit 1. ... ok
+test_strict_exposes_low_warning (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_strict_exposes_low_warning)
+--strict exposes even warning-severity findings. ... ok
+test_strict_reports_all_findings (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_strict_reports_all_findings)
+--strict reports every finding regardless of severity -> exit code ... ok
+
+======================================================================
+FAIL: test_low_only_finding_severity_warn_marker_exit_1 (tests.test_check_all.TestContractRenderExitCodes.test_low_only_finding_severity_warn_marker_exit_1)
+Findings at low/medium only, --severity low -> "w findings: N" exit 1.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 132, in test_low_only_finding_severity_warn_marker_exit_1
+    self.assertIn("w findings:", lines[0])
+AssertionError: 'w findings:' not found in '⚠ findings: 1'
+
+======================================================================
+FAIL: test_changelog_wrong_location_medium (tests.test_check_all.TestRule2Changelog.test_changelog_wrong_location_medium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 329, in test_changelog_wrong_location_medium
+    self.assertTrue(_find(records, rule="changelog-path-location",
+AssertionError: [] is not true
+
+======================================================================
+FAIL: test_ambiguous_heading_low_not_medium (tests.test_check_all.TestRule4CrossRefs.test_ambiguous_heading_low_not_medium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 499, in test_ambiguous_heading_low_not_medium
+    self.assertTrue(any("Shared Heading" in h["description"]
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_broken_anchor_medium_not_blocking (tests.test_check_all.TestRule4CrossRefs.test_broken_anchor_medium_not_blocking)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 341, in test_broken_anchor_medium_not_blocking
+    self.assertTrue(hits)
+AssertionError: [] is not true
+
+======================================================================
+FAIL: test_implementation_file_ref_miss_low_never_medium (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_miss_low_never_medium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 555, in test_implementation_file_ref_miss_low_never_medium
+    self.assertTrue(any("Nonexistent Chapter Here" in h["description"]
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_unresolved_section_reference_medium (tests.test_check_all.TestRule4CrossRefs.test_unresolved_section_reference_medium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 366, in test_unresolved_section_reference_medium
+    self.assertTrue(any("Totally Absent" in h["description"] for h in hits))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_zero_matches_stays_medium (tests.test_check_all.TestRule4CrossRefs.test_zero_matches_stays_medium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 522, in test_zero_matches_stays_medium
+    self.assertTrue(any("Wholly Unknown Topic" in h["description"]
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_last_modified_deprecated_warning (tests.test_check_all.TestSchema.test_last_modified_deprecated_warning)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 691, in test_last_modified_deprecated_warning
+    self.assertEqual(len(hits), 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_severity_filters_exit_code (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_filters_exit_code)
+When severity filter hides all findings, exit code is 0 (clean).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T13-00-01/tests/test_check_all.py", line 249, in test_severity_filters_exit_code
+    self.assertEqual(rc_default, 0)
+AssertionError: 2 != 0
+
+----------------------------------------------------------------------
+Ran 48 tests in 0.481s
+
+FAILED (failures=9)
+
+=== RUN 2: python3 -m unittest tests.test_check_all_hook_contract -v ===
+test_distinguish_critical_from_crash_in_block_mode (tests.test_check_all_hook_contract.TestHookCase2Behavior.test_distinguish_critical_from_crash_in_block_mode)
+🚨 critical path vs crash path must produce DIFFERENT stderr. ... ok
+test_distinguish_critical_from_crash_in_warn_mode (tests.test_check_all_hook_contract.TestHookCase2Behavior.test_distinguish_critical_from_crash_in_warn_mode)
+Same differentiation test for warn mode. ... ok
+test_case_2_critical_warn_mode_exits_0 (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_critical_warn_mode_exits_0)
+For 🚨 critical: warn mode → exit 0 (not fail-closed). ... ok
+test_case_2_differentiates_critical_marker (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_differentiates_critical_marker)
+case 2) MUST contain code that greps/checks for 🚨 critical. ... ok
+test_case_2_differentiates_internal_error_in_code (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_differentiates_internal_error_in_code)
+case 2) MUST distinguish crash from critical by checking for ... ok
+test_case_2_else_fallback_for_crash (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_else_fallback_for_crash)
+case 2) must fall through to fail-closed when neither ... ok
+test_case_2_has_conditional_branching (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_has_conditional_branching)
+case 2) MUST have an if/elif/else chain — legacy is flat ... ok
+test_case_2_has_multiple_exit_paths (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_has_multiple_exit_paths)
+case 2) must have ≥ 2 exit calls (critical vs crash). ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.089s
+
+OK
+
+=== RUN 3: python3 -m unittest tests.test_install_hooks -v (regression) ===
+test_block_checker_absent_exit_1_fail_closed (tests.test_install_hooks.HookExitCodeContract.test_block_checker_absent_exit_1_fail_closed) ... ok
+test_block_clean_exit_0 (tests.test_install_hooks.HookExitCodeContract.test_block_clean_exit_0) ... ok
+test_block_crash_exit_1 (tests.test_install_hooks.HookExitCodeContract.test_block_crash_exit_1) ... ok
+test_block_high_findings_exit_1_names_rule_and_file (tests.test_install_hooks.HookExitCodeContract.test_block_high_findings_exit_1_names_rule_and_file) ... ok
+test_block_medium_only_exit_0_with_warning (tests.test_install_hooks.HookExitCodeContract.test_block_medium_only_exit_0_with_warning) ... ok
+test_block_mixed_findings_exit_1 (tests.test_install_hooks.HookExitCodeContract.test_block_mixed_findings_exit_1) ... ok
+test_block_unexpected_exit_code_treated_as_crash (tests.test_install_hooks.HookExitCodeContract.test_block_unexpected_exit_code_treated_as_crash) ... ok
+test_warn_checker_absent_exit_0_loud (tests.test_install_hooks.HookExitCodeContract.test_warn_checker_absent_exit_0_loud) ... ok
+test_warn_clean_exit_0 (tests.test_install_hooks.HookExitCodeContract.test_warn_clean_exit_0) ... ok
+test_warn_crash_exit_0_but_loud_banner (tests.test_install_hooks.HookExitCodeContract.test_warn_crash_exit_0_but_loud_banner) ... ok
+test_warn_high_findings_exit_0_printed_verbatim (tests.test_install_hooks.HookExitCodeContract.test_warn_high_findings_exit_0_printed_verbatim) ... ok
+test_warn_medium_findings_exit_0 (tests.test_install_hooks.HookExitCodeContract.test_warn_medium_findings_exit_0) ... ok
+test_install_outside_repo_fails_with_remediation (tests.test_install_hooks.InstallHooks.test_install_outside_repo_fails_with_remediation) ... ok
+test_install_reports_block_mode_when_flag_present (tests.test_install_hooks.InstallHooks.test_install_reports_block_mode_when_flag_present) ... ok
+test_install_reports_warn_mode_by_default (tests.test_install_hooks.InstallHooks.test_install_reports_warn_mode_by_default) ... ok
+test_install_self_check_passes_and_hook_stays_executable (tests.test_install_hooks.InstallHooks.test_install_self_check_passes_and_hook_stays_executable) ... ok
+test_install_sets_hooks_path_locally (tests.test_install_hooks.InstallHooks.test_install_sets_hooks_path_locally) ... ok
+test_hook_and_installer_are_executable_in_repo (tests.test_install_hooks.SourceFileSanity.test_hook_and_installer_are_executable_in_repo) ... ok
+test_hook_does_not_copy_into_git_hooks (tests.test_install_hooks.SourceFileSanity.test_hook_does_not_copy_into_git_hooks) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.422s
+
+OK

@@ -1,0 +1,25 @@
+{
+  "run_id": "2026-11-22T04-34-16-01",
+  "session": "sess-telemetry-distribution-2026-11-22",
+  "worktree": "impl-run-2026-11-22T04-34-16-01",
+  "iteration": 2,
+  "phase": "done",
+  "status": "completed",
+  "fail_count": 0,
+  "progress": "improving",
+  "last_exit_code": 0,
+  "last_passed": 45,
+  "test_output_paths": ["artifacts/test-output-1.txt", "artifacts/test-output-2.txt"],
+  "prompt_versions": {"test-author": 2, "code-author": 3, "test-runner": 2, "analyst": 0},
+  "stop_reason": null,
+  "started_at": "2026-11-22T04:34:16Z",
+  "elapsed_seconds": 0,
+  "verification": {
+    "level0_pass": true,
+    "path_gate": "PASS (5 paths)",
+    "adr013_scan": "clean",
+    "main_tree_tests": "45 OK",
+    "dist_dry_run": "DRY-RUN PASSED",
+    "advisory_check_all": "11 pre-existing low findings in docs/, none from this change"
+  }
+}

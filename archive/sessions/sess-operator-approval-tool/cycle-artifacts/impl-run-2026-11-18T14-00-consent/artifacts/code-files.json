@@ -1,0 +1,23 @@
+{
+  "files": ["tools/consent_terminal.py"],
+  "signatures": [
+    {
+      "file": "tools/consent_terminal.py",
+      "names": [
+        "_jsonl_read_all",
+        "_jsonl_write_all",
+        "_jsonl_append_locked",
+        "create_request",
+        "read_pending",
+        "prune_pending",
+        "verify_decision",
+        "mark_consumed",
+        "decide",
+        "_cmd_request",
+        "_cmd_review",
+        "main"
+      ]
+    }
+  ],
+  "notes": "Iteration 3: (1) _jsonl_read_all flock LOCK_SH, (2) blocking select, (3) decide() \\x03/\\x04 → denied. Iteration 4 (F4-F10): F4 diff stats (+add -del) + expiry countdown displayed after summary; F5 's' shows verbatim diff before decide(); F6 engagement gate (confirming state, Enter expand-only unless confirming); F7 raw \\r→\\n normalization; F8 non-raw EOF → denied, empty line → Enter; F9 review filters state==\"pending\" only; F10 secrets.token_hex(4) with collision check (8 hex, secure). decide() pure & unchanged."
+}

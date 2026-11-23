@@ -1,0 +1,6 @@
+{"run_id":"2026-11-23T14-00-00-01","iteration":2,
+ "target":{"exit_code":0,"passed":25,"failed":0,"errors":0,"collection_error":false,"per_module":{"test_gen_engine":9,"test_check_engine_sync":11,"test_build_exact_match":5}},
+ "regression":{"exit_code":1,"passed":31,"failed":1,"errors":0,"known_pre_existing_failures":["test_gitignore_created (confirmed pre-existing iter1, main tree too)"],"introduced_new_failures":[]},
+ "commits_by_subagents":0,
+ "integrity_violation":[],
+ "outputs":["test-output-4.txt","test-output-5.txt"]}

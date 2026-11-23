@@ -1,0 +1,46 @@
+test_broken_in_summary (tests.test_session_status.TestSessionStatus.test_broken_in_summary)
+Req 6: BROKEN runs are included in the final summary count. ... ok
+test_broken_json_output (tests.test_session_status.TestSessionStatus.test_broken_json_output)
+Req 6: malformed JSON produces '<run_id> BROKEN ...'. ... ok
+test_broken_missing_required_fields (tests.test_session_status.TestSessionStatus.test_broken_missing_required_fields)
+Req 6: JSON missing 'status' produces BROKEN. ... ok
+test_default_sessions_dir (tests.test_session_status.TestSessionStatus.test_default_sessions_dir)
+Req 10: without positional arg, tool uses 'sessions' as default. ... ok
+test_exit_0_all_terminal (tests.test_session_status.TestSessionStatus.test_exit_0_all_terminal)
+Req 8: exit 0 when all runs are in terminal states. ... ok
+test_exit_1_broken (tests.test_session_status.TestSessionStatus.test_exit_1_broken)
+Req 8: exit 1 when at least one run is BROKEN. ... ok
+test_exit_1_running (tests.test_session_status.TestSessionStatus.test_exit_1_running)
+Req 8: exit 1 when at least one run is 'running'. ... ok
+test_exit_2_missing_directory (tests.test_session_status.TestSessionStatus.test_exit_2_missing_directory)
+Req 8: exit 2 when the sessions directory does not exist. ... ok
+test_finds_all_runs_at_multiple_depths (tests.test_session_status.TestSessionStatus.test_finds_all_runs_at_multiple_depths)
+Req 1: discovers runs at different nesting levels. ... ok
+test_help_flag (tests.test_session_status.TestSessionStatus.test_help_flag)
+Req 10: --help is recognised by argparse (no crash, exit 0). ... ok
+test_json_ordering_matches_text (tests.test_session_status.TestSessionStatus.test_json_ordering_matches_text)
+Req 5: JSON array order is the same as text (lexicographic by run_id). ... ok
+test_json_output_format (tests.test_session_status.TestSessionStatus.test_json_output_format)
+Req 5: --json produces valid JSON with required fields. ... ok
+test_json_with_broken_runs (tests.test_session_status.TestSessionStatus.test_json_with_broken_runs)
+Req 5+6: --json with a BROKEN run still produces valid JSON. ... ok
+test_no_runs_empty_directory (tests.test_session_status.TestSessionStatus.test_no_runs_empty_directory)
+Req 7: empty sessions dir → 'no runs', exit 0. ... ok
+test_no_runs_no_sessions_subdir (tests.test_session_status.TestSessionStatus.test_no_runs_no_sessions_subdir)
+Req 7: directory without impl-run-* subdirectories. ... ok
+test_output_line_format (tests.test_session_status.TestSessionStatus.test_output_line_format)
+Req 2: line matches '<run_id>  <status>  phase=<phase>  ..." ... ok
+test_recurses_into_subdirectories (tests.test_session_status.TestSessionStatus.test_recurses_into_subdirectories)
+Req 1: tool finds cycle-state.json recursively in nested dirs. ... ok
+test_sorted_output (tests.test_session_status.TestSessionStatus.test_sorted_output)
+Req 3: runs are sorted lexicographically by run_id. ... ok
+test_summary_includes_completed_and_approved (tests.test_session_status.TestSessionStatus.test_summary_includes_completed_and_approved)
+Req 4: summary also counts completed and operator-approved runs. ... ok
+test_summary_line_format (tests.test_session_status.TestSessionStatus.test_summary_line_format)
+Req 4: final line is 'runs: N  running: R  escalated: E  ..." ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.428s
+
+OK
+EXIT_CODE=0

@@ -1,0 +1,8 @@
+{
+  "files": ["tests/test_check_all_core_root.py"],
+  "test_command": "python3 -m unittest tests.test_check_all_core_root -v",
+  "baseline_run": {
+    "exit_code": 1,
+    "note": "4 FAIL (AC-1, AC-3×2, AC-4 — all exercise --core-root which is not yet implemented; argparse rejects unknown flag with exit 2). 11 OK (AC-2, AC-5×2, AC-6×3, AC-7×5 — existing behaviour and regression guards). Expected red state."
+  }
+}

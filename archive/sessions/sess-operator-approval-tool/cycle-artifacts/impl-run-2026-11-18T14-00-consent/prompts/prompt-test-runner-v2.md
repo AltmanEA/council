@@ -1,0 +1,2 @@
+# prompt-test-runner-v2 (2026-11-18) — iteration 2
+Role: roles/test-runner.md. Same duties as v1; iteration field = 2. Additional instruction: the test file was patched between iterations (test-only defect fix); your run is the authoritative evidence for iteration 2. Record counts from YOUR run, not from prior reports. Output files: test-output-2.txt, test-results.json (iteration:2). Sibling suite test_check_all rerun too (collateral check). Clean __pycache__ afterwards.

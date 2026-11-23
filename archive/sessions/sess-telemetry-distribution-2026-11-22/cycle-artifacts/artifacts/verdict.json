@@ -1,0 +1,11 @@
+{
+  "pass": true,
+  "level0_pass": true,
+  "progress": "improving",
+  "reasons": [],
+  "next_steps": [],
+  "critical_blocker": false,
+  "hypotheses": [
+    "Level 0 authoritative: exit_code=0, pass-count 9->45, signatures present; path-gate and ADR-013 verified separately"
+  ]
+}

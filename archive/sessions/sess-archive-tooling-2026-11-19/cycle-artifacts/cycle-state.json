@@ -1,0 +1,23 @@
+{
+  "run_id": "2026-11-19T21-16-1",
+  "session_id": "sess-archive-tooling-2026-11-19",
+  "worktree": "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T21-16-1",
+  "target_task": "sessions/sess-archive-tooling-2026-11-19/impl-run-2026-11-19T21-16-1/target-task.md",
+  "whitelist": [
+    "tools/check_all.py",
+    "tools/gen_manifest.py",
+    "tests/test_archive_skip.py",
+    "tests/test_manifest_archive.py",
+    "tools/README.md"
+  ],
+  "test_command": "python3 -m unittest discover -s tests -p 'test_*.py'",
+  "status": "running",
+  "iteration": 0,
+  "phase": "test-author",
+  "fail_count": 0,
+  "progress": null,
+  "baseline_pass_count": 256,
+  "baseline_failures": "4 TestLiveCorpus tests (test_check_all.test_live_corpus_runs_clean_exit_code; test_link_integrity full_scan_baseline/strict_zero/zero) fail due to TRANSITIONAL live-corpus state from committed items 1-2 (docs/en/archive/index.md referenced but not yet created). NOT a tooling defect; expected to go green after item 5 migration. New archive tests MUST NOT depend on these.",
+  "prev_diff_hash": null,
+  "prompt_versions": {}
+}

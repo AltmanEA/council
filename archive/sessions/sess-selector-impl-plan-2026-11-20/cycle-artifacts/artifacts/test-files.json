@@ -1,0 +1,3 @@
+{ "files": ["tests/test_selector_contract.py", "tests/test_selector_smoke.py"],
+  "test_command": "python3 -m unittest tests.test_selector_contract tests.test_selector_smoke -v",
+  "baseline_run": { "exit_code": 1, "note": "красные до реализации — ожидание выполнено" } }

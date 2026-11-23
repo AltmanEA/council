@@ -1,0 +1,247 @@
+test_anchor_agent_proposed (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_agent_proposed)
+The Step-(5) section must contain 'agent proposed:' for override bracket. ... FAIL
+test_anchor_approve_mechanical_bare (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_approve_mechanical_bare)
+The Step-(5) section must mention bare 'approve' for mechanical changes. ... ok
+test_anchor_approve_semantic_object_required (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_approve_semantic_object_required)
+The Step-(5) section must require naming the object for semantic changes. ... ok
+test_anchor_card_line_limit_ten (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_line_limit_ten)
+The Step-(5) section must reference the 10-line limit for the card. ... FAIL
+test_anchor_card_template_audit_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_audit_label)
+The Step-(5) section must contain 'Audit:' label (card template). ... FAIL
+test_anchor_card_template_category_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_category_label)
+The Step-(5) section must contain 'Category:' label. ... FAIL
+test_anchor_card_template_classification_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_classification_label)
+The Step-(5) section must contain 'Classification:' label. ... FAIL
+test_anchor_card_template_delta_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_delta_label)
+The Step-(5) section must contain 'Delta:' label. ... FAIL
+test_anchor_card_template_files_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_files_label)
+The Step-(5) section must contain 'Files:' label (card template). ... FAIL
+test_anchor_card_template_state_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_state_label)
+The Step-(5) section must contain 'State:' label. ... FAIL
+test_anchor_card_template_translations_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_translations_label)
+The Step-(5) section must contain 'Translations:' label. ... FAIL
+test_anchor_mechanical_keyword (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_mechanical_keyword)
+The Step-(5) section must mention 'mechanical' as a classification. ... ok
+test_anchor_russian_terminology (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_russian_terminology)
+The Step-(5) section must contain the Russian term 'Карточка согласования'. ... FAIL
+test_anchor_silent_when_clean (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_silent_when_clean)
+The Step-(5) section must mention 'silent when clean' for audit. ... ok
+test_anchor_state_final (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_state_final)
+The Step-(5) section must mention 'final' as a valid State value. ... FAIL
+test_anchor_state_intermediate (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_state_intermediate)
+The Step-(5) section must mention 'intermediate' as a valid State value. ... FAIL
+test_leading_blank_lines_stripped (tests.test_card_contract.TestBlankStripping.test_leading_blank_lines_stripped)
+Leading blank lines don't count toward the 10-line limit. ... ok
+test_trailing_blank_lines_stripped (tests.test_card_contract.TestBlankStripping.test_trailing_blank_lines_stripped)
+Trailing blank lines don't count toward the 10-line limit. ... ok
+test_card_fields_order_is_seven (tests.test_card_contract.TestConformantCards.test_card_fields_order_is_seven)
+CARD_FIELDS has exactly 7 ordered field names, no unknown field allowed. ... ok
+test_conformant_10_line_all_fields (tests.test_card_contract.TestConformantCards.test_conformant_10_line_all_fields)
+A card with all 7 fields and 10 lines total passes (if <= 10). ... ok
+test_conformant_10_line_card (tests.test_card_contract.TestConformantCards.test_conformant_10_line_card)
+A full 10-line card (all 7 fields, State: intermediate, override bracket) passes. ... ok
+test_conformant_6_line_card (tests.test_card_contract.TestConformantCards.test_conformant_6_line_card)
+A 6-line card (no optional fields) passes validation. ... ok
+test_max_card_lines_is_ten (tests.test_card_contract.TestConformantCards.test_max_card_lines_is_ten)
+MAX_CARD_LINES = 10. ... ok
+test_required_fields_are_four (tests.test_card_contract.TestConformantCards.test_required_fields_are_four)
+REQUIRED_FIELDS = [Files, Category, Delta, Classification]. ... ok
+test_clean_audit_clean_triggers_finding (tests.test_card_contract.TestRule_card_audit.test_clean_audit_clean_triggers_finding)
+Audit: clean triggers card-audit (must be omitted). ... ok
+test_clean_audit_em_dash_triggers_finding (tests.test_card_contract.TestRule_card_audit.test_clean_audit_em_dash_triggers_finding)
+Audit: — (em dash) triggers card-audit (must be omitted). ... ok
+test_clean_audit_none_triggers_finding (tests.test_card_contract.TestRule_card_audit.test_clean_audit_none_triggers_finding)
+Audit: none triggers card-audit (must be omitted). ... ok
+test_clean_audit_zero_triggers_finding (tests.test_card_contract.TestRule_card_audit.test_clean_audit_zero_triggers_finding)
+Audit: 0 triggers card-audit (must be omitted). ... ok
+test_finding_audit_passes (tests.test_card_contract.TestRule_card_audit.test_finding_audit_passes)
+Audit with actual findings does NOT trigger card-audit. ... ok
+test_invalid_category_triggers_finding (tests.test_card_contract.TestRule_card_category.test_invalid_category_triggers_finding)
+Category: refactor triggers card-category. ... ok
+test_valid_categories_pass (tests.test_card_contract.TestRule_card_category.test_valid_categories_pass)
+All valid categories pass individually. ... ok
+test_empty_agent_proposed_triggers_finding (tests.test_card_contract.TestRule_card_classification.test_empty_agent_proposed_triggers_finding)
+[agent proposed: ] with empty content triggers card-classification. ... ok
+test_invalid_bracket_format (tests.test_card_contract.TestRule_card_classification.test_invalid_bracket_format)
+Classification with bracket not matching [agent proposed: <non-empty>] triggers. ... ok
+test_invalid_classification_head (tests.test_card_contract.TestRule_card_classification.test_invalid_classification_head)
+Classification: experimental triggers card-classification. ... ok
+test_valid_bracket_format_passes (tests.test_card_contract.TestRule_card_classification.test_valid_bracket_format_passes)
+Classification with valid [agent proposed: mechanical] passes. ... ok
+test_valid_classification_head_passes (tests.test_card_contract.TestRule_card_classification.test_valid_classification_head_passes)
+Classification: mechanical passes. ... ok
+test_invalid_delta_hyphen_instead_of_unicode_minus (tests.test_card_contract.TestRule_card_delta.test_invalid_delta_hyphen_instead_of_unicode_minus)
+Using ASCII hyphen-minus instead of U+2212 triggers card-delta. ... ok
+test_invalid_delta_wrong_format_triggers_finding (tests.test_card_contract.TestRule_card_delta.test_invalid_delta_wrong_format_triggers_finding)
+Delta without / separators triggers card-delta. ... ok
+test_valid_delta_passes (tests.test_card_contract.TestRule_card_delta.test_valid_delta_passes)
+Standard valid Delta format passes. ... ok
+test_valid_delta_with_minus_net_passes (tests.test_card_contract.TestRule_card_delta.test_valid_delta_with_minus_net_passes)
+Delta with net - passes. ... ok
+test_empty_files_value_triggers_finding (tests.test_card_contract.TestRule_card_empty_value.test_empty_files_value_triggers_finding)
+Files: (empty value) triggers card-empty-value. ... ok
+test_fields_in_correct_order_passes (tests.test_card_contract.TestRule_card_field_order.test_fields_in_correct_order_passes)
+Fields in CARD_FIELDS order pass. ... ok
+test_fields_out_of_order_triggers_finding (tests.test_card_contract.TestRule_card_field_order.test_fields_out_of_order_triggers_finding)
+Files after Delta triggers card-field-order. ... ok
+test_11_lines_exceeds_limit (tests.test_card_contract.TestRule_card_line_limit.test_11_lines_exceeds_limit)
+An 11-line card triggers card-line-limit. ... ok
+test_exactly_10_lines_passes_limit (tests.test_card_contract.TestRule_card_line_limit.test_exactly_10_lines_passes_limit)
+A 10-line card does NOT trigger card-line-limit. ... ok
+test_missing_classification_triggers_finding (tests.test_card_contract.TestRule_card_missing_required.test_missing_classification_triggers_finding)
+Removing Classification triggers card-missing-required. ... ok
+test_missing_files_triggers_finding (tests.test_card_contract.TestRule_card_missing_required.test_missing_files_triggers_finding)
+Removing Files from required fields triggers card-missing-required. ... ok
+test_invalid_state_triggers_finding (tests.test_card_contract.TestRule_card_state.test_invalid_state_triggers_finding)
+State: draft triggers card-state. ... ok
+test_valid_state_passes (tests.test_card_contract.TestRule_card_state.test_valid_state_passes)
+State: final passes. ... ok
+test_invalid_translations_no_verified_triggers_finding (tests.test_card_contract.TestRule_card_translations.test_invalid_translations_no_verified_triggers_finding)
+Missing 'verified' keyword triggers card-translations. ... ok
+test_invalid_translations_wrong_separator_triggers_finding (tests.test_card_contract.TestRule_card_translations.test_invalid_translations_wrong_separator_triggers_finding)
+Using * instead of U+00B7 triggers card-translations. ... ok
+test_valid_translations_passes (tests.test_card_contract.TestRule_card_translations.test_valid_translations_passes)
+Valid Translations format passes. ... ok
+test_unknown_field_detected (tests.test_card_contract.TestRule_card_unknown_field.test_unknown_field_detected)
+A field not in CARD_FIELDS triggers card-unknown-field. ... ok
+test_mechanical_dry_run_no_findings (tests.test_card_contract.TestScriptedDryRun.test_mechanical_dry_run_no_findings)
+Mechanical bundle (Phase 1 tail shape) → validator returns []. ... ok
+test_mechanical_dry_run_with_audit_finding (tests.test_card_contract.TestScriptedDryRun.test_mechanical_dry_run_with_audit_finding)
+Mechanical bundle with audit findings → Audit line present, no card-audit finding. ... ok
+test_semantic_dry_run_no_object_rejected (tests.test_card_contract.TestScriptedDryRun.test_semantic_dry_run_no_object_rejected)
+Semantic bundle → approve: (empty object) must be rejected. ... ok
+test_semantic_dry_run_requires_object (tests.test_card_contract.TestScriptedDryRun.test_semantic_dry_run_requires_object)
+Semantic bundle → bare "approve" must be rejected by check_approve. ... ok
+test_case_sensitive_labels_rejected (tests.test_card_contract.TestTolerance.test_case_sensitive_labels_rejected)
+Uppercase label variants (e.g. 'files' vs 'Files') are treated as unknown fields. ... ok
+test_colon_in_value_not_split (tests.test_card_contract.TestTolerance.test_colon_in_value_not_split)
+A colon inside the value (e.g. agent proposed: ...) does not create a second field. ... ok
+test_prose_lines_ignored (tests.test_card_contract.TestTolerance.test_prose_lines_ignored)
+Lines that are not Label: value form are ignored. ... ok
+test_all_table_cases (tests.test_approve_grammar.TestApproveGrammar.test_all_table_cases)
+Every (reply, classification, expected) tuple in the table is verified. ... ok
+test_mechanical_approve_with_colon_cases (tests.test_approve_grammar.TestApproveGrammar.test_mechanical_approve_with_colon_cases)
+All 'approve: ...' cases for mechanical classification return True. ... ok
+test_mechanical_bare_approve_cases (tests.test_approve_grammar.TestApproveGrammar.test_mechanical_bare_approve_cases)
+All bare-approve cases for mechanical classification return True. ... ok
+test_non_approve_token_rejected (tests.test_approve_grammar.TestApproveGrammar.test_non_approve_token_rejected)
+Anything not starting with 'approve' token returns False. ... ok
+test_semantic_approve_empty_object_rejected (tests.test_approve_grammar.TestApproveGrammar.test_semantic_approve_empty_object_rejected)
+approve: with empty/whitespace-only object for semantic returns False. ... ok
+test_semantic_approve_with_object_accepted (tests.test_approve_grammar.TestApproveGrammar.test_semantic_approve_with_object_accepted)
+All 'approve: <non-empty>' cases for semantic classification return True. ... ok
+test_semantic_bare_approve_rejected (tests.test_approve_grammar.TestApproveGrammar.test_semantic_bare_approve_rejected)
+All bare-approve cases for semantic classification return False. ... ok
+
+======================================================================
+FAIL: test_anchor_agent_proposed (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_agent_proposed)
+The Step-(5) section must contain 'agent proposed:' for override bracket.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 797, in test_anchor_agent_proposed
+    self.assertIn(
+AssertionError: 'agent proposed:' not found in " (operator approval carrier — in-chat)\n\nthe step-(5) **approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (op-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). the procedure:\n\n1. **advisory pre-commit audit (mandatory).** before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. the verdict is merged into the approval summary and never blocks. clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **present the summary card.** the agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **wait for the operator's reply.** a mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the safety section`). absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **single-commit bundling.** all files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under op-3).\n\nthere is no consent terminal, no approval_id, no expiry window, no hmac record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must mention 'agent proposed:' override bracket
+
+======================================================================
+FAIL: test_anchor_card_line_limit_ten (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_line_limit_ten)
+The Step-(5) section must reference the 10-line limit for the card.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 821, in test_anchor_card_line_limit_ten
+    self.assertIn(
+AssertionError: '10' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must reference the 10-line card limit
+
+======================================================================
+FAIL: test_anchor_card_template_audit_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_audit_label)
+The Step-(5) section must contain 'Audit:' label (card template).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 749, in test_anchor_card_template_audit_label
+    self.assertIn(
+AssertionError: 'Audit:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'Audit:' card field label
+
+======================================================================
+FAIL: test_anchor_card_template_category_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_category_label)
+The Step-(5) section must contain 'Category:' label.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 725, in test_anchor_card_template_category_label
+    self.assertIn(
+AssertionError: 'Category:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'Category:' card field label
+
+======================================================================
+FAIL: test_anchor_card_template_classification_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_classification_label)
+The Step-(5) section must contain 'Classification:' label.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 741, in test_anchor_card_template_classification_label
+    self.assertIn(
+AssertionError: 'Classification:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'Classification:' card field label
+
+======================================================================
+FAIL: test_anchor_card_template_delta_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_delta_label)
+The Step-(5) section must contain 'Delta:' label.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 733, in test_anchor_card_template_delta_label
+    self.assertIn(
+AssertionError: 'Delta:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'Delta:' card field label
+
+======================================================================
+FAIL: test_anchor_card_template_files_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_files_label)
+The Step-(5) section must contain 'Files:' label (card template).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 717, in test_anchor_card_template_files_label
+    self.assertIn(
+AssertionError: 'Files:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'Files:' card field label
+
+======================================================================
+FAIL: test_anchor_card_template_state_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_state_label)
+The Step-(5) section must contain 'State:' label.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 765, in test_anchor_card_template_state_label
+    self.assertIn(
+AssertionError: 'State:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'State:' card field label
+
+======================================================================
+FAIL: test_anchor_card_template_translations_label (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_card_template_translations_label)
+The Step-(5) section must contain 'Translations:' label.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 757, in test_anchor_card_template_translations_label
+    self.assertIn(
+AssertionError: 'Translations:' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain 'Translations:' card field label
+
+======================================================================
+FAIL: test_anchor_russian_terminology (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_russian_terminology)
+The Step-(5) section must contain the Russian term 'Карточка согласования'.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 813, in test_anchor_russian_terminology
+    self.assertIn(
+AssertionError: 'Карточка согласования' not found in " (operator approval carrier — in-chat)\n\nThe step-(5) **Approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (OP-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). The procedure:\n\n1. **Advisory pre-commit audit (mandatory).** Before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. The verdict is merged into the approval summary and never blocks. Clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **Present the summary card.** The agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **Wait for the operator's reply.** A mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the Safety section`). Absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **Single-commit bundling.** All files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under OP-3).\n\nThere is no consent terminal, no approval_id, no expiry window, no HMAC record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must contain the Russian term 'Карточка согласования'
+
+======================================================================
+FAIL: test_anchor_state_final (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_state_final)
+The Step-(5) section must mention 'final' as a valid State value.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 837, in test_anchor_state_final
+    self.assertIn(
+AssertionError: 'final' not found in " (operator approval carrier — in-chat)\n\nthe step-(5) **approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (op-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). the procedure:\n\n1. **advisory pre-commit audit (mandatory).** before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. the verdict is merged into the approval summary and never blocks. clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **present the summary card.** the agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **wait for the operator's reply.** a mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the safety section`). absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **single-commit bundling.** all files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under op-3).\n\nthere is no consent terminal, no approval_id, no expiry window, no hmac record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must mention 'final' state value
+
+======================================================================
+FAIL: test_anchor_state_intermediate (tests.test_card_contract.TestAnchorStep5Approve.test_anchor_state_intermediate)
+The Step-(5) section must mention 'intermediate' as a valid State value.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T16-00-01/tests/test_card_contract.py", line 829, in test_anchor_state_intermediate
+    self.assertIn(
+AssertionError: 'intermediate' not found in " (operator approval carrier — in-chat)\n\nthe step-(5) **approve** of `documentation-rules` §5.2 — the human act that authorizes any write to documentation artifacts — is the operator's text reply **in the same conversation turn** (op-1: instant approval, no waiting, no out-of-band mechanism; carrier change per sess-documenter-concept-revision, operator decision 2026-11-19). the procedure:\n\n1. **advisory pre-commit audit (mandatory).** before asking for approval, the agent runs `python3 tools/check_all.py` on the proposed change. the verdict is merged into the approval summary and never blocks. clean result → no audit line (silent when clean); findings → a short severity-sorted list with one-line fix hints, appended to the summary.\n2. **present the summary card.** the agent shows: affected files, change category, line delta, and the mechanical/semantic classification (agent proposes; the operator may override).\n3. **wait for the operator's reply.** a mechanical change is approved by a bare `approve`; a **semantic** change (substantive rewrite of meaning) must name its object (e.g. `approve: rewrite of the safety section`). absence of approval is never consent: without an `approve` reply in the conversation, do not write.\n4. **single-commit bundling.** all files of one logical update (document content → changelog → manifest) are bundled by the skill's apply phase into exactly one commit (the single-commit invariant — the foundation of revert-based recovery under op-3).\n\nthere is no consent terminal, no approval_id, no expiry window, no hmac record, no diff-hash binding (the deleted v0.x machinery is archived at `docs/en/documenter-service/legacy/` — do not reintroduce it).\n" : SKILL.md Step-(5) must mention 'intermediate' state value
+
+----------------------------------------------------------------------
+Ran 67 tests in 0.004s
+
+FAILED (failures=12)

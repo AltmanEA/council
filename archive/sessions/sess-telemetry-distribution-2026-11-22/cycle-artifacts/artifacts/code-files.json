@@ -1,0 +1,29 @@
+{
+  "files": [
+    "tools/collect_telemetry.sh",
+    "dist/install.sh",
+    "dist/RUNBOOK.md",
+    "tools/README.md"
+  ],
+  "signatures": {
+    "tools/collect_telemetry.sh": [
+      "parse_config",
+      "redact_ip",
+      "redact_message",
+      "redact_frame",
+      "build_redacted_stack",
+      "cmd_collect",
+      "cmd_inspect",
+      "cmd_bundle",
+      "cmd_read",
+      "main"
+    ],
+    "dist/install.sh": [
+      "usage",
+      "copy_template_item"
+    ],
+    "dist/RUNBOOK.md": [],
+    "tools/README.md": []
+  },
+  "notes": "v2 v1: base64 удалён → открытый heredoc (cat > tmp <<'PY' ... PY + exec python3). v2 diff-review: (1) install.sh disclosure перенесён вне if ENABLE_TELEMETRY — печатается при любой установке (оператор OP-2); (2) redact_frame: путь в формате ./basename:line (было ./basename); (3) hash dedup — хэш считается по out_rec (redacted) без stacktrace_hash, а не по сырому rec; (4) --inspect — добавлены суммарный размер каталога diagnostics и timestamp последней записи; (5) --read — path traversal защита: абсолютные пути и .. пропускаются с warning, извлекаются только manifest.json + файлы из manifest. Все 45 тестов 45/45 OK. install.sh — --enable-telemetry, overlay-safe создание config/каталогов, disclosure всегда."
+}

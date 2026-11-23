@@ -1,0 +1,19 @@
+{
+  "run_id": "2026-11-15T15-21-32-001",
+  "session": "dryrun-impl-skill",
+  "worktree": "impl-run-2026-11-15T15-21-32-001",
+  "iteration": 2,
+  "phase": "done",
+  "status": "completed",
+  "fail_count": 1,
+  "progress": "improving",
+  "last_exit_code": 0,
+  "last_passed": 20,
+  "test_output_paths": ["artifacts/test-output-1.txt"],
+  "prompt_versions": { "test-author": 2, "code-author": 1 },
+  "stop_reason": null,
+  "started_at": "2026-11-15T15:21:32+03:00",
+  "completed_at": "2026-11-15T16:05:00+03:00",
+  "elapsed_seconds": 2400,
+  "merge_note": "Level 0 pass in worktree (iter1) exposed CWD-isolation test defect at merge validation in main tree; rolled back; iteration 2 refined test-author context prompt (v2); merged after green in BOTH environments."
+}

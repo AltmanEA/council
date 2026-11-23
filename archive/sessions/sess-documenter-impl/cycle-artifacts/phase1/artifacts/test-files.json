@@ -1,0 +1,29 @@
+{
+  "files": [
+    "tests/test_check_drift.py",
+    "tools/tests/fixtures/check_drift/phase4/en.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_good.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_bad_identity.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_bad_glossary.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_partially_translated.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_glossary_only.md",
+    "tools/tests/fixtures/check_drift/phase4/drift_identical.md",
+    "tools/tests/fixtures/check_drift/phase4/drift_different.md",
+    "tools/tests/fixtures/check_drift/phase4/report_fail0.json",
+    "tools/tests/fixtures/check_drift/phase4/report_fail2.json",
+    "tools/tests/fixtures/check_drift/phase4/report_malformed.json",
+    "tools/tests/fixtures/check_drift/phase4/mini-glossary.md",
+    "tools/tests/fixtures/check_drift/phase4/en_table_hyphens.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_table_no_hyphens.md",
+    "tools/tests/fixtures/check_drift/phase4/en_flexion.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_flexion_declined.md",
+    "tools/tests/fixtures/check_drift/phase4/en_scope.md",
+    "tools/tests/fixtures/check_drift/phase4/ru_scope_different_line.md"
+  ],
+  "test_command": "python3 -m unittest tests.test_check_drift -v",
+  "baseline_run": {
+    "exit_code": 0,
+    "note": "iteration 3: ALL GREEN. 32 tests, 32 pass, 0 fail, 0 skipped. Green-washing removed: test_live_documenter_service restored to strict assertions (no conditional skip). test_identity_zero_body_no_finding: rc==2 skip removed, test now executes and passes (phase4 implemented). 3 regression baselines from iteration 2 also pass (Code Author's stem fix resolved all 3 bugs)."
+  }
+}

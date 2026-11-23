@@ -1,0 +1,14 @@
+{
+  "iteration": 2,
+  "commands": [
+    "python3 -m unittest tests.test_selector_integration -v",
+    "python3 -m unittest tests.test_selector_contract -v",
+    "python3 -m unittest tests.test_selector_smoke -v"
+  ],
+  "exit_code": 0,
+  "passed": 160,
+  "failed": 0,
+  "errors": 0,
+  "collection_error": false,
+  "failed_tests": []
+}

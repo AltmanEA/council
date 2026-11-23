@@ -1,0 +1,256 @@
+=== TEST: python3 -m unittest tests.test_check_drift -v ===
+test_check_parity_not_exists (tests.test_check_drift.TestCheckParityDeleted.test_check_parity_not_exists) ... ok
+test_drift_bad_usage_exits_2 (tests.test_check_drift.TestDriftRegression.test_drift_bad_usage_exits_2)
+Wrong number of args → exit 2. ... ok
+test_drift_different_exits_1 (tests.test_check_drift.TestDriftRegression.test_drift_different_exits_1)
+Different files → drift mode rc 1 (headings/structural differences). ... ok
+test_drift_identical_exits_0 (tests.test_check_drift.TestDriftRegression.test_drift_identical_exits_0)
+Identical files → drift mode rc 0. ... ok
+test_russian_equiv_in_different_body_line (tests.test_check_drift.TestGlossaryDocumentLevelScope.test_russian_equiv_in_different_body_line)
+EN term 'Translation' on line 11, RU equivalent 'Перевод' on line 12. ... ok
+test_declined_russian_equivalent_matches (tests.test_check_drift.TestGlossaryFlexionRegression.test_declined_russian_equivalent_matches)
+EN term 'Documentation' appears as 'документации' (declined) in RU. ... ok
+test_coverage_footer_lists_gate_rules (tests.test_check_drift.TestHumanRendering.test_coverage_footer_lists_gate_rules)
+Human footer shows deterministic gate rule IDs in phase4 mode. ... ok
+test_human_rendering_format (tests.test_check_drift.TestHumanRendering.test_human_rendering_format)
+Each finding: rule=... severity=... file=... description. ... ok
+test_json_schema_flat_object (tests.test_check_drift.TestJsonOutput.test_json_schema_flat_object)
+Each --json line has exactly {rule, severity, file, description}. ... ok
+test_no_coverage_musur_in_json (tests.test_check_drift.TestJsonOutput.test_no_coverage_musur_in_json)
+--json output must not contain coverage footer lines. ... ok
+test_live_documenter_service (tests.test_check_drift.TestLiveCorpus.test_live_documenter_service)
+Real corpus: check_drift --phase4 on documenter-service EN/RU must exit 0. ... ok
+test_fail0_exits_0_no_phase4_finding (tests.test_check_drift.TestPhase4FailGate.test_fail0_exits_0_no_phase4_finding)
+report_fail0.json has fail=0 → all gates pass, rc 0, no phase4 lines. ... ok
+test_fail2_exits_1_with_phase4_fail_finding (tests.test_check_drift.TestPhase4FailGate.test_fail2_exits_1_with_phase4_fail_finding)
+report_fail2.json has fail=2 → phase4-fail finding, rc 1. ... ok
+test_malformed_report_exit_2 (tests.test_check_drift.TestPhase4FailGate.test_malformed_report_exit_2)
+Malformed JSON → exit 2 + stderr ERROR. ... ok
+test_missing_report_file_exit_2 (tests.test_check_drift.TestPhase4FailGate.test_missing_report_file_exit_2)
+Report file does not exist → exit 2 + stderr ERROR. ... ok
+test_report_field_not_int_exit_2 (tests.test_check_drift.TestPhase4FailGate.test_report_field_not_int_exit_2)
+Report has fail as string → internal error (exit 2). ... ok
+test_bad_glossary_untranslated_finds_failure (tests.test_check_drift.TestPhase4GlossaryGate.test_bad_glossary_untranslated_finds_failure)
+ru_bad_glossary.md leaves 'Translation' as English → phase4-glossary. ... ok
+test_glossary_no_glossary_flag_uses_default (tests.test_check_drift.TestPhase4GlossaryGate.test_glossary_no_glossary_flag_uses_default)
+Without --glossary, default path is used (repo-level glossary). ... ok
+test_glossary_term_not_in_en_body_ignored (tests.test_check_drift.TestPhase4GlossaryGate.test_glossary_term_not_in_en_body_ignored)
+Term 'Governance' is in glossary but NOT in EN body → ignored. ... ok
+test_good_glossary_pass (tests.test_check_drift.TestPhase4GlossaryGate.test_good_glossary_pass)
+ru_good.md has RU equivalents for all EN-body terms → no glossary finding. ... ok
+test_partial_translation_one_glossary_finding (tests.test_check_drift.TestPhase4GlossaryGate.test_partial_translation_one_glossary_finding)
+ru_bad_glossary.md (29 lines, same as EN): verbatim EN at a body index → ... ok
+test_identity_all_identical_finds_en_copy (tests.test_check_drift.TestPhase4IdentityGate.test_identity_all_identical_finds_en_copy)
+ru_bad_identity.md is byte-identical EN copy → phase4-identity finding. ... ok
+test_identity_partial_no_finding (tests.test_check_drift.TestPhase4IdentityGate.test_identity_partial_no_finding)
+ru_partially_translated.md: some body lines differ → NO phase4-identity. ... ok
+test_identity_zero_body_no_finding (tests.test_check_drift.TestPhase4IdentityGate.test_identity_zero_body_no_finding)
+Document with only headers/metadata → zero body lines → no finding. ... ok
+test_fail_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_fail_gate_isolated)
+report_fail2 + good files: only phase4-fail fires. ... ok
+test_glossary_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_glossary_gate_isolated)
+ru_bad_glossary with mini-glossary: only phase4-glossary fires. ... ok
+test_identity_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_identity_gate_isolated)
+ru_bad_identity: only phase4-identity fires. ... ok
+test_parity_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_parity_gate_isolated)
+ru_bad_parity: only phase4-parity fires (other gates not reached/passed). ... ok
+test_good_fixtures_parity_pass (tests.test_check_drift.TestPhase4ParityGate.test_good_fixtures_parity_pass)
+ru_good.md same line count → parity OK (combined with other clean gates). ... ok
+test_parity_length_mismatch_emits_one_finding (tests.test_check_drift.TestPhase4ParityGate.test_parity_length_mismatch_emits_one_finding)
+ru_bad_parity.md has 30 lines vs EN 29 → ONE phase4-parity finding. ... ok
+test_parity_length_mismatch_stops_positional_checks (tests.test_check_drift.TestPhase4ParityGate.test_parity_length_mismatch_stops_positional_checks)
+When lengths differ, no further positional (identity/glossary) checks run. ... ok
+test_table_body_with_hyphens_not_structural (tests.test_check_drift.TestTableHyphenParityRegression.test_table_body_with_hyphens_not_structural)
+EN table body row has hyphenated text, RU counterpart does not. ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 1.181s
+
+OK
+
+=== TEST: python3 -m unittest tests.test_check_all -v ===
+test_clean_corpus_exit_0_silent (tests.test_check_all.TestCleanCorpus.test_clean_corpus_exit_0_silent)
+Contract §4 (human rendering): clean -> no output, exit 0. ... ok
+test_fixture_manifest_is_in_parity (tests.test_check_all.TestCleanCorpus.test_fixture_manifest_is_in_parity) ... ok
+test_json_output_is_jsonl_with_required_keys (tests.test_check_all.TestCli.test_json_output_is_jsonl_with_required_keys) ... ok
+test_severity_filter_and_rule_selection (tests.test_check_all.TestCli.test_severity_filter_and_rule_selection) ... ok
+test_unknown_rule_token_exit_2 (tests.test_check_all.TestCli.test_unknown_rule_token_exit_2) ... ok
+test_clean_silent_no_ok_line (tests.test_check_all.TestContractRenderExitCodes.test_clean_silent_no_ok_line)
+Clean corpus: stdout empty, exit 0 (no "OK" line). ... ok
+test_clean_silent_under_severity_low (tests.test_check_all.TestContractRenderExitCodes.test_clean_silent_under_severity_low)
+Even with --severity low, a clean corpus produces no output. ... ok
+test_high_and_medium_findings_sorted_by_severity (tests.test_check_all.TestContractRenderExitCodes.test_high_and_medium_findings_sorted_by_severity)
+Findings sorted: high first, then medium, then low. ... ok
+test_high_finding_critical_and_findings_lines_exit_2 (tests.test_check_all.TestContractRenderExitCodes.test_high_finding_critical_and_findings_lines_exit_2)
+One high finding -> "🚨 critical: 1" + "⚠ findings: N", exit 2. ... ok
+test_low_only_finding_severity_warn_marker_exit_1 (tests.test_check_all.TestContractRenderExitCodes.test_low_only_finding_severity_warn_marker_exit_1)
+Findings at low/medium only, --severity low -> "⚠ findings: N" exit 1. ... ok
+test_finding_lines_carry_tokens_and_parse (tests.test_check_all.TestHumanReadableTokenFormat.test_finding_lines_carry_tokens_and_parse) ... ok
+test_high_finding_line_contains_literal_severity_high (tests.test_check_all.TestHumanReadableTokenFormat.test_high_finding_line_contains_literal_severity_high) ... ok
+test_json_mode_unchanged (tests.test_check_all.TestHumanReadableTokenFormat.test_json_mode_unchanged) ... ok
+test_internal_error_distinguishable_from_critical_marker (tests.test_check_all.TestInternalError.test_internal_error_distinguishable_from_critical_marker) ... ok
+test_unreadable_manifest_fails_loud_exit_2 (tests.test_check_all.TestInternalError.test_unreadable_manifest_fails_loud_exit_2) ... ok
+test_live_corpus_runs_clean_exit_code (tests.test_check_all.TestLiveCorpus.test_live_corpus_runs_clean_exit_code) ... ok
+test_non_kebab_folder_high (tests.test_check_all.TestNaming.test_non_kebab_folder_high) ... ok
+test_line_count_overflow_high (tests.test_check_all.TestRule1LineCount.test_line_count_overflow_high) ... ok
+test_metadata_and_blank_lines_not_counted (tests.test_check_all.TestRule1LineCount.test_metadata_and_blank_lines_not_counted) ... ok
+test_changelog_wrong_location_medium (tests.test_check_all.TestRule2Changelog.test_changelog_wrong_location_medium) ... ok
+test_missing_changelog_high (tests.test_check_all.TestRule2Changelog.test_missing_changelog_high) ... ok
+test_ambiguous_heading_low_not_medium (tests.test_check_all.TestRule4CrossRefs.test_ambiguous_heading_low_not_medium)
+ambiguous-section-reference severity=low (not medium) at default low. ... ok
+test_broken_anchor_medium_not_blocking (tests.test_check_all.TestRule4CrossRefs.test_broken_anchor_medium_not_blocking) ... ok
+test_corpus_wide_unique_heading_resolves_passes (tests.test_check_all.TestRule4CrossRefs.test_corpus_wide_unique_heading_resolves_passes) ... ok
+test_implementation_file_numeric_ref_resolves (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_numeric_ref_resolves) ... ok
+test_implementation_file_ref_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_hit_passes) ... ok
+test_implementation_file_ref_miss_low_never_medium (tests.test_check_all.TestRule4CrossRefs.test_implementation_file_ref_miss_low_never_medium) ... ok
+test_missing_reference_docs_en_path_high (tests.test_check_all.TestRule4CrossRefs.test_missing_reference_docs_en_path_high) ... ok
+test_relative_path_reference_broken_high (tests.test_check_all.TestRule4CrossRefs.test_relative_path_reference_broken_high) ... ok
+test_relative_path_reference_resolves_file_relative_first (tests.test_check_all.TestRule4CrossRefs.test_relative_path_reference_resolves_file_relative_first) ... ok
+test_same_line_named_file_heading_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_same_line_named_file_heading_hit_passes) ... ok
+test_same_line_named_file_heading_miss_high (tests.test_check_all.TestRule4CrossRefs.test_same_line_named_file_heading_miss_high) ... ok
+test_same_line_plain_path_no_backticks_hit_passes (tests.test_check_all.TestRule4CrossRefs.test_same_line_plain_path_no_backticks_hit_passes) ... ok
+test_section_reference_to_real_heading_passes (tests.test_check_all.TestRule4CrossRefs.test_section_reference_to_real_heading_passes) ... ok
+test_unresolved_section_reference_medium (tests.test_check_all.TestRule4CrossRefs.test_unresolved_section_reference_medium) ... ok
+test_zero_matches_stays_medium (tests.test_check_all.TestRule4CrossRefs.test_zero_matches_stays_medium) ... ok
+test_manifest_drift_high (tests.test_check_all.TestRule6ManifestParity.test_manifest_drift_high) ... ok
+test_non_index_allowed_by_parent_index_not_orphan (tests.test_check_all.TestRule6ManifestParity.test_non_index_allowed_by_parent_index_not_orphan) ... ok
+test_orphan_high (tests.test_check_all.TestRule6ManifestParity.test_orphan_high) ... ok
+test_bad_frontmatter_is_finding_not_exit_2 (tests.test_check_all.TestSchema.test_bad_frontmatter_is_finding_not_exit_2) ... ok
+test_last_modified_deprecated_warning (tests.test_check_all.TestSchema.test_last_modified_deprecated_warning) ... ok
+test_severity_filters_exit_code (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_filters_exit_code)
+When severity filter hides all findings, exit code is 0 (clean). ... ok
+test_severity_filters_json_output (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_filters_json_output)
+--json mode: severity filter still applies, no marker lines. ... ok
+test_severity_high_hides_medium_not_reported (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_high_hides_medium_not_reported)
+With explicit --severity high: medium-only findings are not reported -> exit 0. ... ok
+test_severity_low_hides_only_low (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_low_hides_only_low)
+At default severity=low: medium findings reported -> exit 1. ... ok
+test_severity_medium_shows_medium_exit_1 (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_severity_medium_shows_medium_exit_1)
+--severity medium: medium findings are reported -> exit 1. ... ok
+test_strict_exposes_low_warning (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_strict_exposes_low_warning)
+--strict exposes even warning-severity findings. ... ok
+test_strict_reports_all_findings (tests.test_check_all.TestSeverityFilterReportingAndExitCode.test_strict_reports_all_findings)
+--strict reports every finding regardless of severity -> exit code ... ok
+
+----------------------------------------------------------------------
+Ran 48 tests in 0.621s
+
+OK
+
+=== TEST: python3 -m unittest tests.test_check_all_hook_contract -v ===
+test_distinguish_critical_from_crash_in_block_mode (tests.test_check_all_hook_contract.TestHookCase2Behavior.test_distinguish_critical_from_crash_in_block_mode)
+🚨 critical path vs crash path must produce DIFFERENT stderr. ... ok
+test_distinguish_critical_from_crash_in_warn_mode (tests.test_check_all_hook_contract.TestHookCase2Behavior.test_distinguish_critical_from_crash_in_warn_mode)
+Same differentiation test for warn mode. ... ok
+test_case_2_critical_warn_mode_exits_0 (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_critical_warn_mode_exits_0)
+For 🚨 critical: warn mode → exit 0 (not fail-closed). ... ok
+test_case_2_differentiates_critical_marker (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_differentiates_critical_marker)
+case 2) MUST contain code that greps/checks for 🚨 critical. ... ok
+test_case_2_differentiates_internal_error_in_code (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_differentiates_internal_error_in_code)
+case 2) MUST distinguish crash from critical by checking for ... ok
+test_case_2_else_fallback_for_crash (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_else_fallback_for_crash)
+case 2) must fall through to fail-closed when neither ... ok
+test_case_2_has_conditional_branching (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_has_conditional_branching)
+case 2) MUST have an if/elif/else chain — legacy is flat ... ok
+test_case_2_has_multiple_exit_paths (tests.test_check_all_hook_contract.TestHookCase2Branches.test_case_2_has_multiple_exit_paths)
+case 2) must have ≥ 2 exit calls (critical vs crash). ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.096s
+
+OK
+
+=== TEST: python3 -m unittest tests.test_install_hooks -v ===
+test_block_checker_absent_exit_1_fail_closed (tests.test_install_hooks.HookExitCodeContract.test_block_checker_absent_exit_1_fail_closed) ... ok
+test_block_clean_exit_0 (tests.test_install_hooks.HookExitCodeContract.test_block_clean_exit_0) ... ok
+test_block_crash_exit_1 (tests.test_install_hooks.HookExitCodeContract.test_block_crash_exit_1) ... ok
+test_block_high_findings_exit_1_names_rule_and_file (tests.test_install_hooks.HookExitCodeContract.test_block_high_findings_exit_1_names_rule_and_file) ... ok
+test_block_medium_only_exit_0_with_warning (tests.test_install_hooks.HookExitCodeContract.test_block_medium_only_exit_0_with_warning) ... ok
+test_block_mixed_findings_exit_1 (tests.test_install_hooks.HookExitCodeContract.test_block_mixed_findings_exit_1) ... ok
+test_block_unexpected_exit_code_treated_as_crash (tests.test_install_hooks.HookExitCodeContract.test_block_unexpected_exit_code_treated_as_crash) ... ok
+test_warn_checker_absent_exit_0_loud (tests.test_install_hooks.HookExitCodeContract.test_warn_checker_absent_exit_0_loud) ... ok
+test_warn_clean_exit_0 (tests.test_install_hooks.HookExitCodeContract.test_warn_clean_exit_0) ... ok
+test_warn_crash_exit_0_but_loud_banner (tests.test_install_hooks.HookExitCodeContract.test_warn_crash_exit_0_but_loud_banner) ... ok
+test_warn_high_findings_exit_0_printed_verbatim (tests.test_install_hooks.HookExitCodeContract.test_warn_high_findings_exit_0_printed_verbatim) ... ok
+test_warn_medium_findings_exit_0 (tests.test_install_hooks.HookExitCodeContract.test_warn_medium_findings_exit_0) ... ok
+test_install_outside_repo_fails_with_remediation (tests.test_install_hooks.InstallHooks.test_install_outside_repo_fails_with_remediation) ... ok
+test_install_reports_block_mode_when_flag_present (tests.test_install_hooks.InstallHooks.test_install_reports_block_mode_when_flag_present) ... ok
+test_install_reports_warn_mode_by_default (tests.test_install_hooks.InstallHooks.test_install_reports_warn_mode_by_default) ... ok
+test_install_self_check_passes_and_hook_stays_executable (tests.test_install_hooks.InstallHooks.test_install_self_check_passes_and_hook_stays_executable) ... ok
+test_install_sets_hooks_path_locally (tests.test_install_hooks.InstallHooks.test_install_sets_hooks_path_locally) ... ok
+test_hook_and_installer_are_executable_in_repo (tests.test_install_hooks.SourceFileSanity.test_hook_and_installer_are_executable_in_repo) ... ok
+test_hook_does_not_copy_into_git_hooks (tests.test_install_hooks.SourceFileSanity.test_hook_does_not_copy_into_git_hooks) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.438s
+
+OK
+
+=== TEST: python3 -m unittest tests.test_link_integrity -v ===
+test_fenced_reference_is_ignored (tests.test_link_integrity.TestDocsToManifest.test_fenced_reference_is_ignored) ... ok
+test_missing_file_reference_blocks (tests.test_link_integrity.TestDocsToManifest.test_missing_file_reference_blocks) ... ok
+test_ru_reference_requires_registration (tests.test_link_integrity.TestDocsToManifest.test_ru_reference_requires_registration)
+docs/ru mirrors are covered: registered via has_translation in ... ok
+test_unparsable_manifest_skips_docs_side (tests.test_link_integrity.TestDocsToManifest.test_unparsable_manifest_skips_docs_side)
+Missing/unparsable on-disk manifest → the check cannot judge ... ok
+test_unregistered_existing_file_blocks (tests.test_link_integrity.TestDocsToManifest.test_unregistered_existing_file_blocks)
+A file that exists on disk but is absent from the manifest ... ok
+test_clean_fixture_corpus_no_link_findings (tests.test_link_integrity.TestLinkIntegrityCleanCorpus.test_clean_fixture_corpus_no_link_findings) ... ok
+test_registered_paths_pass (tests.test_link_integrity.TestLinkIntegrityCleanCorpus.test_registered_paths_pass)
+A reference to a registered docs/en path stays clean. ... ok
+test_full_scan_baseline_unchanged (tests.test_link_integrity.TestLiveCorpus.test_full_scan_baseline_unchanged)
+Regression guard: the new step adds no findings to the live ... ok
+test_live_repo_link_integrity_strict_zero (tests.test_link_integrity.TestLiveCorpus.test_live_repo_link_integrity_strict_zero) ... ok
+test_live_repo_link_integrity_zero (tests.test_link_integrity.TestLiveCorpus.test_live_repo_link_integrity_zero) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.350s
+
+OK
+
+=== CLI SPOT-CHECKS ===
+
+=== phase4_good ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_good.md --report tools/tests/fixtures/check_drift/phase4/report_fail0.json --glossary tools/tests/fixtures/check_drift/phase4/mini-glossary.md
+coverage: deterministic=(phase4-fail, phase4-parity, phase4-identity, phase4-glossary)
+RC=0
+
+=== phase4_badfail (ru_bad_parity + report_fail2) ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md --report tools/tests/fixtures/check_drift/phase4/report_fail2.json --glossary tools/tests/fixtures/check_drift/phase4/mini-glossary.md
+rule=phase4-fail severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md fail=2 (expected 0)
+rule=phase4-parity severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md line count: EN=29, RU=30
+
+coverage: deterministic=(phase4-fail, phase4-parity)
+RC=1
+First rule line: rule=phase4-fail severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md fail=2 (expected 0)
+
+=== phase4 ru_bad_identity ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_bad_identity.md --report tools/tests/fixtures/check_drift/phase4/report_fail0.json --glossary tools/tests/fixtures/check_drift/phase4/mini-glossary.md
+rule=phase4-identity severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_identity.md candidate is an EN copy
+rule=phase4-glossary severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_identity.md glossary terms untranslated: Documentation, Translation
+
+coverage: deterministic=(phase4-fail, phase4-parity, phase4-identity, phase4-glossary)
+RC=1
+
+=== phase4 ru_bad_glossary ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_bad_glossary.md --report tools/tests/fixtures/check_drift/phase4/report_fail0.json --glossary tools/tests/fixtures/check_drift/phase4/mini-glossary.md
+rule=phase4-glossary severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_glossary.md glossary terms untranslated: Translation
+
+coverage: deterministic=(phase4-fail, phase4-parity, phase4-identity, phase4-glossary)
+RC=1
+
+=== missing --report file ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_good.md --report /tmp/nonexistent_report.json
+ERROR: report file not found: /tmp/nonexistent_report.json
+RC=2
+
+=== drift_mode (identical files) ===
+Command: python3 tools/check_drift.py tools/tests/fixtures/check_drift/phase4/drift_identical.md tools/tests/fixtures/check_drift/phase4/drift_identical.md
+coverage: deterministic=(heading-count, heading-depth, table-row-count, table-blocks, code-fence-count, code-fence-pos, list-marker, inline-code-count, inline-code-set, hr-count, hr-pos, metadata-fingerprint, en-leakage)
+coverage: ai_reserved=(line-parity(Phase4), glossary, abstraction)
+RC=0
+
+=== LIVE ===
+Command: python3 tools/check_drift.py --phase4 docs/en/documenter-service/index.md docs/ru/documenter-service/index-RU.md --report tools/tests/fixtures/check_drift/phase4/report_fail0.json
+coverage: deterministic=(phase4-fail, phase4-parity, phase4-identity, phase4-glossary)
+RC=0

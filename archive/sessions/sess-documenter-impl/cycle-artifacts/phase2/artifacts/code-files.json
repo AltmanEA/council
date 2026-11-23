@@ -1,0 +1,16 @@
+{
+  "files": ["tests/card_contract.py"],
+  "signatures": [
+    "CARD_FIELDS",
+    "REQUIRED_FIELDS",
+    "MAX_CARD_LINES",
+    "validate_card",
+    "check_approve"
+  ],
+  "audit_findings": [
+    "Delta regex: added U+00B1 (±) to the character class for net sign — spec says K sign can be ± or + or - (was only [+-])",
+    "validate_card: added explicit leading/trailing blank line stripping before line-counting — spec says 'stripped before counting' (blank-line tests happened to pass anyway because counts stayed ≤10)",
+    "Module docstring: added U+00B1 documentation and boundary rulings as agent-judgment guidance per spec",
+    "Group (c) 12 anchor tests: EXPECTED RED — SKILL.md §Step-(5) prose sync is operator-handled, out-of-cycle"
+  ]
+}

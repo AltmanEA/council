@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "tools/check_all.py",
+      "modified": true,
+      "signatures": ["_ARCHIVE_PREFIXES", "is_archived"]
+    },
+    {
+      "path": "tools/README.md",
+      "modified": true,
+      "signatures": ["Archive exclusion"]
+    }
+  ],
+  "notes": "final wc -l of tools/*.py total: 3473"
+}

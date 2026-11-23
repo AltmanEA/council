@@ -1,0 +1,6 @@
+Cycle completed normally. 4 iterations:
+1) red baseline (skips) -> phase retry, prompt test-author v2
+2) defect in test helper (literal hmac) -> Analyst L1 -> prompt test-author v3
+3) diff-review findings F1-F3 (no read lock, busy-spin, Ctrl-C raw) -> prompt code-author v2 + addendum, test pins v4
+4) diff-review findings F4-F10 (stats/countdown, s-pager, engagement gate, Enter normalization, EOF, pending-filter single-use, id entropy) -> prompt code-author v3
+fail_count stayed 0 (every iteration strictly improving).

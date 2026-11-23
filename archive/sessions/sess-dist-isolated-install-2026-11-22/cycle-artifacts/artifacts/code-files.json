@@ -1,0 +1,1 @@
+{ "files": ["tools/check_all.py"], "signatures": ["--core-root", "_core_root_resolve", "_core_texts", "_core_headers", "core_doc_ids"] }

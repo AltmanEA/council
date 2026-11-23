@@ -1,0 +1,1 @@
+{"files": ["tests/test_delegate_consent.py"], "test_command": "python3 -m unittest tests.test_delegate_consent -v", "baseline_run": {"exit_code": 1, "note": "Red baseline: 8 ERROR (ModuleNotFoundError — delegate_consent.py absent), 1 OK (baseline check). Expected before implementation."}}

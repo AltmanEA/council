@@ -1,0 +1,83 @@
+=== TEST: python3 -m unittest tests.test_check_drift -v ===
+test_check_parity_not_exists (tests.test_check_drift.TestCheckParityDeleted.test_check_parity_not_exists) ... ok
+test_drift_bad_usage_exits_2 (tests.test_check_drift.TestDriftRegression.test_drift_bad_usage_exits_2)
+Wrong number of args → exit 2. ... ok
+test_drift_different_exits_1 (tests.test_check_drift.TestDriftRegression.test_drift_different_exits_1)
+Different files → drift mode rc 1 (headings/structural differences). ... ok
+test_drift_identical_exits_0 (tests.test_check_drift.TestDriftRegression.test_drift_identical_exits_0)
+Identical files → drift mode rc 0. ... ok
+test_coverage_footer_lists_gate_rules (tests.test_check_drift.TestHumanRendering.test_coverage_footer_lists_gate_rules)
+Human footer shows deterministic gate rule IDs in phase4 mode. ... ok
+test_human_rendering_format (tests.test_check_drift.TestHumanRendering.test_human_rendering_format)
+Each finding: rule=... severity=... file=... description. ... ok
+test_json_schema_flat_object (tests.test_check_drift.TestJsonOutput.test_json_schema_flat_object)
+Each --json line has exactly {rule, severity, file, description}. ... ok
+test_no_coverage_musur_in_json (tests.test_check_drift.TestJsonOutput.test_no_coverage_musur_in_json)
+--json output must not contain coverage footer lines. ... ok
+test_live_documenter_service (tests.test_check_drift.TestLiveCorpus.test_live_documenter_service)
+Real corpus: check_drift --phase4 docs/en/documenter-service/... → rc 0. ... ok
+test_fail0_exits_0_no_phase4_finding (tests.test_check_drift.TestPhase4FailGate.test_fail0_exits_0_no_phase4_finding)
+report_fail0.json has fail=0 → all gates pass, rc 0, no phase4 lines. ... ok
+test_fail2_exits_1_with_phase4_fail_finding (tests.test_check_drift.TestPhase4FailGate.test_fail2_exits_1_with_phase4_fail_finding)
+report_fail2.json has fail=2 → phase4-fail finding, rc 1. ... ok
+test_malformed_report_exit_2 (tests.test_check_drift.TestPhase4FailGate.test_malformed_report_exit_2)
+Malformed JSON → exit 2 + stderr ERROR. ... ok
+test_missing_report_file_exit_2 (tests.test_check_drift.TestPhase4FailGate.test_missing_report_file_exit_2)
+Report file does not exist → exit 2 + stderr ERROR. ... ok
+test_report_field_not_int_exit_2 (tests.test_check_drift.TestPhase4FailGate.test_report_field_not_int_exit_2)
+Report has fail as string → internal error (exit 2). ... ok
+test_bad_glossary_untranslated_finds_failure (tests.test_check_drift.TestPhase4GlossaryGate.test_bad_glossary_untranslated_finds_failure)
+ru_bad_glossary.md leaves 'Translation' as English → phase4-glossary. ... ok
+test_glossary_no_glossary_flag_uses_default (tests.test_check_drift.TestPhase4GlossaryGate.test_glossary_no_glossary_flag_uses_default)
+Without --glossary, default path is used (repo-level glossary). ... ok
+test_glossary_term_not_in_en_body_ignored (tests.test_check_drift.TestPhase4GlossaryGate.test_glossary_term_not_in_en_body_ignored)
+Term 'Governance' is in glossary but NOT in EN body → ignored. ... ok
+test_good_glossary_pass (tests.test_check_drift.TestPhase4GlossaryGate.test_good_glossary_pass)
+ru_good.md has RU equivalents for all EN-body terms → no glossary finding. ... ok
+test_partial_translation_one_glossary_finding (tests.test_check_drift.TestPhase4GlossaryGate.test_partial_translation_one_glossary_finding)
+ru_partially_translated.md: one body line verbatim EN → exactly one glossary finding. ... ok
+test_identity_all_identical_finds_en_copy (tests.test_check_drift.TestPhase4IdentityGate.test_identity_all_identical_finds_en_copy)
+ru_bad_identity.md is byte-identical EN copy → phase4-identity finding. ... ok
+test_identity_partial_no_finding (tests.test_check_drift.TestPhase4IdentityGate.test_identity_partial_no_finding)
+ru_partially_translated.md: some body lines differ → NO phase4-identity. ... ok
+test_identity_zero_body_no_finding (tests.test_check_drift.TestPhase4IdentityGate.test_identity_zero_body_no_finding)
+Document with only headers/metadata → zero body lines → no finding. ... ok
+test_fail_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_fail_gate_isolated)
+report_fail2 + good files: only phase4-fail fires. ... ok
+test_glossary_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_glossary_gate_isolated)
+ru_bad_glossary with mini-glossary: only phase4-glossary fires. ... ok
+test_identity_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_identity_gate_isolated)
+ru_bad_identity: only phase4-identity fires. ... ok
+test_parity_gate_isolated (tests.test_check_drift.TestPhase4Isolation.test_parity_gate_isolated)
+ru_bad_parity: only phase4-parity fires (other gates not reached/passed). ... ok
+test_good_fixtures_parity_pass (tests.test_check_drift.TestPhase4ParityGate.test_good_fixtures_parity_pass)
+ru_good.md same line count → parity OK (combined with other clean gates). ... ok
+test_parity_length_mismatch_emits_one_finding (tests.test_check_drift.TestPhase4ParityGate.test_parity_length_mismatch_emits_one_finding)
+ru_bad_parity.md has 24 lines vs EN 23 → ONE phase4-parity finding. ... ok
+test_parity_length_mismatch_stops_positional_checks (tests.test_check_drift.TestPhase4ParityGate.test_parity_length_mismatch_stops_positional_checks)
+When lengths differ, no further positional (identity/glossary) checks run. ... ok
+
+----------------------------------------------------------------------
+Ran 29 tests in 1.081s
+
+OK
+
+=== CLI SPOT-CHECK: phase4_good ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_good.md --report tools/tests/fixtures/check_drift/phase4/report_fail0.json --glossary tools/tests/fixtures/check_drift/phase4/mini-glossary.md
+coverage: deterministic=(phase4-fail, phase4-parity, phase4-identity, phase4-glossary)
+RC=0
+
+=== CLI SPOT-CHECK: phase4_badfail ===
+Command: python3 tools/check_drift.py --phase4 tools/tests/fixtures/check_drift/phase4/en.md tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md --report tools/tests/fixtures/check_drift/phase4/report_fail2.json --glossary tools/tests/fixtures/check_drift/phase4/mini-glossary.md
+rule=phase4-fail severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md fail=2 (expected 0)
+rule=phase4-parity severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md line count: EN=23, RU=24
+
+coverage: deterministic=(phase4-fail, phase4-parity)
+RC=1
+First rule line: rule=phase4-fail severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md fail=2 (expected 0)
+
+=== CLI SPOT-CHECK: drift_mode ===
+Command: python3 tools/check_drift.py tools/tests/fixtures/check_drift/phase4/drift_identical.md tools/tests/fixtures/check_drift/phase4/drift_identical.md
+coverage: deterministic=(heading-count, heading-depth, table-row-count, table-blocks, code-fence-count, code-fence-pos, list-marker, inline-code-count, inline-code-set, hr-count, hr-pos, metadata-fingerprint, en-leakage)
+coverage: ai_reserved=(line-parity(Phase4), glossary, abstraction)
+RC=0

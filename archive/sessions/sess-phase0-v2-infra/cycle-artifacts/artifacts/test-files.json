@@ -1,0 +1,32 @@
+{
+  "files": [
+    "tests/test_gen_engine.py",
+    "tests/test_check_engine_sync.py",
+    "tests/test_build_exact_match.py"
+  ],
+  "test_command": "python3 -m unittest tests.test_gen_engine tests.test_check_engine_sync tests.test_build_exact_match -v",
+  "baseline_run": {
+    "exit_code": 1,
+    "note": "25 tests, 19 failures + 3 errors (22 total failing). gen_engine.sh and check_engine_sync.py are absent → tests fail immediately (exit 127 / 'can't open file'). build.sh exists but lacks the exact-match guard → untagged bare invocation succeeds (exit 0), failing the FATAL/exit-1 assertions."
+  },
+  "iteration_2_fix": {
+    "exit_code": 0,
+    "passed": 25,
+    "failed": 0,
+    "errors": 0,
+    "note": "Fixed _setup_build_repo() in test_build_exact_match.py: added skip for .git/.impl-whitelist/artifacts/__pycache__ in the WORKTREE copy loop, and added post-init isolation assertion (git tag -l empty + git rev-parse --show-toplevel == repo). test_gen_engine.py and test_check_engine_sync.py use fresh in-tmpdir repo creation (no WORKTREE copy) — no fix needed.",
+    "fix_details": {
+      "file": "tests/test_build_exact_match.py",
+      "function": "_setup_build_repo",
+      "changes": [
+        "Added skip block: if name in ('.git', '.impl-whitelist', 'artifacts', '__pycache__'): continue",
+        "Added isolation check after git init+commit: assert git tag -l is empty and git rev-parse --show-toplevel == repo path"
+      ]
+    },
+    "per_module": {
+      "test_gen_engine": 9,
+      "test_check_engine_sync": 12,
+      "test_build_exact_match": 4
+    }
+  }
+}

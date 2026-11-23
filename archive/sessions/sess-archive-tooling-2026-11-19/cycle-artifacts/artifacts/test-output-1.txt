@@ -1,0 +1,66 @@
+=== RUN 1 ===
+test_archive_doc_no_findings (tests.test_archive_skip.TestArchiveExclusionEn.test_archive_doc_no_findings) ... ok
+test_ru_archive_no_findings (tests.test_archive_skip.TestArchiveExclusionRu.test_ru_archive_no_findings) ... ok
+test_non_archive_violations_still_reported (tests.test_archive_skip.TestArchiveExclusionVsNonArchive.test_non_archive_violations_still_reported) ... ok
+test_en_archive_is_excluded (tests.test_archive_skip.TestArchivePrefixExcluded.test_en_archive_is_excluded) ... ok
+test_ru_archive_is_excluded (tests.test_archive_skip.TestArchivePrefixExcludedRu.test_ru_archive_is_excluded) ... ok
+test_archive_in_filename_not_excluded (tests.test_archive_skip.TestArchivePrefixPredicate.test_archive_in_filename_not_excluded)
+A file named archived-notes.md under docs/en/service-contract/ ... ok
+test_archive_substring_not_excluded (tests.test_archive_skip.TestArchivePrefixPredicate.test_archive_substring_not_excluded)
+A file under docs/en/archive-notes/ (contains 'archive' but is not ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.065s
+
+OK
+=== RUN 2 ===
+test_archive_entry_present_with_status_archive (tests.test_manifest_archive.TestManifestArchiveEntry.test_archive_entry_present_with_status_archive)
+An archived doc under docs/en/archive/ produces a manifest entry ... ok
+test_non_archive_entries_unchanged (tests.test_manifest_archive.TestManifestArchiveEntry.test_non_archive_entries_unchanged)
+Existing non-archive docs in the fixture corpus are still present ... ok
+test_write_persists_archive_entry (tests.test_manifest_archive.TestManifestArchiveEntry.test_write_persists_archive_entry)
+gen_manifest.main(['--write']) writes a manifest that includes the ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.015s
+
+OK
+=== RUN 3 ===
+...........................................................................................................F............................................................................................................................................................FFF...
+======================================================================
+FAIL: test_live_corpus_runs_clean_exit_code (test_check_all.TestLiveCorpus.test_live_corpus_runs_clean_exit_code)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T21-16-1/tests/test_check_all.py", line 805, in test_live_corpus_runs_clean_exit_code
+    self.assertIn(rc, (0, 1), err)
+AssertionError: 2 not found in (0, 1) : 
+
+======================================================================
+FAIL: test_full_scan_baseline_unchanged (test_link_integrity.TestLiveCorpus.test_full_scan_baseline_unchanged)
+Regression guard: the new step adds no findings to the live
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T21-16-1/tests/test_link_integrity.py", line 210, in test_full_scan_baseline_unchanged
+    self.assertIn(rc, (0, 1))
+AssertionError: 2 not found in (0, 1)
+
+======================================================================
+FAIL: test_live_repo_link_integrity_strict_zero (test_link_integrity.TestLiveCorpus.test_live_repo_link_integrity_strict_zero)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T21-16-1/tests/test_link_integrity.py", line 199, in test_live_repo_link_integrity_strict_zero
+    self.assertEqual(rc, 0)
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_live_repo_link_integrity_zero (test_link_integrity.TestLiveCorpus.test_live_repo_link_integrity_zero)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-19T21-16-1/tests/test_link_integrity.py", line 193, in test_live_repo_link_integrity_zero
+    self.assertEqual(rc, 0)
+AssertionError: 2 != 0
+
+----------------------------------------------------------------------
+Ran 270 tests in 2.885s
+
+FAILED (failures=4)

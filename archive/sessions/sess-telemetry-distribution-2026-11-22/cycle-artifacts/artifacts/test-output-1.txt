@@ -1,0 +1,51 @@
+test_bundle_exits_0 (tests.test_collect_telemetry.BundleMode.test_bundle_exits_0) ... ok
+test_bundle_includes_diagnostic_files (tests.test_collect_telemetry.BundleMode.test_bundle_includes_diagnostic_files) ... ok
+test_bundle_manifest_has_5_fields (tests.test_collect_telemetry.BundleMode.test_bundle_manifest_has_5_fields) ... ok
+test_enabled_false_exits_0 (tests.test_collect_telemetry.DisabledDefault.test_enabled_false_exits_0) ... ok
+test_enabled_false_writes_nothing (tests.test_collect_telemetry.DisabledDefault.test_enabled_false_writes_nothing) ... ok
+test_no_config_exits_0 (tests.test_collect_telemetry.DisabledDefault.test_no_config_exits_0) ... ok
+test_no_config_writes_nothing (tests.test_collect_telemetry.DisabledDefault.test_no_config_writes_nothing) ... ok
+test_disclosure_mentions_no_transmission (tests.test_collect_telemetry.DisclosureText.test_disclosure_mentions_no_transmission) ... ok
+test_disclosure_printed_with_flag (tests.test_collect_telemetry.DisclosureText.test_disclosure_printed_with_flag) ... ok
+test_readme_has_collect_telemetry_row (tests.test_collect_telemetry.DocsContract.test_readme_has_collect_telemetry_row) ... ok
+test_readme_has_safety_sentence (tests.test_collect_telemetry.DocsContract.test_readme_has_safety_sentence) ... ok
+test_runbook_has_telemetry_section (tests.test_collect_telemetry.DocsContract.test_runbook_has_telemetry_section) ... ok
+test_invalid_json_exits_0 (tests.test_collect_telemetry.FailClosed.test_invalid_json_exits_0) ... ok
+test_invalid_json_no_partial_record (tests.test_collect_telemetry.FailClosed.test_invalid_json_no_partial_record) ... ok
+test_invalid_json_warning_on_stderr (tests.test_collect_telemetry.FailClosed.test_invalid_json_warning_on_stderr) ... ok
+test_missing_category_exits_0 (tests.test_collect_telemetry.FailClosed.test_missing_category_exits_0) ... ok
+test_collect_telemetry_sh_exists (tests.test_collect_telemetry.FileExistence.test_collect_telemetry_sh_exists) ... ok
+test_collect_telemetry_sh_is_executable (tests.test_collect_telemetry.FileExistence.test_collect_telemetry_sh_is_executable) ... ok
+test_install_sh_exists (tests.test_collect_telemetry.FileExistence.test_install_sh_exists) ... ok
+test_duplicate_hash_skipped (tests.test_collect_telemetry.HashDedup.test_duplicate_hash_skipped) ... ok
+test_inspect_no_data_exits_0 (tests.test_collect_telemetry.InspectMode.test_inspect_no_data_exits_0) ... ok
+test_inspect_shows_categories (tests.test_collect_telemetry.InspectMode.test_inspect_shows_categories) ... ok
+test_inspect_summary_no_record_content (tests.test_collect_telemetry.InspectMode.test_inspect_summary_no_record_content) ... ok
+test_install_creates_telemetry_dirs (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_creates_telemetry_dirs) ... ok
+test_install_creates_telemetry_gitignore (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_creates_telemetry_gitignore) ... ok
+test_install_creates_telemetry_readme (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_creates_telemetry_readme) ... ok
+test_install_creates_telemetry_yml (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_creates_telemetry_yml) ... ok
+test_install_overlay_does_not_overwrite_config (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_overlay_does_not_overwrite_config) ... ok
+test_install_telemetry_yml_enabled (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_telemetry_yml_enabled) ... ok
+test_install_telemetry_yml_project_name (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_telemetry_yml_project_name) ... ok
+test_install_with_flag_exits_0 (tests.test_collect_telemetry.InstallEnableTelemetry.test_install_with_flag_exits_0) ... ok
+test_install_no_telemetry_dirs (tests.test_collect_telemetry.InstallNoTelemetry.test_install_no_telemetry_dirs) ... ok
+test_install_no_telemetry_yml (tests.test_collect_telemetry.InstallNoTelemetry.test_install_no_telemetry_yml) ... ok
+test_install_without_flag_exits_0 (tests.test_collect_telemetry.InstallNoTelemetry.test_install_without_flag_exits_0) ... ok
+test_opt_out_prevents_write (tests.test_collect_telemetry.OptOut.test_opt_out_prevents_write) ... ok
+test_read_unsupported_schema_exits_0 (tests.test_collect_telemetry.ReadMode.test_read_unsupported_schema_exits_0) ... ok
+test_read_valid_schema_prints_file_list (tests.test_collect_telemetry.ReadMode.test_read_valid_schema_prints_file_list) ... ok
+test_redact_api_keys (tests.test_collect_telemetry.RedactionTable.test_redact_api_keys) ... ok
+test_redact_external_ip (tests.test_collect_telemetry.RedactionTable.test_redact_external_ip) ... ok
+test_redact_filesystem_paths (tests.test_collect_telemetry.RedactionTable.test_redact_filesystem_paths) ... ok
+test_redact_loopback_ip (tests.test_collect_telemetry.RedactionTable.test_redact_loopback_ip) ... ok
+test_redact_private_ip (tests.test_collect_telemetry.RedactionTable.test_redact_private_ip) ... ok
+test_redact_stacktrace_fields_only (tests.test_collect_telemetry.RedactionTable.test_redact_stacktrace_fields_only) ... ok
+test_redact_symbols_replaces_function (tests.test_collect_telemetry.RedactionTable.test_redact_symbols_replaces_function) ... ok
+test_stacktrace_capped_at_50_lines (tests.test_collect_telemetry.StacktraceLimit.test_stacktrace_capped_at_50_lines)
+A single stacktrace is capped at 50 lines (per spec). ... ok
+
+----------------------------------------------------------------------
+Ran 45 tests in 1.976s
+
+OK

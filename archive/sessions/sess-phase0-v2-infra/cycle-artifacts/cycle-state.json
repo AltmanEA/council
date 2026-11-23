@@ -1,0 +1,18 @@
+{
+  "run_id": "2026-11-23T14-00-00-01",
+  "session": "sess-phase0-v2-infra",
+  "worktree": "impl-run-2026-11-23T14-00-phase0",
+  "iteration": 2,
+  "phase": "run-test",
+  "status": "running",
+  "fail_count": 0,
+  "progress": "improving",
+  "last_exit_code": 0,
+  "last_passed": 25,
+  "test_output_paths": ["artifacts/test-output-1.txt", "artifacts/test-output-2.txt", "artifacts/test-output-3.txt", "artifacts/test-output-4.txt", "artifacts/test-output-5.txt", "artifacts/test-results.json"],
+  "prompt_versions": {"test-author": 2, "code-author": 1, "test-runner": 2},
+  "stop_reason": null,
+  "started_at": "2026-11-23T14:00:00Z",
+  "elapsed_seconds": 0,
+  "notes": "iter2 self-report 25/25 (fixture isolation fixed: skip .git/.impl-whitelist/artifacts/__pycache__, assert tags empty + toplevel==repo; other two modules unaffected). worktree verified by primary: 0 commits above base, status = whitelist-only. test-runner v2 launched for authoritative evidence. Known pre-existing (out of cycle scope, report to operator): test_dist_isolated_layout.test_gitignore_created fails also in main tree (install.sh managed-block vs expected entries)."
+}

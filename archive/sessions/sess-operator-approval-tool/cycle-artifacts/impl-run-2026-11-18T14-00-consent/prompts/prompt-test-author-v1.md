@@ -1,0 +1,2 @@
+# prompt-test-author-v1 (2026-11-18)
+Role: roles/test-author.md; inputs: target-task.md, consensus-doc.md, existing tests style; outputs: WT/tests/test_consent_terminal.py + artifacts/test-files.json. Constraints: unittest only; tempfile state roots; cover all acceptance criteria incl. decide() pure keypress function contract; subprocess smoke tests (no-draft request -> exit 2, --help -> exit 0); anti-reversed-TDD baseline red required.

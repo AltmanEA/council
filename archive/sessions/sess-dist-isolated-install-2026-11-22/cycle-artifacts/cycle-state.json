@@ -1,0 +1,17 @@
+{
+  "run_id": "2026-11-22T14-30-01-1",
+  "session": "sess-dist-isolated-install-2026-11-22",
+  "worktree": "impl-run-2026-11-22T14-30-1",
+  "iteration": 2,
+  "phase": "write-code",
+  "status": "running",
+  "fail_count": 0,
+  "progress": "improving",
+  "last_exit_code": 0,
+  "last_passed": 63,
+  "test_output_paths": [],
+  "prompt_versions": {},
+  "stop_reason": null,
+  "started_at": "2026-11-22T14:30:00",
+  "elapsed_seconds": 0
+}

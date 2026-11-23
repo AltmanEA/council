@@ -1,0 +1,2 @@
+tools/check_all.py
+tests/test_check_all_core_root.py

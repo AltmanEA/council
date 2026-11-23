@@ -1,0 +1,12 @@
+{
+  "files": ["tests/test_collect_telemetry.py"],
+  "test_command": "python3 -m unittest tests.test_collect_telemetry -v",
+  "baseline_run": {
+    "exit_code": 1,
+    "total": 45,
+    "passing": 9,
+    "failing": 34,
+    "errors": 2,
+    "note": "9 PASS: disabled-default silence (2), no-config writes nothing (2), disclosure text keywords present (1), README safety sentence (1), install without flag OK (3), install.sh file exists (1). 34 FAIL: collect_telemetry.sh doesn't exist (127) — all collector tests: file-existence, no-config-exits-0, enabled-false-exits-0, opt-out, redaction (7), stacktrace-limit, hash-dedup, fail-closed (3), inspect (3), bundle (3), read (2), disclosure-no-transmission, docs-collect_telemetry-row, docs-runbook-telemetry, invalid-json-warning, missing-category. 2 ERRORS: install_telemetry_yml_enabled/project_name — FileNotFoundError because install.sh has no --enable-telemetry support yet (telemetry.yml never created; downstream test tries to open it)."
+  }
+}

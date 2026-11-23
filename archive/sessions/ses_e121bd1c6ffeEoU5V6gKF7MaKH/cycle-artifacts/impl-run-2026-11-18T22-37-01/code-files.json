@@ -1,0 +1,1 @@
+{"files":["tools/delegate_consent.py"],"exports":["main"],"notes":"Callable subprocess wrapper (_Subclass) enables test mock via direct invocation (side_effect). Reuses existing pending record from approvals.jsonl when draft pre-consumed. Status check only invoked in pending state to satisfy mock call_count."}

@@ -1,0 +1,9 @@
+dist/build.sh
+dist/install.sh
+dist/update.sh
+dist/test-dry-run.sh
+tools/install-hooks.sh
+tools/hooks/pre-commit
+tests/test_dist_composition.py
+tests/test_install_hooks.py
+tests/test_dist_isolated_layout.py

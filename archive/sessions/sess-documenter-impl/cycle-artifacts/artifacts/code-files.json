@@ -1,0 +1,35 @@
+{
+  "files": ["tools/check_all.py", "tools/hooks/pre-commit"],
+  "signatures": [
+    {
+      "file": "tools/check_all.py",
+      "names": [
+        "main",
+        "scan",
+        "check_rule1_line_count",
+        "check_rule2_changelog",
+        "check_rule4_cross_refs",
+        "check_rule6_manifest_parity",
+        "check_naming",
+        "check_schema",
+        "check_link_integrity",
+        "_finding",
+        "_Corpus",
+        "_visible_lines",
+        "_refs_from_line",
+        "_in_cross_references_section"
+      ]
+    },
+    {
+      "file": "tools/hooks/pre-commit",
+      "names": [
+        "fail_closed_exit"
+      ]
+    }
+  ],
+  "notes": [
+    "Итерация 1: --severity semantics, rendering, exit codes, hook case 2). 47/56 green.",
+    "Итерация 2: default --severity = low (AMENDED). Единственное изменение — argparse default='low' + обновлённые help/docstrings. 71/75 green (4 red — test expectations под default=low, Test Author обновляет).",
+    "4 оставшихся красных: test_live_corpus_runs_clean_exit_code (rc=1 вместо 0/2 — live repo имеет 32 low), test_ambiguous_heading_low_not_medium (rc=1 вместо 0 — low findings reported at default=low), test_unresolved_section_reference_medium (rc=1 вместо 0 — medium findings reported), test_severity_filters_exit_code (rc=2 вместо 1 — unexpected high finding). Это ожидаемое поведение CLI при default=low, тесты требуют обновления assertion-ов."
+  ]
+}

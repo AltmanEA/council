@@ -1,0 +1,9 @@
+# Cycle-specific whitelist for impl-run-2026-11-22T04-34-16-01
+# Existing files are writable because the operator explicitly listed them in the
+# Action Items («Реализация по Action Items», 2026-11-22).
+tools/collect_telemetry.sh
+tools/README.md
+dist/install.sh
+dist/RUNBOOK.md
+tests/test_collect_telemetry.py
+tests/test_telemetry_*.py

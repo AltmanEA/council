@@ -1,0 +1,14 @@
+{
+  "pass": false,
+  "level0_pass": true,
+  "progress": "improving",
+  "reasons": [],
+  "next_steps": [],
+  "critical_blocker": false,
+  "hypotheses": [
+    "AC2 (poisoned-manifest injection): роль-промпт содержит оборонительную фразу и fixture poisoned.yaml существует, однако все 126 тестов — это string-presence / schema-валидация. Нет интеграционного теста, где Selector реально обрабатывает poisoned manifest и возвращает результат без echoed injection. По target-task.md это BLOCKING before pilot — тестовый слой его не проверяет.",
+    "AC4 (budget ceiling): константы CEILING_TOKENS/FILES и DEFAULT_… проверены как literal-токены в SKILL.md, но нет теста runtime enforcement — что Selector фактический обрезает результат при превышении лимита.",
+    "Все 126 тестов покрывают контракт-токены и фикстуры (prose-anchors), но не запускают Selector через реальный LLM-вызов. V2-injection и ранжирование документов проверяются на уровне промпта/фикстуры, не live-прогоном — риск для pilot: контракт спецификации валиден, поведение модели не протестировано.",
+    "output.valid.json и output.truncated.json проходят schema-валидацию, но их content — hand-crafted fixtures; нет теста, который генерирует вывод Selector из реального input и верифицирует response chain (AC9)."
+  ]
+}

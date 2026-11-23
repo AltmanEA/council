@@ -1,0 +1,77 @@
+{
+  "cycle": "B",
+  "purpose": "Test suite for .council/ isolated installation layout (iterations 1.1–1.6)",
+  "tests": [
+    {
+      "file": "tests/test_dist_isolated_layout.py",
+      "description": "AC-1..AC-11 black-box tests for .council/ layout",
+      "command": "python3 -m unittest tests.test_dist_isolated_layout -v",
+      "iteration": "1.6",
+      "total": 19,
+      "pass": 19,
+      "fail": 0,
+      "exit_code": 0,
+      "acs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9", "AC-11"]
+    },
+    {
+      "file": "tests/test_dist_composition.py",
+      "description": "Variant-B composition tests adapted for .council/ layout",
+      "command": "python3 -m unittest tests.test_dist_composition -v",
+      "iteration": "1.6",
+      "total": 13,
+      "pass": 13,
+      "fail": 0,
+      "exit_code": 0,
+      "acs": ["AC-2", "AC-5", "AC-6"]
+    }
+  ],
+  "combined_command": "python3 -m unittest tests.test_dist_isolated_layout tests.test_dist_composition -v",
+  "combined_iteration": "1.6",
+  "combined_total": 32,
+  "combined_pass": 32,
+  "combined_fail": 0,
+  "combined_exit_code": 0,
+  "iterations": {
+    "1.1": {
+      "changes": "Added TestAC5WhereIsCouncil (AC-5 banner) and TestAC9HooksArgument (AC-9 argument readback)",
+      "pass": 11,
+      "fail": 21,
+      "exit_code": 1
+    },
+    "1.2": {
+      "changes": "Fixed TestDirtyGuard.test_dirty_refuses_build — replaced fake temp repo harness with real BUILD_SH invocation",
+      "pass": 14,
+      "fail": 18,
+      "exit_code": 1
+    },
+    "1.3": {
+      "changes": "Made TestDirtyGuard self-contained — marker file in dist/ created/deleted in finally: block",
+      "pass": 14,
+      "fail": 18,
+      "exit_code": 1
+    },
+    "1.4": {
+      "changes": "Strengthened AC-6 assertions — added stripped-prefix backup layout check, fixed restore command",
+      "pass": 14,
+      "fail": 18,
+      "exit_code": 1
+    },
+    "1.5": {
+      "changes": "Fixed Bug 1: TestAC1ArchiveNoPrefix tmpdir deleted before assertion (replaced with self.addCleanup). Fixed Bug 2: TestAC6UpdateFlow FileExistsError on os.makedirs (added exist_ok=True). Restored missing backup_name variable.",
+      "pass": 26,
+      "fail": 6,
+      "exit_code": 1
+    },
+    "1.6": {
+      "changes": "Adapted 5 stale composition assertions to .council/ layout: (1) TestContentSetCore.manifest entries use .council/ prefix, (2) TestInstallVerification paths re-pathed to .council/, (3) TestNoFlatInstall narrowed docs/ assertion to core doc dirs only, (4) TestHostInstall re-pathed to .council/, (5) TestCheckAllOnHost added manifest-gen + --root/--core-root args.",
+      "pass": 32,
+      "fail": 0,
+      "exit_code": 0
+    }
+  },
+  "notes": [
+    "AC-10 (test-dry-run.sh) is out of scope — handled in implementation phase",
+    "test_check_all_exits_zero (AC-11) passes because existing check_all.py is unchanged",
+    "Iteration 1.6: all 32 tests green — red baseline achieved for implementation phase"
+  ]
+}

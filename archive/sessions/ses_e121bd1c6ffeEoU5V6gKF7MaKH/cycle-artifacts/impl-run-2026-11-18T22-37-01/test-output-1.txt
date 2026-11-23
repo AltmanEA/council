@@ -1,0 +1,31 @@
+test_consume_approved_valid (tests.test_delegate_consent.TestConsume.test_consume_approved_valid)
+Approved with valid HMAC + matching hashes → approve→apply, ... ok
+test_consume_denied (tests.test_delegate_consent.TestConsume.test_consume_denied)
+Operator denied → exit 1, no approve, link removed. ... ok
+test_consume_no_link (tests.test_delegate_consent.TestConsume.test_consume_no_link)
+No link file → exit 1, nothing to consume. ... ok
+test_consume_pending_decision (tests.test_delegate_consent.TestConsume.test_consume_pending_decision)
+Decision still pending → exit 1, no approve called, link stays. ... ok
+test_consume_tampered_diff (tests.test_delegate_consent.TestConsume.test_consume_tampered_diff)
+link diff_b64 doesn't match stored → exit 2, no approve called. ... hash binding failed: link diff_b64 != consent hash
+ok
+test_module_should_be_missing (tests.test_delegate_consent.TestModuleExists.test_module_should_be_missing)
+Baseline check: retire gracefully if implementation is present. ... skipped 'implementation present; baseline check retired'
+test_activation_gate_fail (tests.test_delegate_consent.TestPropose.test_activation_gate_fail)
+activation state != 'active' → exit 2, service delegate not called. ... activation check failed: state != active or tier2 not authorized
+ok
+test_propose_delegate_error (tests.test_delegate_consent.TestPropose.test_propose_delegate_error)
+delegate-write returns error → exit 2. ... 
+ok
+test_propose_happy_path (tests.test_delegate_consent.TestPropose.test_propose_happy_path)
+Full happy: audit → delegate-write → consent request created. ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.024s
+
+OK (skipped=1)
+Consumed: request_id=aa2f52fc approval_id=app-001 target=docs/en/foo/index.md
+nothing to consume (no link file)
+request_id: 87cf155a
+approval_id: app-001
+Review command: tools/consent_review.sh --request-id 87cf155a

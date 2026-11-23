@@ -1,0 +1,33 @@
+{
+  "iteration": 2,
+  "commands": [
+    "python3 -m unittest tests.test_check_drift -v",
+    "python3 -m unittest tests.test_check_all -v",
+    "python3 -m unittest tests.test_check_all_hook_contract -v",
+    "python3 -m unittest tests.test_install_hooks -v",
+    "python3 -m unittest tests.test_link_integrity -v"
+  ],
+  "exit_code": 0,
+  "passed": 117,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "collection_error": false,
+  "failed_tests": [],
+  "regression_tests": {
+    "tests.test_check_drift": {"passed": 32, "failed": 0, "errors": 0, "skipped": 0},
+    "tests.test_check_all": {"passed": 48, "failed": 0, "errors": 0, "skipped": 0},
+    "tests.test_check_all_hook_contract": {"passed": 8, "failed": 0, "errors": 0, "skipped": 0},
+    "tests.test_install_hooks": {"passed": 19, "failed": 0, "errors": 0, "skipped": 0},
+    "tests.test_link_integrity": {"passed": 10, "failed": 0, "errors": 0, "skipped": 0}
+  },
+  "cli_spot_checks": {
+    "phase4_good": {"rc": 0},
+    "phase4_badfail": {"rc": 1, "first_rule_line": "rule=phase4-fail severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_parity.md fail=2 (expected 0)"},
+    "phase4_ru_bad_identity": {"rc": 1, "first_rule_line": "rule=phase4-identity severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_identity.md candidate is an EN copy"},
+    "phase4_ru_bad_glossary": {"rc": 1, "first_rule_line": "rule=phase4-glossary severity=high file=tools/tests/fixtures/check_drift/phase4/ru_bad_glossary.md glossary terms untranslated: Translation"},
+    "missing_report": {"rc": 2},
+    "drift_mode": {"rc": 0},
+    "live": {"rc": 0}
+  }
+}

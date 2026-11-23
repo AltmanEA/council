@@ -1,0 +1,109 @@
+test_no_pycache_in_archive (tests.test_dist_composition.TestBytecodeExclusion.test_no_pycache_in_archive) ... ok
+test_no_pycache_in_manifest (tests.test_dist_composition.TestBytecodeExclusion.test_no_pycache_in_manifest) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_check_all_clean (tests.test_dist_composition.TestCheckAllOnHost.test_check_all_clean) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_archive_core_contents (tests.test_dist_composition.TestContentSetCore.test_archive_core_contents) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_template_contents (tests.test_dist_composition.TestContentSetTemplates.test_template_contents) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_dirty_guard_refuses (tests.test_dist_composition.TestDirtyTreeGuard.test_dirty_guard_refuses)
+The build.sh source must contain dirty-tree guard logic. ... ok
+test_dirty_guard_scratch_repo (tests.test_dist_composition.TestDirtyTreeGuard.test_dirty_guard_scratch_repo)
+In a scratch repo that's clean, build succeeds. After modifying ... ok
+test_has_translation_removed (tests.test_dist_composition.TestHasTranslationSanitization.test_has_translation_removed) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_host_no_ru (tests.test_dist_composition.TestHostInstall.test_host_no_ru) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_install_core_missing (tests.test_dist_composition.TestInstallFatalPrecheck.test_install_core_missing) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_install_verification (tests.test_dist_composition.TestInstallVerification.test_install_verification) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_ru_paths_replaced (tests.test_dist_composition.TestRUPathSanitization.test_ru_paths_replaced) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_orphan_removal_with_manifest (tests.test_dist_composition.TestUpdateOrphanRemoval.test_orphan_removal_with_manifest) ... ok
+test_check_all_exits_zero (tests.test_dist_isolated_layout.TestAC11CheckAllRoot.test_check_all_exits_zero) ... ok
+test_archive_core_is_plain_layout (tests.test_dist_isolated_layout.TestAC1ArchiveNoPrefix.test_archive_core_is_plain_layout) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_manifest_has_council_prefix (tests.test_dist_isolated_layout.TestAC1ManifestPrefix.test_manifest_has_council_prefix) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_framework_files_under_council (tests.test_dist_isolated_layout.TestAC2InstallLayout.test_framework_files_under_council) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_host_root_framing_files (tests.test_dist_isolated_layout.TestAC2InstallLayout.test_host_root_framing_files) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_existing_opencode_no_skills_array (tests.test_dist_isolated_layout.TestAC3OpencodeWiring.test_existing_opencode_no_skills_array)
+Host has opencode.jsonc without skills array → warning, file untouched. ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_new_opencode_json (tests.test_dist_isolated_layout.TestAC3OpencodeWiring.test_new_opencode_json) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_selector_agent_installed (tests.test_dist_isolated_layout.TestAC3OpencodeWiring.test_selector_agent_installed)
+selector.md installed at .opencode/agents/selector.md. ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_council_manifest_generated (tests.test_dist_isolated_layout.TestAC4CoreManifest.test_council_manifest_generated) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_install_verification_passes (tests.test_dist_isolated_layout.TestAC5Verification.test_install_verification_passes)
+Install succeeds, meaning all verified paths exist under .council/. ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_where_is_council_banner (tests.test_dist_isolated_layout.TestAC5WhereIsCouncil.test_where_is_council_banner) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_version_bump_orphan_removal_backup (tests.test_dist_isolated_layout.TestAC6UpdateFlow.test_version_bump_orphan_removal_backup)
+Version bump, orphan removal, backup preserve, restore-instructions.txt. ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_gitignore_created (tests.test_dist_isolated_layout.TestAC7Gitignore.test_gitignore_created) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+FAIL
+test_gitignore_idempotent (tests.test_dist_isolated_layout.TestAC7Gitignore.test_gitignore_idempotent)
+Running install twice must NOT duplicate the managed block. ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_update_missing_council_dir (tests.test_dist_isolated_layout.TestAC8PreflightMissing.test_update_missing_council_dir) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_update_council_is_symlink (tests.test_dist_isolated_layout.TestAC8PreflightSymlink.test_update_council_is_symlink) ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_custom_hooks_dir (tests.test_dist_isolated_layout.TestAC9HooksArgument.test_custom_hooks_dir)
+AC-9: install-hooks.sh currently hardcodes tools/hooks. ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_hooks_custom_dir_argument (tests.test_dist_isolated_layout.TestAC9HooksArgument.test_hooks_custom_dir_argument)
+AC-9: bash tools/install-hooks.sh .council/tools/hooks must set ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+test_pre_commit_falls_back_to_root_check_all (tests.test_dist_isolated_layout.TestAC9HooksArgument.test_pre_commit_falls_back_to_root_check_all)
+pre-commit resolves check_all.py location-relative from hook file, ... /usr/lib/python3.12/tarfile.py:2301: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  warnings.warn(
+ok
+
+======================================================================
+FAIL: test_gitignore_created (tests.test_dist_isolated_layout.TestAC7Gitignore.test_gitignore_created)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/ea/.local/share/opencode/worktree/2c62c7/impl-run-2026-11-23T14-00-phase0/tests/test_dist_isolated_layout.py", line 466, in test_gitignore_created
+    self.assertIn(".council/backup-*/", content,
+AssertionError: '.council/backup-*/' not found in '\n# Council framework (managed block)\nsessions/\n' : .gitignore must exclude .council/backup-*/
+
+----------------------------------------------------------------------
+Ran 32 tests in 11.586s
+
+FAILED (failures=1)
