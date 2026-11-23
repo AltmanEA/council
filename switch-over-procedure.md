@@ -6,6 +6,11 @@ Advisory per OP-1: every check informs; the operator makes every go/stop/rollbac
 
 Executant legend: **[O]** — operator, **[A]** — agent, **[AO]** — agent executes, operator confirms result.
 
+Rehearsal mode (этап R перед настоящим gate): see `rehearsal-plan.md` — dogfood-окна с
+`purpose: rehearsal — not a switch-over gate` и вердиктом арбитра `ADVISORY PASS/FAIL`
+не являются основанием для switch-over; только окно этапа G (freeze `draft-freeze-<N>`,
+единый пин, вердикт `PASS`) открывает шаг 1 ниже.
+
 ## Pre-conditions (шаг 0) — all must hold before step 1
 
 | # | Check | Command / evidence | Hold condition |
