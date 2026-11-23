@@ -28,8 +28,10 @@ cp -a /home/ea/council-dev/sessions/ /home/ea/council/archive/sessions/council-d
 
 ## Шаг 2 — Forward-port / premise-shift аудит [A]
 
+Исполняется детерминированным `tools/check_forward_port.py` (TDD cycle 2026-11-23T16-30-00-04).
+
 ```bash
-cd /home/ea/council && python3 tools/check_forward_port.py --base v1-stable --branch v2-dev --path fallback/
+cd /home/ea/council && python3 tools/check_forward_port.py --base v1-stable --source HEAD --path fallback/ --branch v2-dev --against draft/
 ```
 
 - **Пустой вывод = проход** (exit 0). Вывод = список нарушений (`MISSING-TRAILER` / `MISSING-CONTENT` / `BAD-PREMISE-SHIFT`) ⇒ стоп: доделать парные forward-port коммиты в `v2-dev` (трейлеры `backport-of: <sha>`, `premise-shift: none|affects=<session-id>`), повторить шаг.
