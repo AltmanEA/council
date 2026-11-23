@@ -164,7 +164,7 @@ documents:
   - id: glossary
     path: docs/en/glossary/index.md
     title: Glossary
-    version: 0.20.0
+    version: 0.21.0
     status: active
     abstraction: reference
     has_translation: docs/ru/glossary/index-RU.md

@@ -1,6 +1,6 @@
 # Glossary
 id: glossary
-Version: 0.20.0
+Version: 0.21.0
 Status: active
 Abstraction: reference
 has_translation: docs/ru/glossary/index-RU.md
@@ -133,6 +133,8 @@ Terms and definitions for the AI-Agent Collaborative Design Framework core proto
 ---
 
 ## Core Framework Concepts
+
+**Council** (Консилиум) The AI-agent collaborative design framework as a whole: its protocol, roles, sessions, artifacts, and governance. Translated consistently as «Консилиум» in Russian documents; never «Совет» and never left untranslated in Russian text. Formerly a redundant term removed in v0.17.0 — restored in v0.21.0 because it is the project's own domain term and must be translation-controlled.
 
 **Orchestration** (Оркестрация) The coordination of protocol phases and role transitions, driven by role statuses. Transitions are deterministic; the state graph encodes which phase follows based on collected results.
 
