@@ -67,6 +67,59 @@ Critical findings must include a justification naming a concrete failure mode or
 
 ---
 
+## Pre-Phase 0 — Role Analyzer (Advisory Extended Roles)
+
+Per consensus `sess-council-role-selection` (2026-11-23): the Council protocol uses a **hybrid role selection principle** — fixed locked Core roles + advisory Extended roles recommended by an AI analyzer. The analyzer is **not a role and not a protocol phase**; it is a Pre-Phase 0 generator of scenario artifact content (structured JSON), fitting into the §Scenario-driven assignment pattern from `protocol-core/index.md`.
+
+### Locked Core (immutable invariant)
+
+| Role | Rationale for locking |
+|------|-----------------------|
+| Architect | System structure analysis — structural invariant |
+| Reliability & Security Specialist | Failure mode coverage — security invariant |
+| Human-Centric Designer | User capability calibration — trust invariant |
+
+The analyzer is **forbidden** from recommending exclusion of any locked Core role. This is an architectural invariant, not a policy choice (closes prompt-injection vector through task description).
+
+### Advisory Analyzer Contract
+
+**Input:** completed task brief (goal, subjects, focus areas, constraints).
+
+**Output:** machine-readable artifact (`review-analyzer.json`) + human-readable justification (`review-analyzer.md`).
+
+JSON schema:
+```json
+{
+  "core_locked": true,
+  "self_assessed_complexity": "simple | moderate | complex",
+  "extended_roles": [
+    {
+      "role_name": "<string>",
+      "reason": "<one-line justification, max 5-7 lines>",
+      "perspective": "<what angle this role adds>"
+    }
+  ],
+  "timestamp": "<ISO 8601 UTC>",
+  "session_id": "<string>"
+}
+```
+
+**Fallback behavior (analyzer failure):** if JSON validation fails or the analyzer cannot produce output → full Core roster only (no extended roles). Documented in `draft/session-task-brief-template.md` as explicit field.
+
+**Audit trail:** the full trace (input task brief, JSON output, human readability justification, operator decision) is preserved in session workspace (`review-analyzer.md` / `review-analyzer.json`). Schema validation via `tools/check_all.py`.
+
+### Operator Decision (OP-1)
+
+The operator may accept, reject, or augment the analyzer's recommendation. The operator's decision is final and recorded in the analyzer artifact for audit purposes.
+
+### Integration Points
+
+- Analyzer output feeds into the task brief before Phase 1: extended role list populated from `review-analyzer.json.extended_roles[].role_name`.
+- Scenario artifacts expressed as "live scenario" fields within the task brief — no separate file needed unless explicitly required.
+- If no extended roles apply (see §Complexity Threshold below), skip analyzer entirely; proceed with base set.
+
+---
+
 ## Operational Flow
 
 ### Phase 1 — Task Submission
