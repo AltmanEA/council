@@ -15,5 +15,6 @@
   "target_id": "planned-architecture-layer-2",
   "ru_path": "docs/ru/planned-architecture/layer-2-RU.md",
   "en_sha256_at_commit": "da578f1b60306c7c77755226899b9f8b7ae05a7b57712d815f70b31d3658effc",
-  "status": "verified"
+  "status": "unverified",
+  "note": "ai_review=not_run"
 }

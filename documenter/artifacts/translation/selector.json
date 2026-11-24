@@ -15,5 +15,6 @@
   "target_id": "selector",
   "ru_path": "docs/ru/selector/index-RU.md",
   "en_sha256_at_commit": "67966ad4cdc14adda58a7397a2288a1b6919a8de5890b552df54e41d08f22ed0",
-  "status": "verified"
+  "status": "drift",
+  "note": "EN changed after translation"
 }

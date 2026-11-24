@@ -15,6 +15,6 @@
   "target_id": "project-concept",
   "ru_path": "docs/ru/project-concept/index-RU.md",
   "en_sha256_at_commit": "42638dc1cdcfd8bc1f63b52599efa59278966b2d0d79b0e248fa20cc5b7c59e8",
-  "status": "unverified",
-  "note": "RU bytes differ from run output"
+  "status": "drift",
+  "note": "EN changed after translation"
 }

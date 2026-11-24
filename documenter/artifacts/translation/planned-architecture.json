@@ -15,5 +15,6 @@
   "target_id": "planned-architecture",
   "ru_path": "docs/ru/planned-architecture/index-RU.md",
   "en_sha256_at_commit": "c0a98636952b3c30b8fa1fe4b646927fcea1c500f69d1399b57a58c4bd040fe7",
-  "status": "verified"
+  "status": "drift",
+  "note": "EN changed after translation"
 }

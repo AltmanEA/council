@@ -15,5 +15,6 @@
   "target_id": "execution-runtime",
   "ru_path": "docs/ru/execution-runtime/index-RU.md",
   "en_sha256_at_commit": "0490d5bcd3715e3d1da4ec5740817af3b54c9d2c7259fef8490b7fc24c814525",
-  "status": "verified"
+  "status": "unverified",
+  "note": "ai_review=not_run"
 }
