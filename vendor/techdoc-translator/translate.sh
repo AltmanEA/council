@@ -70,13 +70,17 @@ _CKDW='{"enable_thinking":false}'
 
 # ── Preflight: check API server availability ──
 preflight_api() {
-    if ! curl -sf --max-time 3 "${TRANSLATE_API_BASE}/models" > /dev/null 2>&1; then
+    if ! curl -sf --max-time 3 \
+        -H "Authorization: Bearer ${TRANSLATE_API_KEY}" \
+        "${TRANSLATE_API_BASE}/models" > /dev/null 2>&1; then
         echo "[preflight] API server unreachable at ${TRANSLATE_API_BASE}; fix: start local model server or set TRANSLATE_API_BASE to a working endpoint" >&2
         return 1
     fi
     # Verify model is listed on the server (warn-only on parse failure)
     local model_list
-    model_list=$(curl -sf --max-time 5 "${TRANSLATE_API_BASE}/models" 2>/dev/null) || {
+    model_list=$(curl -sf --max-time 5 \
+        -H "Authorization: Bearer ${TRANSLATE_API_KEY}" \
+        "${TRANSLATE_API_BASE}/models" 2>/dev/null) || {
         echo "[preflight] [WARN] could not fetch /models for model check" >&2
         return 0
     }
@@ -120,5 +124,9 @@ if [ "${TRANSLATE_BACKEND}" = "cloud" ]; then
     fi
 fi
 
+# ── Auto-inject --allow-cloud when TRANSLATE_BACKEND=cloud ──
+_extra_args=""
+[ "${TRANSLATE_BACKEND}" = "cloud" ] && _extra_args="--allow-cloud"
+
 # ── Dispatch ──
-exec python3 "${SCRIPT_DIR}/techdoc_translator.py" "$@"
+exec python3 "${SCRIPT_DIR}/techdoc_translator.py" ${_extra_args} "$@"
