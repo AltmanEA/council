@@ -360,5 +360,69 @@ class TestGenEngineAliasDirNaming(unittest.TestCase):
             self.assertTrue(os.path.isdir(os.path.join(repo, ".engine", "v1.0.3")))
 
 
+class TestGenEnginePathFlag(unittest.TestCase):
+    """AC-10: --path flag selects the source directory (e.g. draft/ for dogfood
+    engine materialization); default remains fallback/."""
+
+    def _setup_draft_repo(self, tmpdir):
+        repo = os.path.join(tmpdir, "repo")
+        os.makedirs(os.path.join(repo, "draft"))
+        os.makedirs(os.path.join(repo, "other"))
+        with open(os.path.join(repo, "draft", "index.md"), "w") as f:
+            f.write("# Draft\n")
+        with open(os.path.join(repo, "other", "index.md"), "w") as f:
+            f.write("# Other\n")
+        _run(["git", "init"], cwd=repo)
+        _run(["git", "config", "user.email", "test@test.com"], cwd=repo)
+        _run(["git", "config", "user.name", "test"], cwd=repo)
+        _run(["git", "add", "."], cwd=repo)
+        _run(["git", "commit", "-m", "init"], cwd=repo)
+        _run(["git", "tag", "draft-pin"], cwd=repo)
+        return repo
+
+    def test_path_flag_extracts_draft(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._setup_draft_repo(tmpdir)
+            result = _run(
+                ["bash", GEN_ENGINE, "draft-pin", "--path", "draft/"], cwd=repo,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            engine_dir = os.path.join(repo, ".engine", "draft-pin")
+            self.assertTrue(
+                os.path.isfile(os.path.join(engine_dir, "index.md")),
+                f"draft/index.md must be extracted with --path draft/, got {os.listdir(engine_dir)}",
+            )
+            with open(os.path.join(engine_dir, "index.md")) as f:
+                content = f.read()
+            self.assertTrue(
+                content.startswith("ENGINE: draft-pin @ "),
+                "ENGINE header must be prepended with --path",
+            )
+            # other/ must not leak
+            self.assertFalse(os.path.exists(os.path.join(engine_dir, "..", "other")))
+
+    def test_default_path_still_fallback(self):
+        """Without --path, extraction targets fallback/ (regression guard)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._setup_draft_repo(tmpdir)  # has draft/ and other/, no fallback/
+            result = _run(["bash", GEN_ENGINE, "draft-pin"], cwd=repo)
+            self.assertEqual(
+                result.returncode, 2,
+                "no fallback/ at ref → exit 2 when --path omitted",
+            )
+            self.assertIn("no fallback/ files found", result.stderr)
+
+    def test_path_without_files_exit2(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._setup_draft_repo(tmpdir)
+            result = _run(
+                ["bash", GEN_ENGINE, "draft-pin", "--path", "missing/"], cwd=repo,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("gen_engine:", result.stderr)
+            self.assertIn("missing/", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

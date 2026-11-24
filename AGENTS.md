@@ -76,14 +76,21 @@ This workspace (`council-dev/`, branch `v2-dev`, anchors `v1-stable` / `v2-pre-d
 
 | Name | Role | Rule |
 |---|---|---|
-| `.engine/<version>/` | **чем обсуждаем** — engine, generated from a v1 tag | read-only, never edit; regenerate with `bash tools/gen_engine.sh <tag>` (see §1.7) |
-| `draft/` | **что обсуждаем** — v2 draft, object of review | never conduct a session *by* it; edit only in approved change commits |
+| `.engine/<version>/` | **чем обсуждаем** — engine, generated from a pin (v1 tag or draft pin) | read-only, never edit; v1 engine: `bash tools/gen_engine.sh v1-latest`; dogfood engine: `bash tools/gen_engine.sh <draft-pin-tag> --path draft/` (see §1.7) |
+| `draft/` | **что обсуждаем** — v2 draft, object of review | edit only in approved change commits, never inside an active window or dogfood session |
 | `sessions/` | артефакты сессий этого workspace | local; only `consensus-doc.md`/`task-brief.md` tracked; never read `../council/sessions/` as relevant |
 | `arbiter-gate-rules.md` | критерии приёмки dogfood gate перед go-live | читается арбитром (сессия на движке v1, двухпиновый контракт) перед вердиктом; единственный владелец текста — этот файл |
 | `rehearsal-plan.md` | двухэтапный протокол «репетиция (R) → настоящий gate (G)» | план исполнения dogfood-окон; пины, правила пометок и чеклист — единственный владелец текста этот файл |
 
+**Two session modes (development of v2):**
+
+- **Mode A — `dev-engine` (default for development):** the council is conducted *by the v1 engine* (`.engine/<v1-sha>/`); `draft/` is the object of discussion, never the protocol. Safe when `draft/` is edited between sessions. Brief header: `mode: dev-engine`, `engine: <v1-pin, e.g. v0.6.1@3d29792>`.
+- **Mode B — `dev-dogfood` (test councils on v2 edits):** the council is conducted *by the draft itself* (engine materialized from a draft pin: `bash tools/gen_engine.sh <draft-pin> --path draft/`; verify with `check_engine_sync.py --engine-dir .engine/<dir> --ref <draft-pin>`). Brief header: `mode: dev-dogfood`, `engine: draft@<sha>`. A `draft/` edit during an active dogfood session (Phase 1 → consensus-doc) makes the session `invalid` (arbiter rule 4); gate windows additionally FAIL and restart (arbiter rule 3). Gate-window sessions and switch-over rehearsal windows run in this mode per `rehearsal-plan.md`.
+
+Draft lifecycle: substantive `draft/` edits shift the engine pin — the previous gate verdict remains history bound to its pin; a new switch-over requires a new freeze tag (`draft-freeze-<N>`) + a fresh gate window on the new pin.
+
 - **Never** read or modify `../council/fallback/` by absolute path; the operational regulation does not exist under this workspace (`fallback/` is intentionally absent here — it is `draft/` instead).
-- Every dev session must start with: `bash tools/gen_engine.sh v1-latest` (materialize engine; operator-executed) and `python3 tools/check_engine_sync.py` (advisory pin check); the task-brief must carry `worktree-path: /home/ea/council-dev`, `mode: dev-engine` (or `dev-dogfood`), and `engine: <pin>`; the same header is copied into `consensus-doc.md`.
+- Every dev session must start with engine materialization for its mode (Mode A: `bash tools/gen_engine.sh v1-latest`; Mode B: `--path draft/` from the draft pin) and `python3 tools/check_engine_sync.py` (advisory pin check; for draft engines pass `--ref <draft-pin>`); the task-brief must carry `worktree-path: /home/ea/council-dev`, `mode: dev-engine` (or `dev-dogfood`), and `engine: <pin>`; the same header is copied into `consensus-doc.md`.
 - **v1 hotfix flow (forward-port):** hotfixes land in `../council/` (master), get tag `v1.0.x`, move `v1-latest`; each requires a paired commit in this branch with trailers `backport-of: <sha>` and `premise-shift: none|affects=<session-id>` (consensus `sess-branch-version-strategy`, 2026-11-23). Before each dev session verify: all `fallback/` commits in master since the last engine pin are reflected in `.engine/` or `draft/`, or marked `backport-deferred`.
 - Switch-over (v2 becomes operational) happens only via the documented 7-step procedure of that consensus; until then `master` equals v1.
 

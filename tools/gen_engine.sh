@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# gen_engine.sh — materialize the engine: extract fallback/ subtree of a git ref.
+# gen_engine.sh — materialize the engine: extract a source subtree of a git ref.
 #
-# Usage: bash tools/gen_engine.sh <tag-or-ref> [target-dir]
+# Usage: bash tools/gen_engine.sh <tag-or-ref> [target-dir] [--path DIR/]
 #
-# Extracts ONLY fallback/ files from the given git ref using git plumbing
+# Extracts ONLY files under the source directory (default: fallback/; use
+# --path draft/ for dogfood engines) from the given git ref using git plumbing
 # (no working-tree reads).  Each .md file receives an ENGINE header as its
 # first line.  A DIST-SOURCE manifest is written with tag, tree, commit,
 # and generated timestamp.
@@ -17,14 +18,33 @@ set -euo pipefail
 #
 # Exit codes:
 #   0  success
-#   2  usage error — missing argument, unknown ref, or ref without fallback/
+#   2  usage error — missing argument, unknown ref, or ref without source path
 
 die() { echo "gen_engine: $*" >&2; exit 2; }
 
 # --- argument validation ---------------------------------------------------
-[[ $# -ge 1 ]] || die "missing argument: usage gen_engine.sh <tag-or-ref> [target-dir]"
+[[ $# -ge 1 ]] || die "missing argument: usage gen_engine.sh <tag-or-ref> [target-dir] [--path DIR/]"
 REF="$1"
-TARGET_DIR="${2:-}"
+shift
+SOURCE_PATH="fallback/"
+TARGET_DIR=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --path)
+            [[ $# -ge 2 ]] || die "--path requires an argument (e.g. draft/)"
+            SOURCE_PATH="$2"
+            shift 2
+            ;;
+        *)
+            [[ -z "$TARGET_DIR" ]] || die "unexpected argument: $1"
+            TARGET_DIR="$1"
+            shift
+            ;;
+    esac
+done
+# Normalize: ensure trailing slash, no leading slash
+SOURCE_PATH="${SOURCE_PATH#/}"
+SOURCE_PATH="${SOURCE_PATH%/}/"
 
 # Resolve repo root from the caller's working directory (cwd).
 # This allows the script to work in any git repo, not only from the council repo.
@@ -60,11 +80,11 @@ if [[ -z "$TARGET_DIR" ]]; then
     TARGET_DIR="$ROOT_DIR/.engine/$VERSION"
 fi
 
-# --- list fallback/ files --------------------------------------------------
-FALLBACK_FILES=$(git -C "$ROOT_DIR" ls-tree -r --name-only "$REF" -- fallback/ 2>/dev/null) || true
+# --- list source-path files --------------------------------------------------
+FALLBACK_FILES=$(git -C "$ROOT_DIR" ls-tree -r --name-only "$REF" -- "$SOURCE_PATH" 2>/dev/null) || true
 
 if [[ -z "$FALLBACK_FILES" ]]; then
-    die "no fallback/ files found at ref: $REF"
+    die "no $SOURCE_PATH files found at ref: $REF"
 fi
 
 # --- full rebuild: remove target, then regenerate --------------------------
@@ -73,8 +93,8 @@ mkdir -p "$TARGET_DIR"
 
 # --- copy each file with ENGINE header prepended ---------------------------
 while IFS= read -r filepath; do
-    # filepath is like "fallback/index.md" → strip the fallback/ prefix
-    relpath="${filepath#fallback/}"
+    # filepath is like "fallback/index.md" (or "draft/index.md" with --path) → strip the prefix
+    relpath="${filepath#"$SOURCE_PATH"}"
     dest="$TARGET_DIR/$relpath"
     dest_dir=$(dirname "$dest")
     mkdir -p "$dest_dir"
