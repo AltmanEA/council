@@ -241,7 +241,7 @@ documents:
   - id: project-concept
     path: docs/en/project-concept/index.md
     title: Council
-    version: 0.3.4
+    version: 0.4.0
     status: draft
     abstraction: conceptual
     has_translation: docs/ru/project-concept/index-RU.md

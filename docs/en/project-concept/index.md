@@ -1,6 +1,6 @@
 # Council
 id: project-concept
-Version: 0.3.4
+Version: 0.4.0
 Status: draft
 Abstraction: conceptual
 has_translation: docs/ru/project-concept/index-RU.md
@@ -20,6 +20,16 @@ The primary output artifact is a structured consensus document that records deci
 2. **Consensus before commitment.** A recommendation is not considered final until all participants converge or the escalation path is triggered. No single agent holds a monopoly on the decision.
 3. **Escalation capability.** The system explicitly tracks situations where alignment is impossible and routes such issues to the human operator. Escalation is a normal outcome, not a failure.
 4. **Iterative evolution.** Roles, protocols, and escalation rules are updated as the system is used. We start minimal and refine in practice.
+5. **Code over instruction.** Whatever can be done with code is done with code —
+   this is the end state of the system. During development the simplest variant
+   is built first: an AI instruction (a prompt contract), refined together with
+   code. Capabilities verified in real operation are converted into code; an AI
+   instruction is a draft of a future code function.
+6. **Dynamic scenario formation.** Pre-written rigid scenario catalogs are not
+   used. Before a Council session, auxiliary agents run as service agents: a
+   context collector gathers the information the task requires, and a task
+   analyzer determines the Council participants — forming the scenario on the
+   fly, subject to operator approval.
 
 ---
 
